@@ -1,0 +1,7 @@
+{
+  "_nota": "Flavor PROD — POR_CONFIGURAR cuando exista el proyecto Supabase Pro (T-004, requiere aprobación: costo recurrente USD 25/mes, ver COST_DECISIONS D-001). SENTRY_DSN se configura al crear el proyecto Sentry (D-007). Nunca commitear claves privadas: la anon key y el DSN son públicos por diseño.",
+  "APP_ENV": "prod",
+  "SUPABASE_URL": "POR_CONFIGURAR",
+  "SUPABASE_ANON_KEY": "POR_CONFIGURAR",
+  "SENTRY_DSN": ""
+}

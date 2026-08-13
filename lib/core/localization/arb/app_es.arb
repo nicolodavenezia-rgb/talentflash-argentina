@@ -1,0 +1,39 @@
+{
+  "@@locale": "es",
+  "appTitle": "TalentFlash",
+  "@appTitle": {
+    "description": "Nombre de la aplicación (pestaña del navegador, task switcher)"
+  },
+  "welcomeHeadline": "Bienvenido a TalentFlash",
+  "@welcomeHeadline": {
+    "description": "Título de la pantalla de bienvenida"
+  },
+  "welcomeSubtitle": "Trabajo en gastronomía y hotelería de CABA y GBA, con presentaciones en video de 20 a 30 segundos. El video siempre es opcional.",
+  "@welcomeSubtitle": {
+    "description": "Bajada de la pantalla de bienvenida; recuerda que el video es opcional (SPEC §5)"
+  },
+  "roleQuestion": "¿Cómo querés usar TalentFlash?",
+  "@roleQuestion": {
+    "description": "Pregunta de selección de rol en el onboarding"
+  },
+  "roleCandidateTitle": "Soy candidato",
+  "roleCandidateSubtitle": "Quiero conseguir trabajo",
+  "roleCandidateSemantics": "Entrar como candidato: crear tu perfil y buscar trabajo",
+  "@roleCandidateSemantics": {
+    "description": "Etiqueta para lectores de pantalla del botón candidato (WCAG AA)"
+  },
+  "roleCompanyTitle": "Soy empresa",
+  "roleCompanySubtitle": "Quiero contratar personal",
+  "roleCompanySemantics": "Entrar como empresa: publicar ofertas y descubrir candidatos",
+  "@roleCompanySemantics": {
+    "description": "Etiqueta para lectores de pantalla del botón empresa (WCAG AA)"
+  },
+  "candidateHomeTitle": "Inicio — Candidato",
+  "candidateHomePlaceholder": "Acá va a estar tu feed de ofertas con salario siempre visible (Bloque G del ROADMAP). Por ahora este es el punto de entrada del candidato.",
+  "companyHomeTitle": "Inicio — Empresa",
+  "companyHomePlaceholder": "Acá van a estar tus búsquedas, ofertas y candidatos (Bloque G del ROADMAP). Por ahora este es el punto de entrada de la empresa.",
+  "backToRoleSelection": "Volver a elegir cómo usar TalentFlash",
+  "@backToRoleSelection": {
+    "description": "Tooltip/semántica del botón volver en las pantallas placeholder"
+  }
+}

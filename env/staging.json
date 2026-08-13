@@ -1,0 +1,7 @@
+{
+  "_nota": "Flavor STAGING — POR_CONFIGURAR cuando exista el proyecto Supabase stg- (T-004, requiere aprobación: servicio externo). La anon key es pública por diseño; los secretos reales van en GitHub Secrets, nunca acá.",
+  "APP_ENV": "staging",
+  "SUPABASE_URL": "POR_CONFIGURAR",
+  "SUPABASE_ANON_KEY": "POR_CONFIGURAR",
+  "SENTRY_DSN": ""
+}

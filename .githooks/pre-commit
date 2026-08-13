@@ -1,0 +1,12 @@
+#!/bin/sh
+# Hook de pre-commit del Bloque A (T-002): rechaza commits con formato o análisis roto.
+# Activación (una sola vez por clon): git config core.hooksPath .githooks
+set -e
+
+echo "[pre-commit] dart format --set-exit-if-changed"
+dart format --output=none --set-exit-if-changed .
+
+echo "[pre-commit] flutter analyze"
+flutter analyze --no-pub
+
+echo "[pre-commit] OK"
