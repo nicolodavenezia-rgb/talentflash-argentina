@@ -32,5 +32,29 @@ void main() {
       );
       expect(withDsn.sentryEnabled, isTrue);
     });
+
+    test('validateForStartup acepta la configuración pública completa', () {
+      const configured = EnvConfig(
+        environment: AppEnvironment.dev,
+        supabaseUrl: 'http://127.0.0.1:54321',
+        supabaseAnonKey: 'sb_publishable_test',
+        sentryDsn: '',
+      );
+
+      expect(configured.supabaseConfigured, isTrue);
+      expect(configured.validateForStartup, returnsNormally);
+    });
+
+    test('validateForStartup rechaza placeholders y valores vacíos', () {
+      const placeholder = EnvConfig(
+        environment: AppEnvironment.staging,
+        supabaseUrl: 'POR_CONFIGURAR',
+        supabaseAnonKey: 'POR_CONFIGURAR',
+        sentryDsn: '',
+      );
+
+      expect(placeholder.supabaseConfigured, isFalse);
+      expect(placeholder.validateForStartup, throwsStateError);
+    });
   });
 }

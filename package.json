@@ -1,0 +1,15 @@
+{
+  "name": "talentflash-local-tooling",
+  "private": true,
+  "scripts": {
+    "supabase": "supabase",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:lint": "supabase db lint --schema public",
+    "db:test": "node scripts/run-db-tests.mjs",
+    "db:test:supabase": "supabase test db"
+  },
+  "devDependencies": {
+    "supabase": "2.115.0"
+  }
+}

@@ -1,7 +1,7 @@
 {
-  "_nota": "Flavor DEV — Supabase local (supabase start). Sin secretos reales: la anon key local la imprime el CLI. Uso: flutter run --dart-define-from-file=env/dev.json",
+  "_nota": "Flavor DEV — Supabase local. Solo URL y publishable key públicas; nunca service_role. Uso: flutter run --dart-define-from-file=env/dev.json",
   "APP_ENV": "dev",
   "SUPABASE_URL": "http://127.0.0.1:54321",
-  "SUPABASE_ANON_KEY": "PENDIENTE_correr_supabase_start",
+  "SUPABASE_ANON_KEY": "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
   "SENTRY_DSN": ""
 }

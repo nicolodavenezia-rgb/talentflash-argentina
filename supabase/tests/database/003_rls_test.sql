@@ -1,8 +1,6 @@
--- pgTAP — extraído de docs/DATA_MODEL.md §6 (T-007)
-
--- 060-payments-lockdown.test.sql (extracto)
+-- Lockdown de pagos y ausencia de datos privados para anon.
 begin;
-select plan(3);
+select plan(9);
 
 select tests.authenticate_as('user_cand_pub');
 select throws_ok(
@@ -18,6 +16,42 @@ select results_eq(
   $$ select count(*)::int >= 0 from payments where payer_profile_id = auth.uid() $$,
   $$ values (true) $$,
   'POSITIVO: el pagador puede leer sus propios pagos');
+
+reset role;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+set local role anon;
+
+select throws_ok(
+  $$ select count(*) from profiles $$,
+  '42501', null,
+  'NEGATIVO: anon no lee profiles');
+
+select throws_ok(
+  $$ select count(*) from candidate_profiles $$,
+  '42501', null,
+  'NEGATIVO: anon no lee candidate_profiles');
+
+select throws_ok(
+  $$ select count(*) from job_applications $$,
+  '42501', null,
+  'NEGATIVO: anon no lee postulaciones');
+
+select throws_ok(
+  $$ select count(*) from messages $$,
+  '42501', null,
+  'NEGATIVO: anon no lee mensajes');
+
+select throws_ok(
+  $$ select count(*) from payments $$,
+  '42501', null,
+  'NEGATIVO: anon no lee pagos');
+
+select results_eq(
+  $$ select count(*)::int > 0 from geo_provincias $$,
+  $$ values (true) $$,
+  'POSITIVO: anon puede leer el catálogo geográfico público');
 
 select * from finish();
 rollback;

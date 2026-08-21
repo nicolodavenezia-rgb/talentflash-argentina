@@ -24,6 +24,21 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+  database:
+    name: Migraciones, lint y RLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run db:start
+      - run: npm run db:reset
+      - run: npm run db:lint
+      - run: npm run db:test
+
   secret-scan:
     name: Scan de secretos (gitleaks)
     runs-on: ubuntu-latest

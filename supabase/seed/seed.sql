@@ -2,8 +2,7 @@
 -- Seed de DESARROLLO (T-008): 20 candidatos, 5 empresas, 10 ofertas activas.
 -- SOLO para entorno local (`supabase db reset` lo aplica). Jamás en prod.
 -- Contraseña de todos los usuarios de prueba: password123
--- NOTA: aún no ejecutado localmente (falta Supabase CLI + Docker; ver
--- supabase/README.md). Marcar T-008 como verificado recién cuando corra.
+-- Verificado localmente mediante `npm run db:reset`.
 -- ===========================================================================
 
 -- --- 20 candidatos (auth.users; el trigger handle_new_user crea profiles) ---

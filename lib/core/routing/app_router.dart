@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/companies/presentation/company_home_screen.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
 import '../../features/profiles/presentation/candidate_home_screen.dart';
+import 'app_entry_point.dart';
 
 /// Nombres de ruta centralizados: navegar siempre por nombre, nunca por string.
 abstract final class RouteNames {
@@ -15,8 +16,9 @@ abstract final class RouteNames {
 /// Router del Bloque A: bienvenida + puntos de entrada candidato/empresa.
 /// Los guards de sesión y rol llegan con la autenticación (Bloque B, T-011+).
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final entryPoint = ref.watch(appEntryPointProvider);
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: entryPoint.initialLocation,
     routes: [
       GoRoute(
         path: '/',

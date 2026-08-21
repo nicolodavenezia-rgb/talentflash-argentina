@@ -2,7 +2,7 @@
 
 Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
 
-- `migrations/` — 17 migraciones SQL versionadas (0001–0017), generadas desde
+- `migrations/` — 18 migraciones SQL versionadas (0001–0018), generadas desde
   `docs/DATA_MODEL.md` (fuente de verdad). Regla: ningún cambio de esquema por
   dashboard; siempre migración versionada (T-005).
 - `functions/` — Edge Functions (llegan con los Bloques B+; catálogo en ARCHITECTURE.md §3).
@@ -10,28 +10,25 @@ Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
 - `seed/seed.sql` — seed de DESARROLLO (T-008): 20 candidatos, 5 empresas,
   10 ofertas. Solo local, jamás en producción.
 
-## Requisitos locales (PENDIENTES en esta máquina — 12-08-2026)
+## Desarrollo local
 
-El CLI de Supabase y Docker **no están instalados**, así que las migraciones y
-los tests todavía **no fueron ejecutados**. Para correr todo localmente:
+Docker Desktop y el CLI de Supabase están configurados localmente. El CLI queda
+fijado como `devDependency` del proyecto; no hace falta una instalación global.
 
 ```powershell
-# 1. Docker Desktop: https://docs.docker.com/desktop/setup/install/windows-install/
-# 2. Supabase CLI (scoop):
-scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-scoop install supabase
-# 3. Inicializar (una vez, desde 01_app/): genera supabase/config.toml
-supabase init
-# 4. En config.toml apuntar el seed: [db.seed] sql_paths = ["./seed/seed.sql"]
-# 5. Levantar el stack local y aplicar migraciones + seed desde cero:
-supabase start
-supabase db reset
-# 6. Tests de RLS (pgTAP):
-supabase test db
+npm install
+npm run db:start
+npm run db:reset
+npm run db:lint
+npm run db:test
 ```
 
-`supabase start` imprime la `anon key` local → copiarla en `env/dev.json`
-(`SUPABASE_ANON_KEY`). Es una clave pública de desarrollo, no un secreto.
+`db:test` ejecuta los mismos archivos pgTAP directamente dentro del contenedor
+PostgreSQL y falla ante errores SQL o líneas TAP `not ok`. El runner alternativo
+del CLI queda disponible como `npm run db:test:supabase`.
+
+`env/dev.json` contiene solo la URL y la publishable/anon key del stack local.
+Es información pública de desarrollo; nunca se guarda la `service_role`.
 
 ## Entornos remotos (T-004 — requieren aprobación)
 

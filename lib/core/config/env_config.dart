@@ -49,6 +49,23 @@ class EnvConfig {
 
   bool get isProd => environment == AppEnvironment.prod;
 
+  bool get supabaseConfigured =>
+      supabaseUrl.isNotEmpty &&
+      supabaseAnonKey.isNotEmpty &&
+      supabaseUrl != 'POR_CONFIGURAR' &&
+      supabaseAnonKey != 'POR_CONFIGURAR';
+
+  /// Falla temprano si se inició un binario sin su archivo de flavor. Las
+  /// credenciales aceptadas acá son públicas; service_role nunca entra al app.
+  void validateForStartup() {
+    if (!supabaseConfigured) {
+      throw StateError(
+        'Supabase no está configurado. Ejecutá Flutter con '
+        '--dart-define-from-file=env/${environment.name}.json',
+      );
+    }
+  }
+
   /// Sentry se habilita solo si el flavor trae un DSN (T-010): en dev queda
   /// apagado y no se necesita cuenta para desarrollar.
   bool get sentryEnabled => sentryDsn.isNotEmpty;

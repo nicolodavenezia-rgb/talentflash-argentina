@@ -1,12 +1,6 @@
--- pgTAP — extraído de docs/DATA_MODEL.md §6 (T-007)
-
--- 020-candidate-visibility.test.sql
+-- Visibilidad de candidatos y confianza del rol de negocio.
 begin;
-select plan(4);
-
--- seeds: empresa verificada (user_empresa_ok), empresa NO verificada (user_empresa_pend),
--- candidato publicado (cand_pub) y no publicado (cand_priv). Creados en 000-setup.sql
--- con tests.create_supabase_user() / tests.authenticate_as().
+select plan(7);
 
 select tests.authenticate_as('user_empresa_ok');
 select results_eq(
@@ -29,6 +23,24 @@ select tests.authenticate_as('user_cand_pub');
 select lives_ok(
   $$ update candidate_profiles set headline = 'nuevo' where profile_id = auth.uid() $$,
   'POSITIVO: candidato edita su propio perfil');
+
+select throws_ok(
+  $$ update profiles set role = 'admin' where id = auth.uid() $$,
+  '42501', null,
+  'NEGATIVO: un usuario no puede promover su propio profile a admin');
+
+select tests.authenticate_as('user_requested_admin');
+select results_eq(
+  $$ select role::text from profiles where id = tests.get_uuid('user_requested_admin') $$,
+  $$ values ('candidate') $$,
+  'NEGATIVO: solicitar admin en user_metadata crea un profile candidate');
+
+reset role;
+select results_eq(
+  $$ select raw_app_meta_data ->> 'role'
+     from auth.users where id = tests.get_uuid('user_requested_admin') $$,
+  $$ values ('candidate') $$,
+  'POSITIVO: el claim confiable de app_metadata coincide con el rol saneado');
 
 select * from finish();
 rollback;

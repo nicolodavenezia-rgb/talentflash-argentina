@@ -22,12 +22,14 @@ esquema SQL completo con RLS, tooling y CI.
 | Android SDK | 36 (Build Tools 36.0.0) | para Android |
 | Visual Studio 2026 | workload C++ | para Windows desktop |
 | Chrome | actual | para Web |
-| Supabase CLI + Docker | — | **aún no instalados**; ver [supabase/README.md](supabase/README.md) |
+| Supabase CLI | 2.115.0 (devDependency) | ejecutar con scripts `npm run db:*` |
+| Docker Desktop | 4.87.0 | backend WSL 2 para Supabase local |
 
 ## Setup (clon nuevo)
 
 ```powershell
 flutter pub get
+npm install                           # CLI de Supabase fijado por proyecto
 flutter gen-l10n                       # genera lib/core/localization/gen/
 git config core.hooksPath .githooks    # activa el pre-commit (formato + analyze)
 ```
@@ -43,9 +45,13 @@ flutter run -d chrome --dart-define-from-file=env/dev.json
 flutter run -d windows --dart-define-from-file=env/dev.json
 # Android (dev) — con un emulador/dispositivo conectado
 flutter run -d android --dart-define-from-file=env/dev.json
+
+# Entry points directos (mismo bootstrap y misma app)
+flutter run -t lib/main_candidato.dart --dart-define-from-file=env/dev.json
+flutter run -t lib/main_empresa.dart --dart-define-from-file=env/dev.json
 ```
 
-- `env/dev.json` — Supabase local (la anon key la imprime `supabase start`).
+- `env/dev.json` — Supabase local con URL y publishable key públicas.
 - `env/staging.json`, `env/prod.json` — `POR_CONFIGURAR`: los proyectos remotos
   de Supabase y Sentry **requieren aprobación** (costo recurrente) y no existen
   todavía. Ningún archivo de `env/` contiene secretos: solo URLs y claves
@@ -59,8 +65,9 @@ flutter analyze
 flutter test
 ```
 
-La CI (`.github/workflows/ci.yml`) corre formato + analyze + tests + scan de
-secretos (gitleaks) en cada push/PR cuando el repo tenga remoto en GitHub.
+La CI (`.github/workflows/ci.yml`) corre formato + analyze + tests Flutter,
+reset/lint/pgTAP de Supabase y scan de secretos (gitleaks) en cada push/PR
+cuando el repo tenga remoto en GitHub.
 
 ## Estructura
 
@@ -73,7 +80,7 @@ lib/
 │                   # notifications, moderation, authentication
 └── shared/         # widgets/utilidades compartidas
 supabase/
-├── migrations/     # 0001–0017 — esquema completo + RLS deny-by-default
+├── migrations/     # 0001–0018 — esquema completo + RLS deny-by-default
 ├── tests/database/ # pgTAP (RLS)
 ├── seed/           # seed de desarrollo (T-008)
 └── functions/      # Edge Functions (Bloques B+)

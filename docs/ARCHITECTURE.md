@@ -111,7 +111,7 @@ Plan Pro: USD 25/mes por organización — incluye 8 GB de DB, 100 GB storage, 2
 ### 3.1 Auth
 
 - **Métodos**: email + contraseña, y teléfono con OTP por SMS (relevante para candidatos gastronómicos que no usan email a diario). Recuperación de contraseña por email con deep link a la app.
-- **Roles**: claim `role` en `app_metadata` (seteado por trigger al registrarse según flujo de origen; nunca editable por el cliente). Valores: `candidate`, `employer`, `admin`.
+- **Roles**: claim `role` en `app_metadata` (seteado por trigger al registrarse según flujo de origen; nunca editable por el cliente). Valores: `candidate`, `company`, `admin`.
 - **Sesiones**: refresh tokens del SDK; logout global desde settings ("cerrar sesión en todos los dispositivos").
 - Verificación de empresa: CUIT validado vía Edge Function `verify-cuit` (§3.4) antes de habilitar publicación de avisos.
 

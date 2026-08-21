@@ -87,7 +87,10 @@ Regla de oro: **ninguna lógica de permisos vive en el cliente**. El cliente sol
 - RLS **habilitada en el 100% de las tablas** del schema expuesto, incluidas las "inofensivas". Tabla nueva sin políticas = tabla inaccesible por defecto.
 - Identidad únicamente por `auth.uid()` y claims del JWT; jamás por parámetros del request.
 - **Service role key solo en Edge Functions.** Nunca en el cliente, nunca en repositorio, nunca en funciones invocables sin verificación previa del JWT del llamador.
-- Roles de negocio modelados según `DATA_MODEL.md` (modelo único para todos los docs): `profiles.role` enum (`candidate`, `company`, `admin`) más `verification_status` para el estado de verificación de empresas. No existe tabla `user_roles` ni rol `empresa_verificada`: "empresa verificada" = `role = 'company'` **y** `verification_status = 'verified'`. Ambas columnas se modifican **solo vía service role** y son consultadas por las políticas RLS.
+- Roles de negocio modelados según `DATA_MODEL.md` (modelo único para todos los docs): `profiles.role` enum (`candidate`, `company`, `admin`) más `verification_status` para el estado de verificación de empresas. No existe tabla `user_roles` ni rol `empresa_verificada`: "empresa verificada" = `role = 'company'` **y** `verification_status = 'approved'`.
+- En signup, `raw_user_meta_data.role` es input no confiable: solo se aceptan `candidate`/`company`, se sanea y se copia a `raw_app_meta_data.role`. `admin` y los cambios de `verification_status` se provisionan exclusivamente desde un contexto con `service_role`; triggers bloquean la mutación por clientes autenticados.
+- La primera fila de `company_profiles` y su membresía `owner` se crean atómicamente mediante `create_company_with_owner(...)`; no existe `INSERT` directo para `authenticated`.
+- Los privilegios SQL son explícitos: `authenticated` opera bajo RLS; `anon` solo lee catálogos y superficies públicas declaradas. Las tablas privadas no se conceden a `anon`.
 
 Ejemplo ilustrativo (candidato lee/edita solo su perfil; empresas verificadas leen perfiles de candidato publicados), con las tablas y columnas reales de `DATA_MODEL.md` (`profiles.id`, `profiles.role`, `verification_status`, `candidate_profiles.is_published`):
 
@@ -102,10 +105,12 @@ create policy "verified_company_read" on candidate_profiles
   for select using (
     is_published = true
     and exists (
-      select 1 from profiles p
-      where p.id = auth.uid()
-        and p.role = 'company'
-        and p.verification_status = 'verified'
+      select 1
+      from company_members cm
+      join company_profiles cp on cp.id = cm.company_id
+      where cm.profile_id = auth.uid()
+        and cp.verification_status = 'approved'
+        and cp.deleted_at is null
     )
   );
 ```

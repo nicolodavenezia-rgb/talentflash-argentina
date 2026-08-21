@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talentflash_argentina/app.dart';
 import 'package:talentflash_argentina/core/config/env_config.dart';
+import 'package:talentflash_argentina/core/routing/app_entry_point.dart';
 
 void main() {
   const testConfig = EnvConfig(
@@ -12,10 +13,14 @@ void main() {
     sentryDsn: '',
   );
 
-  Widget buildApp() => ProviderScope(
-    overrides: [envConfigProvider.overrideWithValue(testConfig)],
-    child: const TalentFlashApp(),
-  );
+  Widget buildApp({AppEntryPoint entryPoint = AppEntryPoint.chooser}) =>
+      ProviderScope(
+        overrides: [
+          envConfigProvider.overrideWithValue(testConfig),
+          appEntryPointProvider.overrideWithValue(entryPoint),
+        ],
+        child: const TalentFlashApp(),
+      );
 
   testWidgets('la bienvenida muestra los dos puntos de entrada en es-AR', (
     tester,
@@ -43,6 +48,22 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Soy empresa'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inicio — Empresa'), findsOneWidget);
+  });
+
+  testWidgets('entrypoint candidato abre directamente su inicio', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(entryPoint: AppEntryPoint.candidate));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Inicio — Candidato'), findsOneWidget);
+  });
+
+  testWidgets('entrypoint empresa abre directamente su inicio', (tester) async {
+    await tester.pumpWidget(buildApp(entryPoint: AppEntryPoint.company));
     await tester.pumpAndSettle();
 
     expect(find.text('Inicio — Empresa'), findsOneWidget);

@@ -38,9 +38,10 @@ create policy cand_admin on candidate_profiles for all using (is_admin());
 create policy comp_member_select on company_profiles for select
   using (is_company_member(id) or (verification_status = 'approved' and deleted_at is null) or is_admin());
 create policy comp_member_update on company_profiles for update
-  using (exists (select 1 from company_members
-                 where company_id = id and profile_id = auth.uid()
-                   and member_role in ('owner','admin')));
+  using (exists (select 1 from company_members cm
+                 where cm.company_id = company_profiles.id
+                   and cm.profile_id = auth.uid()
+                   and cm.member_role in ('owner','admin')));
 create policy comp_insert on company_profiles for insert
   with check (created_by = auth.uid());
 

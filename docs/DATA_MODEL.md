@@ -1,6 +1,6 @@
 # TalentFlash Argentina — Modelo de Datos (PostgreSQL / Supabase)
 
-**Última actualización:** 2026-08-12
+**Última actualización:** 2026-08-20
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 > Fuente de verdad: el SPEC de producto (`SPEC_TALENTFLASH.md`); las referencias "SPEC §5" (ofertas) y "SPEC §8" (pagos) apuntan a ese documento. Documentos hermanos en `01_app/docs/` (SPEC §11): `PRODUCT.md`, `UX_FLOWS.md`, `ARCHITECTURE.md`, `PRIVACY.md`, `SECURITY.md`, `COST_DECISIONS.md`, `ROADMAP.md`.
@@ -15,7 +15,7 @@
 - **Enums:** tipos PostgreSQL nativos (`create type ... as enum`). Cambios de enum = migración explícita.
 - **Moneda:** `numeric(12,2)` + `currency_code char(3)` (ISO 4217). Nunca float.
 - **Naming:** snake_case, singular para enums, plural para tablas. FKs `<entidad>_id`.
-- **Esquemas:** todo en `public`; helpers RLS en `public` con `security definer` y `search_path` fijado; tests en `supabase/tests`.
+- **Esquemas:** entidades y RPC públicos en `public`; helpers RLS en `public` con `security definer`, `search_path` vacío y referencias calificadas; triggers internos en `private`; tests en `supabase/tests`.
 - **Extensiones requeridas:** `pgcrypto` (gen_random_uuid), `pg_trgm` (búsqueda), `pg_cron` (retención/vencimientos).
 
 ### 1.1 Tipos enum
@@ -148,7 +148,15 @@ create table company_verifications (
 );
 ```
 
-> **Nota (roles):** `SECURITY.md` §3 plantea una tabla `user_roles` (multi-rol por usuario). Este modelo usa por ahora rol único en `profiles.role`. La decisión del modelo de roles está abierta en el issue de SECURITY: si se aprueba multi-rol, se agrega `user_roles` en una migración dedicada y `is_admin()` y las policies pasan a leer de esa tabla.
+El trigger de alta acepta desde `raw_user_meta_data.role` únicamente
+`candidate` o `company` (cualquier otro valor se degrada a `candidate`) y copia
+el resultado a `raw_app_meta_data.role`, que es el claim confiable. Un cliente
+nunca puede darse `admin`: ese rol se provisiona solo desde un contexto con
+`service_role` y queda protegido por trigger ante `UPDATE` autenticados.
+
+> **Decisión de roles vigente:** rol único en `profiles.role`; no existe tabla
+> `user_roles`. Un eventual modelo multi-rol requiere una decisión y migración
+> dedicadas que actualicen `is_admin()` y todas las policies afectadas.
 
 ### 2.2 Video y transcripciones
 
@@ -730,22 +738,22 @@ create index idx_conversations_last_msg on conversations(last_message_at desc nu
 
 ```sql
 create or replace function is_admin() returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from profiles
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.profiles
                  where id = auth.uid() and role = 'admin' and deleted_at is null);
 $$;
 
 create or replace function is_company_member(p_company_id uuid) returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from company_members
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.company_members
                  where company_id = p_company_id and profile_id = auth.uid());
 $$;
 
 create or replace function is_verified_company_member() returns boolean
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = '' as $$
   select exists (select 1
-                 from company_members cm
-                 join company_profiles cp on cp.id = cm.company_id
+                 from public.company_members cm
+                 join public.company_profiles cp on cp.id = cm.company_id
                  where cm.profile_id = auth.uid()
                    and cp.verification_status = 'approved'
                    and cp.deleted_at is null);
@@ -753,8 +761,8 @@ $$;
 
 create or replace function has_active_subscription(p_company_id uuid default null)
 returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from subscriptions s
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.subscriptions s
                  where s.status in ('trialing','active')
                    and s.current_period_end > now()
                    and ((p_company_id is not null and s.company_id = p_company_id)
@@ -762,15 +770,15 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 create or replace function are_blocked(p_a uuid, p_b uuid) returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from blocks
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.blocks
                  where (blocker_profile_id = p_a and blocked_profile_id = p_b)
                     or (blocker_profile_id = p_b and blocked_profile_id = p_a));
 $$;
 
 create or replace function candidate_id() returns uuid
-language sql stable security definer set search_path = public as $$
-  select id from candidate_profiles where profile_id = auth.uid();
+language sql stable security definer set search_path = '' as $$
+  select id from public.candidate_profiles where profile_id = auth.uid();
 $$;
 ```
 
@@ -782,7 +790,9 @@ create policy profiles_select_own on profiles for select
   using (id = auth.uid() or is_admin());
 create policy profiles_update_own on profiles for update
   using (id = auth.uid() and deleted_at is null)
-  with check (id = auth.uid() and role = (select role from profiles where id = auth.uid())); -- rol inmutable por el usuario
+  with check (id = auth.uid() and deleted_at is null);
+-- El trigger protect_profile_update bloquea role, email, suspended_until,
+-- created_at y deleted_at para usuarios comunes.
 
 -- CANDIDATE_PROFILES: dueño CRUD; empresas VERIFICADAS ven solo perfiles PUBLICADOS
 -- (regla explícita de visibilidad) y sin bloqueo cruzado.
@@ -803,11 +813,12 @@ create policy cand_admin on candidate_profiles for all using (is_admin());
 create policy comp_member_select on company_profiles for select
   using (is_company_member(id) or (verification_status = 'approved' and deleted_at is null) or is_admin());
 create policy comp_member_update on company_profiles for update
-  using (exists (select 1 from company_members
-                 where company_id = id and profile_id = auth.uid()
-                   and member_role in ('owner','admin')));
-create policy comp_insert on company_profiles for insert
-  with check (created_by = auth.uid());
+  using (exists (select 1 from company_members cm
+                 where cm.company_id = company_profiles.id
+                   and cm.profile_id = auth.uid()
+                   and cm.member_role in ('owner','admin')));
+-- No hay INSERT directo para authenticated. create_company_with_owner(...)
+-- crea company_profiles + el primer company_members(owner) atómicamente.
 
 -- COMPANY_MEMBERS: miembros ven su empresa; owner/admin gestionan.
 create policy cm_select on company_members for select
@@ -1153,6 +1164,8 @@ Matriz mínima a cubrir (una fila = un test): candidato ve/edita lo suyo · cand
 14. `0014_rls_helpers.sql` — funciones de §5.1.
 15. `0015_rls_policies.sql` — enable RLS + policies de §5.2 + revokes.
 16. `0016_cron.sql` — jobs de retención/vencimiento de §7.
-17. Seeds de desarrollo en `supabase/seed.sql` (planes y precios de ejemplo marcados como no productivos).
+17. `0017_updated_at_triggers.sql` — triggers `updated_at` de tablas mutables.
+18. `0018_security_hardening.sql` — GRANT explícitos, RPC atómico de empresa y triggers de columnas protegidas.
+19. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos).
 
 Regla: ninguna migración mezcla DDL de tablas con policies; RLS siempre al final del bloque para que los tests pgTAP corran contra el estado completo.
