@@ -47,13 +47,13 @@ Convenciones: cada tarea es chica (≤2–3 días), tiene **criterio verificable
 
 ### Bloque B — Auth
 
-| ID | Tarea | Criterio verificable | Dep. |
-|---|---|---|---|
-| T-011 | Email + password con verificación de correo (Supabase Auth) | Signup → mail → verificación → login, E2E en dev | T-006 |
-| T-012 | OAuth Google y Apple (Sign in with Apple es obligatorio en App Store si hay login social) | Login con ambos proveedores en dispositivo real | T-011 |
-| T-013 | Recuperación de contraseña con deep link a la app | Flujo completo desde el mail hasta el reset dentro de la app | T-011 |
-| T-014 | Sesiones: refresh automático, logout, tokens en almacenamiento seguro del SO | Sesión sobrevive reinicio de la app; logout borra el token (verificado) | T-011 |
-| T-015 | Roles candidato/empresa/admin (claims o tabla) + guards de navegación | Test de integración: una cuenta empresa no accede a pantallas de candidato y viceversa | T-011 |
+| ID | Tarea | Criterio verificable | Dep. | Estado |
+|---|---|---|---|---|
+| T-011 | Email + password con verificación de correo (Supabase Auth) | Signup → mail → verificación → login, E2E en dev | T-006 | **Hecho en local.** Alta de candidato y de empresa, login y errores tipados; el correo de confirmación se ve en Mailpit (`http://127.0.0.1:54324`). En dev `enable_confirmations = false`, así que el alta deja sesión iniciada; la pantalla ya contempla el caso con confirmaciones activadas. Falta ejercitarlo contra un proyecto remoto (requiere aprobación). |
+| T-012 | OAuth Google y Apple (Sign in with Apple es obligatorio en App Store si hay login social) | Login con ambos proveedores en dispositivo real | T-011 | **Pendiente.** Requiere cuentas de proveedor y configuración remota. No hay botones ni puntos de entrada en la UI: nada que aparente funcionar. |
+| T-013 | Recuperación de contraseña con deep link a la app | Flujo completo desde el mail hasta el reset dentro de la app | T-011 | **Primera etapa hecha:** solicitud del correo de restablecimiento, con respuesta idéntica exista o no la cuenta, y el mail verificado en Mailpit. **Falta** la pantalla in-app de nueva contraseña: depende de definir el esquema de deep link y sumar su URL a `additional_redirect_urls` en `supabase/config.toml`. |
+| T-014 | Sesiones: refresh automático, logout, tokens en almacenamiento seguro del SO | Sesión sobrevive reinicio de la app; logout borra el token (verificado) | T-011 | **Hecho.** Persistencia y almacenamiento seguro los aporta `supabase_flutter` (no se guardan tokens a mano); la app escucha `onAuthStateChange`, restaura la sesión al arrancar sin parpadeos y cierra sesión desde cada shell. Falta el "cerrar sesión en todos los dispositivos" (bloque de ajustes). |
+| T-015 | Roles candidato/empresa/admin (claims o tabla) + guards de navegación | Test de integración: una cuenta empresa no accede a pantallas de candidato y viceversa | T-011 | **Hecho.** Rol confiable desde `app_metadata.role`, guards de GoRouter con sus tests, estado seguro ante claim inválido y migración `0019` que mantiene el claim sincronizado con `profiles.role`. Los guards son UX; la autorización sigue siendo RLS. |
 
 ### Bloque C — Onboarding + consentimientos
 
@@ -209,7 +209,7 @@ Los costos "mensual: cero (dentro de Supabase Pro)" refieren a la base de **USD 
 ### F-01 Auth
 - **Objetivo:** cuentas confiables con mínimo rebote (email + Google/Apple), base de identidad para RLS.
 - **Dependencias:** Bloque A (T-011…T-015 dependen de T-006).
-- **Acceptance criteria:** ☐ signup/login email verificado ☐ OAuth Google y Apple en dispositivos reales ☐ reset de password E2E ☐ sesión persiste y logout limpia tokens ☐ roles aplicados en navegación y en RLS.
+- **Acceptance criteria:** ☑ signup/login email verificado (local) ☐ OAuth Google y Apple en dispositivos reales ◧ reset de password E2E (solicitud hecha; falta el reset in-app por deep link, T-013) ☑ sesión persiste y logout limpia tokens ☑ roles aplicados en navegación y en RLS.
 - **Tests:** unit (validaciones), widget (formularios), integration (flujos E2E), RLS (roles y ownership).
 - **Riesgos:** deep links mal configurados (iOS Universal Links); rechazo de App Store si falta Sign in with Apple junto a Google.
 - **Costos:** inicial cero · mensual cero (dentro de Supabase Pro, incluye 100.000 MAU) · variable: USD 0,00325/MAU por encima de 100.000 (Supabase).

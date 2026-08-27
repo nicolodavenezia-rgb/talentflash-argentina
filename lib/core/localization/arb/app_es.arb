@@ -18,22 +18,122 @@
   },
   "roleCandidateTitle": "Soy candidato",
   "roleCandidateSubtitle": "Quiero conseguir trabajo",
-  "roleCandidateSemantics": "Entrar como candidato: crear tu perfil y buscar trabajo",
+  "roleCandidateSemantics": "Crear una cuenta de candidato para buscar trabajo",
   "@roleCandidateSemantics": {
     "description": "Etiqueta para lectores de pantalla del botón candidato (WCAG AA)"
   },
   "roleCompanyTitle": "Soy empresa",
   "roleCompanySubtitle": "Quiero contratar personal",
-  "roleCompanySemantics": "Entrar como empresa: publicar ofertas y descubrir candidatos",
+  "roleCompanySemantics": "Crear una cuenta de empresa para publicar ofertas y descubrir candidatos",
   "@roleCompanySemantics": {
     "description": "Etiqueta para lectores de pantalla del botón empresa (WCAG AA)"
+  },
+  "welcomeHaveAccount": "Ya tengo cuenta: iniciar sesión",
+  "@welcomeHaveAccount": {
+    "description": "Enlace de la bienvenida hacia el login"
   },
   "candidateHomeTitle": "Inicio — Candidato",
   "candidateHomePlaceholder": "Acá va a estar tu feed de ofertas con salario siempre visible (Bloque G del ROADMAP). Por ahora este es el punto de entrada del candidato.",
   "companyHomeTitle": "Inicio — Empresa",
   "companyHomePlaceholder": "Acá van a estar tus búsquedas, ofertas y candidatos (Bloque G del ROADMAP). Por ahora este es el punto de entrada de la empresa.",
-  "backToRoleSelection": "Volver a elegir cómo usar TalentFlash",
-  "@backToRoleSelection": {
-    "description": "Tooltip/semántica del botón volver en las pantallas placeholder"
-  }
+  "adminHomeTitle": "Inicio — Administración",
+  "adminHomePlaceholder": "El panel de moderación y administración llega en el Bloque P del ROADMAP. Tu cuenta tiene rol de administración, así que no te llevamos a un shell de candidato ni de empresa.",
+  "signedInAs": "Sesión iniciada como {email}",
+  "@signedInAs": {
+    "description": "Identidad de la sesión activa en las pantallas de inicio",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "empresa1@dev.talentflash.test"
+      }
+    }
+  },
+  "authLoadingSession": "Cargando tu sesión…",
+  "@authLoadingSession": {
+    "description": "Pantalla de arranque mientras se restaura la sesión"
+  },
+  "authLoginTitle": "Iniciar sesión",
+  "authLoginSubtitle": "Entrá con el correo y la contraseña de tu cuenta.",
+  "authLoginSubtitleCandidate": "Entrá para seguir tus postulaciones y descubrir ofertas.",
+  "authLoginSubtitleCompany": "Entrá para gestionar tus búsquedas y tus candidatos.",
+  "authEmailLabel": "Correo electrónico",
+  "authEmailHint": "nombre@ejemplo.com",
+  "authPasswordLabel": "Contraseña",
+  "authPasswordConfirmLabel": "Repetir contraseña",
+  "authPasswordHelp": "Mínimo {min} caracteres.",
+  "@authPasswordHelp": {
+    "description": "Ayuda del campo contraseña; el mínimo lo fija SECURITY.md §2",
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "authPasswordShow": "Mostrar contraseña",
+  "authPasswordHide": "Ocultar contraseña",
+  "authSubmitLogin": "Entrar",
+  "authSubmitSignUp": "Crear cuenta",
+  "authSubmitRecovery": "Enviar instrucciones",
+  "authForgotPassword": "¿Olvidaste tu contraseña?",
+  "authGoToSignUp": "¿No tenés cuenta? Registrate",
+  "authGoToSignUpCandidate": "¿No tenés cuenta? Registrate como candidato",
+  "authGoToSignUpCompany": "¿No tenés cuenta? Registrá tu empresa",
+  "authGoToLogin": "¿Ya tenés cuenta? Iniciá sesión",
+  "authAccountTypeTitle": "¿Qué tipo de cuenta querés crear?",
+  "authAccountTypeSubtitle": "Elegí el recorrido; después vas a poder completar tu perfil.",
+  "authSignUpCandidateTitle": "Crear cuenta de candidato",
+  "authSignUpCandidateSubtitle": "Con tu cuenta vas a poder postularte y seguir el estado de cada postulación.",
+  "authSignUpCompanyTitle": "Crear cuenta de empresa",
+  "authSignUpCompanySubtitle": "Creá primero tu usuario. Los datos de la empresa y la verificación de CUIT vienen en el paso siguiente.",
+  "authSignUpConsentDataProcessing": "Acepto el tratamiento de mis datos personales para operar mi cuenta (Ley 25.326).",
+  "authSignUpConsentAge": "Declaro ser mayor de 18 años.",
+  "authSignUpConsentNote": "Los consentimientos opcionales (publicación del perfil, funciones de IA) se piden más adelante y se pueden revocar cuando quieras.",
+  "authSignUpEmailConfirmationSent": "Te enviamos un correo para confirmar tu cuenta. Abrí el enlace y volvé a iniciar sesión.",
+  "authRecoveryTitle": "Recuperar contraseña",
+  "authRecoverySubtitle": "Escribí tu correo y te mandamos las instrucciones para restablecer la contraseña.",
+  "authRecoverySent": "Si hay una cuenta con ese correo, te enviamos las instrucciones para restablecer la contraseña. Revisá tu bandeja de entrada y el correo no deseado.",
+  "@authRecoverySent": {
+    "description": "Respuesta neutra: nunca revela si la cuenta existe (SECURITY.md §2)"
+  },
+  "authRecoveryPendingStep": "El cambio de contraseña dentro de la app todavía no está disponible: falta definir el enlace profundo (T-013 del ROADMAP).",
+  "authBackToLogin": "Volver al inicio de sesión",
+  "authSignOut": "Cerrar sesión",
+  "authGoHome": "Ir a mi inicio",
+  "authGoToStart": "Volver al inicio",
+  "@authGoToStart": {
+    "description": "Salida de la pantalla de estado seguro cuando no hay sesión"
+  },
+  "authErrorEmailRequired": "Ingresá tu correo electrónico.",
+  "authErrorEmailInvalid": "Ese correo no parece válido. Revisalo y probá de nuevo.",
+  "authErrorPasswordRequired": "Ingresá tu contraseña.",
+  "authErrorPasswordTooShort": "La contraseña necesita al menos {min} caracteres.",
+  "@authErrorPasswordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "authErrorPasswordConfirmRequired": "Repetí la contraseña para confirmarla.",
+  "authErrorPasswordMismatch": "Las contraseñas no coinciden.",
+  "authErrorConsentRequired": "Necesitamos tu confirmación para poder crear la cuenta.",
+  "authFailureInvalidCredentials": "El correo o la contraseña no coinciden. Probá de nuevo.",
+  "authFailureEmailAlreadyRegistered": "Ya existe una cuenta con ese correo. Iniciá sesión o recuperá tu contraseña.",
+  "authFailureWeakPassword": "Esa contraseña es demasiado débil. Elegí una más larga.",
+  "authFailureEmailNotConfirmed": "Confirmá tu correo con el enlace que te enviamos y volvé a entrar.",
+  "authFailureRateLimited": "Hiciste muchos intentos seguidos. Esperá unos minutos y volvé a probar.",
+  "authFailureNetwork": "No pudimos conectarnos. Revisá tu conexión y reintentá.",
+  "authFailureUnknown": "No pudimos completar la acción. Reintentá en unos minutos.",
+  "authErrorTitle": "No pudimos continuar",
+  "@authErrorTitle": {
+    "description": "Encabezado del cartel de error de los formularios de autenticación"
+  },
+  "authSessionIssueClaimTitle": "No pudimos verificar tu tipo de cuenta",
+  "authSessionIssueClaimBody": "Tu sesión no trae un tipo de cuenta válido, así que por seguridad no te damos acceso. Cerrá sesión y volvé a entrar; si el problema sigue, escribinos.",
+  "authSessionIssueNotAllowedTitle": "No tenés permiso para esta sección",
+  "authSessionIssueNotAllowedBody": "Tu cuenta no habilita esta parte de TalentFlash. Volvé a tu inicio para seguir trabajando.",
+  "authSessionIssueNotFoundTitle": "No encontramos esa pantalla",
+  "authSessionIssueNotFoundBody": "El enlace puede estar viejo o mal escrito. Volvé al inicio y buscá desde ahí."
 }

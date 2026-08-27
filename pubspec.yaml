@@ -46,6 +46,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Cliente HTTP falso (package:http/testing.dart) para ejercitar el
+  # repositorio de auth contra respuestas reales de GoTrue sin ningún
+  # proyecto Supabase remoto. Ya venía como dependencia transitiva del SDK.
+  http: ^1.6.0
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

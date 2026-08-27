@@ -1,71 +1,78 @@
-import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talentflash_argentina/app.dart';
-import 'package:talentflash_argentina/core/config/env_config.dart';
 import 'package:talentflash_argentina/core/routing/app_entry_point.dart';
+import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
+import 'package:talentflash_argentina/features/authentication/presentation/login_screen.dart';
+import 'package:talentflash_argentina/features/authentication/presentation/sign_up_screen.dart';
+import 'package:talentflash_argentina/features/onboarding/presentation/welcome_screen.dart';
 
+import 'support/fake_auth_repository.dart';
+import 'support/pump_app.dart';
+
+/// Recorrido público de entrada: bienvenida → alta o login.
 void main() {
-  const testConfig = EnvConfig(
-    environment: AppEnvironment.dev,
-    supabaseUrl: 'http://127.0.0.1:54321',
-    supabaseAnonKey: 'test-anon-key',
-    sentryDsn: '',
-  );
+  Future<TalentFlashHarness> pumpWelcome(
+    WidgetTester tester, {
+    AppEntryPoint entryPoint = AppEntryPoint.chooser,
+  }) async {
+    final harness = await pumpTalentFlashApp(
+      tester,
+      authRepository: FakeAuthRepository(
+        initialStatus: const AuthStatusSignedOut(),
+      ),
+      entryPoint: entryPoint,
+    );
+    await tester.pumpAndSettle();
+    return harness;
+  }
 
-  Widget buildApp({AppEntryPoint entryPoint = AppEntryPoint.chooser}) =>
-      ProviderScope(
-        overrides: [
-          envConfigProvider.overrideWithValue(testConfig),
-          appEntryPointProvider.overrideWithValue(entryPoint),
-        ],
-        child: const TalentFlashApp(),
-      );
-
-  testWidgets('la bienvenida muestra los dos puntos de entrada en es-AR', (
+  testWidgets('la bienvenida muestra los dos recorridos en es-AR', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+    await pumpWelcome(tester);
 
+    expect(find.byType(WelcomeScreen), findsOneWidget);
     expect(find.text('Bienvenido a TalentFlash'), findsOneWidget);
     expect(find.text('Soy candidato'), findsOneWidget);
     expect(find.text('Soy empresa'), findsOneWidget);
+    expect(find.text('Ya tengo cuenta: iniciar sesión'), findsOneWidget);
   });
 
-  testWidgets('elegir candidato navega a su punto de entrada', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets('elegir candidato abre su registro', (tester) async {
+    await pumpWelcome(tester);
 
     await tester.tap(find.text('Soy candidato'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Inicio — Candidato'), findsOneWidget);
+    expect(find.byType(SignUpScreen), findsOneWidget);
+    expect(find.text('Crear cuenta de candidato'), findsWidgets);
   });
 
-  testWidgets('elegir empresa navega a su punto de entrada', (tester) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets('elegir empresa abre su registro', (tester) async {
+    await pumpWelcome(tester);
 
     await tester.tap(find.text('Soy empresa'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Inicio — Empresa'), findsOneWidget);
+    expect(find.byType(SignUpScreen), findsOneWidget);
+    expect(find.text('Crear cuenta de empresa'), findsWidgets);
   });
 
-  testWidgets('entrypoint candidato abre directamente su inicio', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp(entryPoint: AppEntryPoint.candidate));
+  testWidgets('quien ya tiene cuenta va al login', (tester) async {
+    await pumpWelcome(tester);
+
+    await tester.tap(find.text('Ya tengo cuenta: iniciar sesión'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Inicio — Candidato'), findsOneWidget);
+    expect(find.byType(LoginScreen), findsOneWidget);
   });
 
-  testWidgets('entrypoint empresa abre directamente su inicio', (tester) async {
-    await tester.pumpWidget(buildApp(entryPoint: AppEntryPoint.company));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Inicio — Empresa'), findsOneWidget);
+  testWidgets('los entrypoints por rol saltean la bienvenida', (tester) async {
+    await pumpWelcome(tester, entryPoint: AppEntryPoint.candidate);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(WelcomeScreen), findsNothing);
+    expect(
+      find.text('Entrá para seguir tus postulaciones y descubrir ofertas.'),
+      findsOneWidget,
+    );
   });
 }

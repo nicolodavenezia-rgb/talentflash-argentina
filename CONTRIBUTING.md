@@ -37,7 +37,12 @@ Una tarea está terminada solo si:
 
 ## Convenciones de código
 
-- Feature-first (`lib/features/<feature>/presentation|domain|data`).
-- Estado con Riverpod; navegación **solo** por nombre de ruta (`RouteNames`).
+- Feature-first (`lib/features/<feature>/presentation|domain|data|providers`).
+- La única clase que habla con el SDK de Supabase es el repositorio de la
+  feature; ningún widget usa `Supabase.instance` (ARCHITECTURE.md §2).
+- Estado con Riverpod; navegación **solo** por nombre de ruta
+  (`AppRoute.<ruta>.name`, catálogo en `lib/core/routing/app_routes.dart`).
+- Los guards de navegación son UX: esconden pantallas. La autorización real es
+  RLS y va con su test pgTAP.
 - Comentarios: qué restricción cumple el código, no qué hace la línea.
 - Commits: mensaje imperativo corto + cuerpo con el porqué si no es obvio.

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/gen/app_localizations.dart';
-import '../../../core/routing/app_router.dart';
+import '../../../core/routing/app_routes.dart';
 
-/// Pantalla de bienvenida con selección de rol (UX_FLOWS.md §1).
-/// Punto de entrada de los dos recorridos: candidato y empresa.
+/// Landing pública (`UX_FLOWS.md` §1.1 — ruta `/`).
+///
+/// Bifurca hacia el alta de candidato o de empresa, y ofrece el login a quien
+/// ya tiene cuenta. No muestra nada privado: es la pantalla de quien no tiene
+/// sesión.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
@@ -15,12 +18,12 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Semantics(
@@ -52,7 +55,8 @@ class WelcomeScreen extends StatelessWidget {
                     subtitle: l10n.roleCandidateSubtitle,
                     semanticsLabel: l10n.roleCandidateSemantics,
                     icon: Icons.person_outline,
-                    onPressed: () => context.goNamed(RouteNames.candidateHome),
+                    onPressed: () =>
+                        context.goNamed(AppRoute.signupCandidate.name),
                   ),
                   const SizedBox(height: 12),
                   _RoleButton(
@@ -60,7 +64,13 @@ class WelcomeScreen extends StatelessWidget {
                     subtitle: l10n.roleCompanySubtitle,
                     semanticsLabel: l10n.roleCompanySemantics,
                     icon: Icons.storefront_outlined,
-                    onPressed: () => context.goNamed(RouteNames.companyHome),
+                    onPressed: () =>
+                        context.goNamed(AppRoute.signupCompany.name),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => context.goNamed(AppRoute.login.name),
+                    child: Text(l10n.welcomeHaveAccount),
                   ),
                 ],
               ),

@@ -3,11 +3,23 @@
 -- SOLO para entorno local (`supabase db reset` lo aplica). Jamás en prod.
 -- Contraseña de todos los usuarios de prueba: password123
 -- Verificado localmente mediante `npm run db:reset`.
+--
+-- Bloque B: los usuarios sembrados tienen que poder INICIAR SESIÓN de verdad.
+-- Para eso hacen falta dos cosas que un insert ingenuo omite:
+--   1) los tokens de correo (`confirmation_token`, `recovery_token`,
+--      `email_change_token_new`, `email_change`) deben ser cadena vacía y no
+--      NULL: GoTrue los lee como texto no nulo y, si encuentra NULL, cualquier
+--      lookup del usuario falla con 500 "Database error querying schema";
+--   2) cada usuario necesita su fila en `auth.identities` con provider
+--      `email`, igual que la que crea un alta real.
+-- Sin esto, login y recuperación fallan solo para los usuarios del seed.
 -- ===========================================================================
 
 -- --- 20 candidatos (auth.users; el trigger handle_new_user crea profiles) ---
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+                        confirmation_token, recovery_token,
+                        email_change_token_new, email_change,
                         created_at, updated_at)
 select
   '00000000-0000-0000-0000-000000000000',
@@ -16,12 +28,16 @@ select
   'candidato' || i || '@dev.talentflash.test',
   crypt('password123', gen_salt('bf')),
   now(), '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"role":"candidate"}'::jsonb, now(), now()
+  '{"role":"candidate"}'::jsonb,
+  '', '', '', '',
+  now(), now()
 from generate_series(1, 20) as i;
 
 -- --- 5 usuarios de empresa ---
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+                        confirmation_token, recovery_token,
+                        email_change_token_new, email_change,
                         created_at, updated_at)
 select
   '00000000-0000-0000-0000-000000000000',
@@ -30,8 +46,26 @@ select
   'empresa' || i || '@dev.talentflash.test',
   crypt('password123', gen_salt('bf')),
   now(), '{"provider":"email","providers":["email"]}'::jsonb,
-  '{"role":"company"}'::jsonb, now(), now()
+  '{"role":"company"}'::jsonb,
+  '', '', '', '',
+  now(), now()
 from generate_series(1, 5) as i;
+
+-- --- Identidad `email` de cada usuario sembrado (la crea un alta real) ---
+insert into auth.identities (provider_id, user_id, identity_data, provider,
+                             last_sign_in_at, created_at, updated_at)
+select
+  u.id::text, u.id,
+  jsonb_build_object(
+    'sub', u.id::text,
+    'email', u.email,
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  'email', now(), now(), now()
+from auth.users u
+where u.email like '%@dev.talentflash.test'
+on conflict (provider_id, provider) do nothing;
 
 -- --- Perfiles de candidato (15 publicados, 5 en borrador) ---
 insert into candidate_profiles (profile_id, headline, bio, provincia_id,

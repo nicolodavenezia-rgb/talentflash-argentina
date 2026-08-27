@@ -27,12 +27,19 @@ Tres *shells* con navegación propia (candidato, empresa, admin) más rutas púb
 
 | Ruta | Pantalla | Notas |
 |---|---|---|
-| `/` | Landing / splash | En Web: landing con propuesta de valor; en móvil: splash → redirección según sesión. |
-| `/auth/login` | Login | Email+contraseña; enlaces a registro y recuperación. |
+| `/inicio` | Carga de sesión | Splash mientras la sesión se restaura: evita mostrar contenido privado —o el login de quien sí tiene sesión— en el primer frame. Recuerda el destino pretendido. |
+| `/` | Landing / splash | En Web: landing con propuesta de valor; en móvil: bifurca a los dos registros y al login. |
+| `/auth/login` | Login | Email+contraseña; enlaces a registro y recuperación. Acepta `?rol=candidato\|empresa` como **pista de copy** cuando el binario es el de un rol; no otorga permisos. |
 | `/auth/registro` | Selección de tipo de cuenta | Bifurca a onboarding C o E (§2, §3). |
-| `/auth/recuperar` | Recuperación de cuenta | Email con enlace mágico de Supabase Auth. |
+| `/auth/registro/candidato` | Alta de candidato | Pide `role: candidate` en metadata; el servidor sanea el valor. |
+| `/auth/registro/empresa` | Alta de usuario de empresa | Pide `role: company`. **No** crea `company_profiles`: la empresa nace con `create_company_with_owner(...)` en el onboarding (§3.1). |
+| `/auth/recuperar` | Recuperación de cuenta | Solicita el correo de restablecimiento. Respuesta idéntica exista o no la cuenta. |
+| `/sesion-invalida` | Estado seguro | Sesión con rol ilegible (`?motivo=claim`), sección no permitida (`?motivo=sin-permiso`) o ruta inexistente (`?motivo=no-encontrada`). |
 | `/ofertas/:id` | Detalle de oferta (público, solo Web) | Deep link compartible / SEO; CTA "Postularme" exige sesión. |
 | `/legal/terminos`, `/legal/privacidad` | Documentos legales | Accesibles siempre, también sin sesión. |
+
+Estado de implementación: `/inicio`, `/`, `/auth/*` y `/sesion-invalida` existen
+desde el Bloque B. `/ofertas/:id` y `/legal/*` llegan con sus bloques.
 
 ### 1.2 Shell candidato (`/candidato/...`) — bottom navigation de 5 ítems
 
@@ -64,11 +71,23 @@ Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/of
 
 ### 1.5 Guards de navegación (orden de evaluación)
 
-1. `authGuard`: sin sesión → `/auth/login` (conserva ruta destino para redirigir después).
-2. `roleGuard`: cada shell exige el rol correcto; un candidato que abre `/empresa/...` vuelve a su shell.
-3. `onboardingGuard`: sesión sin onboarding completo → retoma el paso pendiente (§2/§3).
-4. `verifiedCompanyGuard`: acciones de empresa sensibles (publicar oferta, invitar, chatear) exigen `empresa.estado_verificacion = verificada` (§3.2).
-5. `consentGuard`: funciones que requieren un consentimiento no otorgado muestran la pantalla de consentimiento contextual en lugar de la función (§2.3).
+0. `sessionGuard` **(implementado)**: mientras la sesión no se resolvió, todo va a `/inicio`; nunca se dibuja una pantalla privada ni el login de alguien que sí tiene sesión.
+1. `authGuard` **(implementado)**: sin sesión → `/auth/login` (conserva ruta destino para redirigir después; el destino se sanea y solo admite rutas internas).
+2. `roleGuard` **(implementado)**: cada shell exige el rol correcto; un candidato que abre `/empresa/...` vuelve a su shell. Dos matices: intentar entrar al panel admin sin serlo se responde con una negativa explícita en `/sesion-invalida` en vez de un rebote silencioso, y una cuenta `admin` nunca se degrada al shell de candidato o de empresa (va a `/admin`, aunque el binario sea el de un rol). Con sesión, `/auth/*` y `/` redirigen al shell propio.
+3. `claimGuard` **(implementado)**: sesión cuyo claim de rol falta o no es válido → `/sesion-invalida?motivo=claim`. Estado seguro: no se asume ningún rol y la única salida ofrecida es cerrar sesión.
+4. `onboardingGuard`: sesión sin onboarding completo → retoma el paso pendiente (§2/§3).
+5. `verifiedCompanyGuard`: acciones de empresa sensibles (publicar oferta, invitar, chatear) exigen `empresa.estado_verificacion = verificada` (§3.2).
+6. `consentGuard`: funciones que requieren un consentimiento no otorgado muestran la pantalla de consentimiento contextual en lugar de la función (§2.3).
+
+> **Los guards son UX, no seguridad.** Deciden qué pantalla se ve; un cliente
+> manipulado puede saltearlos. Quien realmente impide leer o escribir datos
+> ajenos es RLS en Postgres (`SECURITY.md` §3), con su suite pgTAP.
+
+**Cierre de sesión.** Al salir, la ruta actual pasa a ser privada y aplica la
+regla 1: se va al login del binario (o a la bienvenida si no había destino),
+conservando el destino por si la persona vuelve a entrar con la misma cuenta. Si
+entra con otra cuenta cuyo rol no habilita ese destino, se descarta y va a su
+propio shell.
 
 ---
 
@@ -78,7 +97,7 @@ Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/of
 
 ### 2.1 Pasos
 
-1. **Registro** (`/auth/registro` → tipo "Busco trabajo"): email + contraseña o proveedor OAuth (Google/Apple). Verificación de email obligatoria antes de publicar el perfil.
+1. **Registro** (`/auth/registro` → tipo "Busco trabajo"): email + contraseña o proveedor OAuth (Google/Apple). Verificación de email obligatoria antes de publicar el perfil. *Implementado el alta con correo y contraseña (`/auth/registro/candidato`): correo normalizado, contraseña de 10 caracteres como mínimo con confirmación, y aceptación explícita —sin premarcar— del tratamiento de datos y de la declaración de mayoría de edad, obligatorias para continuar. OAuth queda para T-012 y no se muestra ningún botón que todavía no funcione.*
 2. **Declaración de mayoría de edad:** fecha de nacimiento; menores de 18 → bloqueo con mensaje claro y sin persistir datos adicionales (SPEC §9).
 3. **Consentimientos granulares** (§2.3) — pantalla propia, antes de cargar cualquier dato de perfil.
 4. **Datos básicos:** nombre, provincia/localidad/barrio (selector en cascada, mismo dataset que filtros §7), sector de interés (inicial: gastronomía y hotelería), disponibilidad y jornada preferida.
@@ -99,9 +118,11 @@ Pantalla con **tres toggles independientes, ninguno premarcado**, cada uno con t
 | ID | Consentimiento | Qué habilita | Si se rechaza |
 |---|---|---|---|
 | **A** | Tratamiento de datos personales | Uso de la cuenta (base mínima para operar) | No se puede crear la cuenta; se explica por qué. |
+| **A′** | Declaración de mayoría de edad (`PRIVACY.md` §3) | Requisito de alta: sin la declaración no hay cuenta | No se puede crear la cuenta. |
 | **B** | Publicación de video y perfil ante empresas | Aparecer en feed/búsqueda de empresas; video visible | La cuenta funciona en "modo solo postulación": el candidato ve y se postula a ofertas, pero no es descubrible. |
 | **C** | Funciones de IA (guion, teleprompter, mejoras de texto, subtítulos, coincidencias explicables) | Todas las asistencias IA del lado candidato | Todo funciona en modo manual; los puntos de entrada IA muestran "activá el consentimiento de IA" (consentGuard). |
 
+- **Estado (Bloque B):** el alta ya exige A y A′ como casillas obligatorias, sin premarcar y con el estado anunciado por el lector de pantalla. El **registro versionado** de cada aceptación en la tabla `consents` (qué texto, cuándo, desde dónde) es T-018 del Bloque C: al alta le falta la sesión autenticada que ese insert necesita cuando el proyecto exige confirmar el correo, así que se persiste en el primer paso del onboarding. Ninguna cuenta completa el onboarding sin su consentimiento registrado.
 - Cada consentimiento es **revocable** en `/candidato/ajustes/privacidad`; la revocación de B despublica perfil y video de inmediato; la de C desactiva las funciones IA sin borrar contenido ya creado por el usuario.
 - Se persiste fecha, versión del texto y canal de cada otorgamiento/revocación (tabla de consentimientos en `DATA_MODEL.md`).
 - Nunca se entrena ningún modelo con videos/audio/perfiles: eso requeriría un consentimiento **adicional y específico** que el MVP no solicita (SPEC §6).
@@ -112,7 +133,7 @@ Pantalla con **tres toggles independientes, ninguno premarcado**, cada uno con t
 
 ### 3.1 Pasos
 
-1. **Registro** (tipo "Busco personal"): email + contraseña; verificación de email.
+1. **Registro** (tipo "Busco personal"): email + contraseña; verificación de email. *Implementado en `/auth/registro/empresa`. Crea únicamente el usuario con rol `company`: la fila de `company_profiles` y su membresía `owner` nacen juntas en el paso 3, vía `create_company_with_owner(...)`, porque el cliente no tiene permiso de `INSERT` directo (`SECURITY.md` §3).*
 2. **Consentimiento A** (tratamiento de datos del representante) — mismo patrón que §2.3.
 3. **Datos de la empresa:** razón social, nombre de fantasía, CUIT, sector, tamaño, provincia/localidad, sitio web opcional.
 4. **Datos del solicitante:** nombre, cargo, relación con la empresa.

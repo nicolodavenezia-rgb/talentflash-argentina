@@ -10,9 +10,15 @@ hotelería, CABA + GBA). App Flutter multiplataforma + Supabase.
 
 ## Estado
 
-**Bloque A — Fundaciones** (ver [docs/ROADMAP.md](docs/ROADMAP.md)). No hay
-features de producto todavía: bienvenida + puntos de entrada candidato/empresa,
-esquema SQL completo con RLS, tooling y CI.
+**Bloque A — Fundaciones** completo y **Bloque B — Auth, primera parte** (ver
+[docs/ROADMAP.md](docs/ROADMAP.md)): esquema SQL completo con RLS, tooling, CI y
+autenticación local con correo y contraseña — alta de candidato y de empresa,
+login, sesión persistente, cierre de sesión, solicitud de recuperación y
+navegación protegida por rol.
+
+Todavía **no** están hechos (y no se simulan en la UI): Google y Apple (T-012),
+la pantalla in-app de cambio de contraseña, que depende del enlace profundo
+(T-013), MFA, CAPTCHA y cualquier proyecto remoto.
 
 ## Requisitos
 
@@ -57,6 +63,45 @@ flutter run -t lib/main_empresa.dart --dart-define-from-file=env/dev.json
   todavía. Ningún archivo de `env/` contiene secretos: solo URLs y claves
   públicas por diseño. Overrides personales: `env/*.local.json` (gitignored).
 
+## Probar la autenticación en local
+
+Levantá el stack (`npm run db:start` y, si hace falta, `npm run db:reset`) y
+corré la app con el flavor dev. Todo ocurre contra `http://127.0.0.1:54321`; no
+hay ningún proyecto remoto.
+
+**Usuarios del seed** (contraseña única: `password123`):
+
+| Usuario | Correo | Rol |
+|---|---|---|
+| Candidatos 1–20 | `candidato1@dev.talentflash.test` … `candidato20@…` | `candidate` |
+| Empresas 1–5 | `empresa1@dev.talentflash.test` … `empresa5@…` | `company` |
+
+Los candidatos 1–15 tienen el perfil publicado y las 5 empresas están
+verificadas. No hay ninguna cuenta `admin` en el seed: el rol de administración
+se provisiona solo desde un contexto con `service_role` (ver `docs/SECURITY.md`
+§3); al hacerlo, la migración `0019` propaga el rol al claim del JWT.
+
+**Correos locales (verificación de cuenta y recuperación de contraseña):** el
+stack local no envía nada afuera. Todos los correos quedan en el buzón de
+pruebas — **Mailpit**, en `http://127.0.0.1:54324` (el contenedor conserva el
+nombre histórico `supabase_inbucket_*`). Ahí se ve el mail "Reset your password"
+que dispara `/auth/recuperar`.
+
+Recordá que `supabase/config.toml` limita a **2 correos por hora**
+(`auth.rate_limit.email_sent`): al probar recuperación varias veces seguidas la
+API responde 429 y la app muestra el mensaje de "muchos intentos".
+
+En dev, `auth.email.enable_confirmations` está en `false`: el alta deja sesión
+iniciada al toque. Con confirmaciones activadas (staging/prod) la misma pantalla
+muestra el aviso de "revisá tu correo" en vez de navegar.
+
+**Qué queda pendiente del flujo de recuperación:** la app implementa la primera
+etapa (pedir el correo de restablecimiento). La segunda —cambiar la contraseña
+dentro de la app— necesita el enlace profundo de T-013, que todavía no está
+definido: no hay esquema de deep link ni URL de redirección en la allowlist de
+`config.toml`. Por eso no existe una pantalla de "nueva contraseña": sería un
+formulario que no podría funcionar.
+
 ## Verificación
 
 ```powershell
@@ -80,7 +125,7 @@ lib/
 │                   # notifications, moderation, authentication
 └── shared/         # widgets/utilidades compartidas
 supabase/
-├── migrations/     # 0001–0018 — esquema completo + RLS deny-by-default
+├── migrations/     # 0001–0019 — esquema completo + RLS deny-by-default
 ├── tests/database/ # pgTAP (RLS)
 ├── seed/           # seed de desarrollo (T-008)
 └── functions/      # Edge Functions (Bloques B+)
@@ -100,6 +145,7 @@ de publicar es costoso).
 1. Ningún secreto en el repo ni en el cliente (SECURITY.md §4; gitleaks en CI).
 2. Ningún cambio de esquema sin migración versionada (T-005).
 3. RLS es la única capa de autorización; cada policy con test pgTAP (T-007).
+   Los guards de navegación son UX: esconden pantallas, no protegen datos.
 4. Cada pantalla cumple WCAG AA antes de cerrar su bloque — checklist en
    [CONTRIBUTING.md](CONTRIBUTING.md) y UX_FLOWS.md §20 (T-086).
 5. Ninguna dependencia SaaS nueva sin registro en docs/COST_DECISIONS.md.

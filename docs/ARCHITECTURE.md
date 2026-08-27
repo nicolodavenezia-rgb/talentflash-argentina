@@ -97,10 +97,36 @@ Convenciones por feature (obligatorias, se validan en code review):
 
 - **Riverpod**: cada feature expone sus providers en `features/<x>/providers/`. Estado asíncrono con `AsyncNotifier`/`AsyncNotifierProvider`; nada de `StateProvider` para lógica de negocio.
 - **Repositorios**: la única clase que toca el SDK de Supabase es `<Feature>Repository` (`features/<x>/data/`). Los notifiers dependen del repositorio por interfaz abstracta — esto es también la palanca de salida de Supabase (§11).
-- **GoRouter** con dos guards encadenados en `core/routing/`:
-  - `authGuard`: sin sesión → `/login` (con `redirect` de vuelta post-login).
-  - `roleGuard`: lee el claim `role` (candidato/empresa/admin) del JWT; una empresa no puede entrar a rutas de candidato y viceversa. El guard es UX, no seguridad: la seguridad real es RLS.
+- **GoRouter** con una única política de redirección en `core/routing/`, implementada como función pura `resolveAuthRedirect(status, entryPoint, location)` (`auth_redirect.dart`) para poder probar cada regla sin widgets:
+  - sesión sin resolver → `/inicio` (pantalla de carga), recordando el destino;
+  - sin sesión → `/auth/login` con `destino` de vuelta post-login (el `destino` se sanea: solo rutas internas, nunca una URL externa);
+  - con sesión, el rol del claim decide el shell: una empresa no entra a rutas de candidato y viceversa (vuelve al propio, `UX_FLOWS.md` §1.5), un intento contra `/admin` sin serlo responde con negativa explícita, y un `admin` nunca se degrada a otro shell;
+  - claim ausente o inválido → `/sesion-invalida`, estado seguro sin rol asumido.
+  El guard es UX, no seguridad: la seguridad real es RLS.
+- El catálogo de rutas vive en `core/routing/app_routes.dart` (`AppRoute`: nombre, path y rol requerido). Se navega siempre por nombre.
 - Cada feature tiene tests de notifier (con repositorio mockeado) y golden tests de sus pantallas principales.
+
+#### Capa de autenticación (Bloque B)
+
+```
+lib/features/authentication/
+├── domain/       # BusinessRole, AuthenticatedUser, AuthStatus (sealed),
+│                 # AuthFailure (errores tipados), AuthValidation (reglas puras)
+├── data/         # AuthRepository (interfaz) + SupabaseAuthRepository (GoTrue)
+├── providers/    # authStatusProvider (Notifier sobre el stream del repo),
+│                 # currentAuthUserProvider, businessRoleProvider,
+│                 # authControllerProvider (AsyncNotifier: signUp/signIn/
+│                 # signOut/reset, con loading y bloqueo de doble submit)
+└── presentation/ # login, registro (candidato/empresa), recuperación,
+                  # carga de sesión, estado seguro, widgets accesibles
+```
+
+Reglas que sostiene esta capa (verificadas por `test/architecture/`):
+
+- el único código que importa `package:supabase_flutter` es `bootstrap.dart`, el provider del cliente, el repositorio y el mapeo de errores; ninguna pantalla toca `Supabase.instance`;
+- `SupabaseAuthRepository` recibe el `GoTrueClient` por constructor, así que los tests lo ejercitan contra un cliente HTTP falso con las respuestas reales de GoTrue, sin proyecto remoto;
+- los errores del SDK se traducen a `AuthFailure` (código enum) y la UI los muestra desde el ARB: el mensaje interno de Supabase nunca llega a la pantalla;
+- el rol de negocio se lee **solo** de `app_metadata.role` (§3.1).
 
 ---
 
@@ -111,8 +137,9 @@ Plan Pro: USD 25/mes por organización — incluye 8 GB de DB, 100 GB storage, 2
 ### 3.1 Auth
 
 - **Métodos**: email + contraseña, y teléfono con OTP por SMS (relevante para candidatos gastronómicos que no usan email a diario). Recuperación de contraseña por email con deep link a la app.
-- **Roles**: claim `role` en `app_metadata` (seteado por trigger al registrarse según flujo de origen; nunca editable por el cliente). Valores: `candidate`, `company`, `admin`.
-- **Sesiones**: refresh tokens del SDK; logout global desde settings ("cerrar sesión en todos los dispositivos").
+- **Roles**: claim `role` en `app_metadata` (seteado por trigger al registrarse según flujo de origen; nunca editable por el cliente). Valores: `candidate`, `company`, `admin`. El cliente lo trata como **fuente única** del rol y aplica *fail-closed*: cualquier valor que no sea exactamente uno de los tres (ausente, con otra caja, con espacios, de otro tipo) se trata como sesión inconsistente y no habilita nada — nunca se asume `admin` ni se degrada a `candidate`.
+- **Consistencia claim ↔ RLS** (migración `0019`): el claim del JWT y `profiles.role` se mantienen sincronizados por trigger. Al provisionar un `admin` con `service_role` —o al cambiar un rol desde el panel de moderación— basta con actualizar `profiles.role`: el claim se propaga en la misma transacción. Sin esto, RLS y la navegación podrían discrepar (acceso de admin en la base con shell de candidato en la app, o al revés).
+- **Sesiones**: refresh tokens del SDK; persistencia y almacenamiento seguro los maneja `supabase_flutter` (no se guardan tokens a mano ni se duplica el storage). Logout global desde settings ("cerrar sesión en todos los dispositivos") queda para el bloque de ajustes.
 - Verificación de empresa: CUIT validado vía Edge Function `verify-cuit` (§3.4) antes de habilitar publicación de avisos.
 
 ### 3.2 RLS como ÚNICA capa de autorización
