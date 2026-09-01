@@ -57,13 +57,13 @@ Convenciones: cada tarea es chica (≤2–3 días), tiene **criterio verificable
 
 ### Bloque C — Onboarding + consentimientos
 
-| ID | Tarea | Criterio verificable | Dep. |
-|---|---|---|---|
-| T-016 | Selector de tipo de cuenta + wizard candidato (datos mínimos, zona, rubro, disponibilidad) | Al terminar existe perfil mínimo válido en DB | T-015 |
-| T-017 | Wizard empresa (razón social, fantasía, rubro, zona) | Al terminar existe empresa en estado `no_verificada` | T-015 |
-| T-018 | Consentimientos versionados: TyC, privacidad, uso de video e IA — tabla `consents` (user, doc, versión, timestamp) | Cada aceptación queda registrada; al subir versión de un doc, la app re-solicita aceptación | T-016 |
-| T-019 | Preferencias de notificaciones (opt-in explícito por canal) | Fila en `notification_prefs` respetada por el envío (test en T-064) | T-016 |
-| T-020 | Copy legal es-AR enlazado desde onboarding y ajustes (ver PRIVACY.md, Ley 25.326) | Links accesibles y versionados junto con `consents` | T-018 |
+| ID | Tarea | Criterio verificable | Dep. | Estado |
+|---|---|---|---|---|
+| T-016 | Selector de tipo de cuenta + wizard candidato (datos mínimos, zona, rubro, disponibilidad) | Al terminar existe perfil mínimo válido en DB | T-015 | **Hecho en local.** Wizard de 7 pasos con reanudación (el avance se persiste por paso vía `save_candidate_onboarding`); mayoría de 18 verificada por fecha calendario en cliente **y** servidor (menor detectada = bloqueo sin persistir datos); cascada provincia→localidad→barrio y sector desde los catálogos de la base; finalización server-side con `complete_candidate_onboarding` (el cliente no puede marcar `onboarding_completed`, trigger de 0022). El perfil profesional completo (experiencia, habilidades) es Bloque D; video/audio/texto es Bloque K — sin botones falsos. |
+| T-017 | Wizard empresa (razón social, fantasía, rubro, zona) | Al terminar existe empresa en estado `no_verificada` | T-015 | **Hecho en local.** Wizard de 6 pasos; CUIT normalizado a `XX-XXXXXXXX-X` y validado por formato (el dígito verificador es T-027); empresa + membresía `owner` + cargo/relación del solicitante nacen atómicos e idempotentes en `complete_company_onboarding`, siempre en `verification_status = 'pending'` (aprobar es exclusivo del circuito admin, T-028). Los datos del wizard viajan en memoria hasta el paso final: jamás queda una empresa a medio crear. |
+| T-018 | Consentimientos versionados: TyC, privacidad, uso de video e IA — tabla `consents` (user, doc, versión, timestamp) | Cada aceptación queda registrada; al subir versión de un doc, la app re-solicita aceptación | T-016 | **Hecho.** Ledger append-only real (sin UPDATE/DELETE; comando idéntico repetido no duplica, trigger de 0021); versión vigente por tipo en `consent_versions` (única fuente de verdad UI+DB, con FK al documento legal); aceptación de TyC agregada como `terms_acceptance`; subir la versión de un obligatorio fuerza el reconsentimiento (guard 6) y la del consentimiento de publicación despublica los perfiles (fail-closed). `ai_training` NO se solicita: sin versión vigente, la base rechaza otorgarlo. |
+| T-019 | Preferencias de notificaciones (opt-in explícito por canal) | Fila en `notification_prefs` respetada por el envío (test en T-064) | T-016 | **Hecho.** Defaults corregidos por migración 0020: push y correo arrancan APAGADOS (el viejo "sin fila = todo habilitado" contradecía el opt-in); guardado por upsert idempotente bajo RLS; los avisos de cuenta y seguridad (`system`) no pueden desactivarse in-app ni por correo (trigger de 0021). El envío real (FCM/APNs, T-063/T-064) queda para el Bloque M y leerá estas filas tal cual. |
+| T-020 | Copy legal es-AR enlazado desde onboarding y ajustes (ver PRIVACY.md, Ley 25.326) | Links accesibles y versionados junto con `consents` | T-018 | **Hecho (texto en borrador).** `/legal/terminos` y `/legal/privacidad` públicos (también `anon`), versionados en `legal_documents` y enlazados desde registro, wizards y reconsentimiento. Los textos declaran honestamente que son borradores sin revisión de abogado; la versión que muestra la pantalla es la misma que se registra en `consents`. |
 
 ### Bloque D — Perfiles
 
@@ -218,7 +218,7 @@ Los costos "mensual: cero (dentro de Supabase Pro)" refieren a la base de **USD 
 ### F-02 Onboarding + consentimientos
 - **Objetivo:** que candidato y empresa lleguen a "perfil útil" en <3 minutos, con base legal registrada.
 - **Dependencias:** F-01.
-- **Acceptance criteria:** ☐ wizard candidato y empresa completos ☐ cada consentimiento queda versionado con timestamp ☐ cambio de versión de un doc re-solicita aceptación ☐ opt-in de notificaciones explícito.
+- **Acceptance criteria:** ☑ wizard candidato y empresa completos (en local; el perfil profesional extendido es F-03 y el video F-10) ☑ cada consentimiento queda versionado con timestamp ☑ cambio de versión de un doc re-solicita aceptación ☑ opt-in de notificaciones explícito.
 - **Tests:** widget (wizards), integration (persistencia), unit (versionado de consents), RLS (consents solo del dueño).
 - **Riesgos:** fricción de onboarding mata activación (medir drop-off por paso, PRODUCT.md §métricas).
 - **Costos:** inicial cero · mensual cero · variable cero.

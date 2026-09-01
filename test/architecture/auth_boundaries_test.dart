@@ -60,6 +60,12 @@ void main() {
       'lib/core/networking/supabase_client_provider.dart',
       'lib/features/authentication/data/supabase_auth_repository.dart',
       'lib/features/authentication/domain/auth_failure.dart',
+      'lib/features/consents/data/supabase_consents_repository.dart',
+      'lib/features/legal/data/supabase_legal_repository.dart',
+      'lib/features/notifications/data/supabase_notification_prefs_repository.dart',
+      'lib/features/onboarding/data/supabase_catalog_repository.dart',
+      'lib/features/onboarding/data/supabase_onboarding_repository.dart',
+      'lib/shared/models/data_failure.dart',
     ]);
   });
 
@@ -87,6 +93,27 @@ void main() {
       offenders,
       isEmpty,
       reason: 'SECURITY.md §4: cero secretos en el cliente.',
+    );
+  });
+
+  test('ai_training no existe en el código de la app (SPEC §6)', () {
+    // El MVP no solicita el consentimiento de entrenamiento: no debe existir
+    // ninguna superficie capaz de otorgarlo. Los comentarios que explican la
+    // regla no cuentan; el dato sí.
+    String withoutComments(String source) => source
+        .split('\n')
+        .where((line) => !line.trimLeft().startsWith('//'))
+        .join('\n');
+
+    final offenders = <String>[
+      for (final file in dartFiles(''))
+        if (withoutComments(file.readAsStringSync()).contains('ai_training'))
+          file.path,
+    ];
+    expect(
+      offenders,
+      isEmpty,
+      reason: 'ai_training jamás se solicita ni aparece como dato en la app.',
     );
   });
 

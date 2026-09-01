@@ -61,6 +61,20 @@ Reglas de implementación:
 - **Prueba de consentimiento:** guardamos qué texto vio el usuario, cuándo, desde dónde y en qué idioma. Ante un requerimiento de la AAIP tenemos que poder demostrar cada consentimiento.
 - **Revocación:** desde la app, en ≤ 3 taps, sin fricción ni "retención". La revocación inserta una fila nueva (no borra la del otorgamiento).
 
+**Estado de implementación (Bloque C, T-018).** El ledger `consents` está
+operativo: append-only real (sin UPDATE/DELETE ni para el propio usuario),
+con versión, timestamp y canal por evento, versión vigente por tipo en
+`consent_versions` (única fuente de verdad, atada por FK al documento legal
+publicado) y reconsentimiento forzado en la app cuando un texto obligatorio
+sube de versión. Las aceptaciones se registran recién con la sesión iniciada,
+en el primer paso del onboarding — nunca desde `user_metadata` ni desde el
+formulario de alta sin sesión, porque eso no serviría como prueba. A los
+tipos de esta tabla se suma `terms_acceptance` (aceptación de TyC, exigida por
+T-018): es aceptación contractual y no un consentimiento del art. 5, pero
+comparte el mismo registro auditable. `ai_training` no se solicita en el MVP y
+la base rechaza otorgarlo. Los textos publicados en `/legal/*` son borradores
+en es-AR claro y lo declaran: la revisión de abogado del §13 sigue pendiente.
+
 Esquema ilustrativo (detalle final en `DATA_MODEL.md`):
 
 ```sql

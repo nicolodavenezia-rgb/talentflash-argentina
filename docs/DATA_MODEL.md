@@ -42,7 +42,7 @@ create type push_platform as enum ('ios','android','web');
 create type report_target as enum ('profile','company','job','video','message');
 create type report_status as enum ('open','in_review','resolved','dismissed');
 create type moderation_action_type as enum ('warning','content_removed','account_suspended','account_banned','account_reinstated');
-create type consent_type as enum ('data_processing','video_profile_publication','ai_features','ai_training','age_declaration');  -- 1:1 con PRIVACY.md §4 (mapeo a toggles A/B/C en §2.7)
+create type consent_type as enum ('data_processing','video_profile_publication','ai_features','ai_training','age_declaration','terms_acceptance');  -- PRIVACY.md §4 + TyC (T-018); mapeo vigente en §2.7. 'terms_acceptance' agregado en 0020.
 create type plan_audience as enum ('candidate','company');
 create type billing_period as enum ('monthly','quarterly','yearly');
 create type subscription_status as enum ('trialing','active','past_due','paused','canceled','expired');
@@ -94,7 +94,12 @@ create table candidate_profiles (
   work_history   jsonb not null default '[]',  -- [{empresa, puesto, desde, hasta, descripcion}]
   cv_url         text,                         -- storage path (opcional, el video es lo central)
   video_id       uuid references videos(id),   -- video de presentación publicado
-  is_published   boolean not null default false, -- visible para empresas verificadas
+  sector_id      uuid references sectors(id),  -- sector de interés (T-016, 0020): UNO por candidato,
+                                               -- igual que jobs.sector_id; multi-sector = migración futura
+  is_published   boolean not null default false, -- DERIVADA server-side (0022): onboarding completo + datos
+                                               -- mínimos + correo confirmado + consentimiento B vigente.
+                                               -- El cliente no puede escribirla (trigger); la recalculan
+                                               -- los triggers de consents/candidate_profiles/profiles.
   published_at   timestamptz,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
@@ -110,8 +115,9 @@ create table company_profiles (
   cuit           text not null unique
                  check (cuit ~ '^[0-9]{2}-?[0-9]{8}-?[0-9]$'),
   verification_status verification_status not null default 'pending',
-  industry       text,
-  size_range     text,                         -- '1-10','11-50',...
+  industry       text,                         -- legacy texto libre; la fuente pasa a ser sector_id (0020)
+  sector_id      uuid references sectors(id),  -- rubro normalizado (T-017, 0020)
+  size_range     text,                         -- '1-10','11-50','51-200','201-500','501+' (valida la RPC)
   description    text,
   logo_url       text,
   website        text,
@@ -128,6 +134,8 @@ create table company_members (
   company_id   uuid not null references company_profiles(id) on delete cascade,
   profile_id   uuid not null references profiles(id) on delete cascade,
   member_role  company_member_role not null default 'recruiter',
+  position_title text,                         -- cargo del solicitante (T-017, 0020)
+  relationship text,                           -- relación con la empresa: 'owner'|'partner'|'manager'|'hr'|'other' (valida la RPC)
   invited_by   uuid references profiles(id),
   created_at   timestamptz not null default now(),
   unique (company_id, profile_id)
@@ -153,6 +161,12 @@ El trigger de alta acepta desde `raw_user_meta_data.role` únicamente
 el resultado a `raw_app_meta_data.role`, que es el claim confiable. Un cliente
 nunca puede darse `admin`: ese rol se provisiona solo desde un contexto con
 `service_role` y queda protegido por trigger ante `UPDATE` autenticados.
+
+`profiles.onboarding_completed` es columna protegida desde 0022: solo la
+marcan las RPC de finalización (`complete_candidate_onboarding`,
+`complete_company_onboarding`), que validan datos mínimos, mayoría de edad y
+consentimientos obligatorios vigentes y fallan cerradas. Un `UPDATE` directo
+del cliente recibe 42501.
 
 > **Decisión de roles vigente:** rol único en `profiles.role`; no existe tabla
 > `user_roles`. Un eventual modelo multi-rol requiere una decisión y migración
@@ -358,14 +372,19 @@ create table push_devices (
   created_at   timestamptz not null default now()
 );
 
--- Preferencias por categoría (UX_FLOWS.md §14, ARCHITECTURE.md §6, ROADMAP.md T-019).
--- Sin fila = defaults (todo habilitado); el backend consulta antes de despachar.
+-- Preferencias por categoría (UX_FLOWS.md §14, ROADMAP.md T-019).
+-- OPT-IN EXPLÍCITO (corregido en 0020): sin fila —o al crearla sin decidir—
+-- push y correo quedan APAGADOS; solo lo in-app operativo está activo. El
+-- despacho (T-064) lee estas filas tal cual, sin reinterpretar; para una
+-- categoría sin fila aplica exactamente estos defaults. Los avisos de cuenta
+-- y seguridad ('system') no admiten in_app_enabled/email_enabled en false
+-- para clientes (trigger de 0021); su push sí es decisión del usuario.
 create table notification_prefs (
   id             uuid primary key default gen_random_uuid(),
   profile_id     uuid not null references profiles(id) on delete cascade,
   category       notification_type not null,
-  push_enabled   boolean not null default true,
-  email_enabled  boolean not null default true,
+  push_enabled   boolean not null default false,
+  email_enabled  boolean not null default false,
   in_app_enabled boolean not null default true,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
@@ -426,12 +445,16 @@ create table admin_audit_log (
 
 ### 2.7 Consentimientos
 
-Tipos 1:1 con `PRIVACY.md` §4. Mapeo con el onboarding de `UX_FLOWS.md` §2.3:
+Mapeo vigente con `UX_FLOWS.md` §2.3 (esta versión CORRIGE la de antes de
+Bloque C, que etiquetaba los toggles distinto e incluía `ai_training` como
+toggle C — esa era la inconsistencia documental entre ROADMAP/UX_FLOWS/PRIVACY
+y este enum):
 
-- **Obligatorios en el registro:** `data_processing` (tratamiento de datos) y `age_declaration` (mayor de 18 — SPEC §9).
-- **Toggles opcionales A/B/C de UX_FLOWS §2.3:** A = `video_profile_publication`, B = `ai_features`, C = `ai_training` (consentimiento separado, específico y revocable — SPEC §6).
+- **Obligatorios:** `terms_acceptance` (TyC — aceptación contractual, exigida por T-018; no es un consentimiento de datos de la Ley 25.326 pero comparte el mismo ledger auditable), `data_processing` (A) y `age_declaration` (A′ — SPEC §9).
+- **Toggles opcionales de UX_FLOWS §2.3:** B = `video_profile_publication`, C = `ai_features`.
+- **`ai_training` NO se solicita en el MVP** (SPEC §6): el valor existe en el enum pero no tiene fila en `consent_versions`, y sin versión vigente la base rechaza cualquier otorgamiento desde el cliente. Habilitarlo requiere migración y decisión explícitas.
 
-**Append-only real:** cada evento (otorgar **o** revocar) es una fila nueva; el estado vigente es la última fila por `(profile_id, consent_type)`. Nunca UPDATE ni DELETE (evidencia legal, Ley 25.326) — mecanismo único de revocación, alineado con el diseño de PRIVACY (fila nueva con `granted = false`).
+**Append-only real:** cada evento (otorgar **o** revocar) es una fila nueva; el estado vigente es la última fila por `(profile_id, consent_type)` **ordenada por `seq`** (agregada en 0020: `created_at` puede empatar dentro de una transacción). Nunca UPDATE ni DELETE (evidencia legal, Ley 25.326). Reglas del trigger `guard_consent_write` (0021), solo para escrituras de clientes: otorgar exige la versión VIGENTE del texto; revocar admite la vigente o la aceptada; repetir exactamente el último comando no inserta fila (sin duplicados).
 
 ```sql
 create table consents (
@@ -439,10 +462,39 @@ create table consents (
   profile_id   uuid not null references profiles(id) on delete cascade,
   consent_type consent_type not null,
   granted      boolean not null,                 -- true = otorga; false = revoca
-  version      text not null,                    -- versión del documento, ej. '2026-08-01'
+  version      text not null,                    -- versión del documento, ej. '2026-08-31'
   ip           inet,
-  user_agent   text,
+  user_agent   text,                             -- canal ('app_web', 'app_android', …)
+  seq          bigint generated always as identity,  -- orden total del ledger (0020)
   created_at   timestamptz not null default now()
+);
+
+-- T-020: documentos legales versionados; el texto vive acá para que la UI y
+-- la versión registrada en consents no puedan divergir. Lectura pública
+-- (también anon); escritura solo por migración/service role.
+create table legal_documents (
+  id           uuid primary key default gen_random_uuid(),
+  slug         text not null,                  -- 'terminos' | 'privacidad'
+  version      text not null,
+  title        text not null,
+  body         text not null,
+  locale       text not null default 'es-AR',
+  published_at timestamptz not null default now(),
+  created_at   timestamptz not null default now(),
+  unique (slug, version)
+);
+
+-- T-018: versión vigente por consentimiento — ÚNICA fuente de verdad para la
+-- UI, las RPC y los tests. Subir una versión obligatoria fuerza el
+-- reconsentimiento (guard 6); subir la de video despublica los perfiles hasta
+-- re-aceptar (trigger de 0022, fail-closed).
+create table consent_versions (
+  consent_type  consent_type primary key,
+  version       text not null,
+  document_slug text not null,
+  is_mandatory  boolean not null default false,
+  updated_at    timestamptz not null default now(),
+  foreign key (document_slug, version) references legal_documents (slug, version)
 );
 ```
 
@@ -700,6 +752,8 @@ create index idx_videos_owner on videos(owner_profile_id);
 create index idx_payments_subscription on payments(subscription_id);
 create index idx_payments_payer on payments(payer_profile_id, created_at desc);
 create index idx_consents_latest on consents(profile_id, consent_type, created_at desc); -- estado vigente = última fila
+create index idx_consents_latest_by_seq on consents(profile_id, consent_type, seq desc); -- 0020: orden determinista del ledger
+create index idx_candidate_profiles_sector on candidate_profiles(sector_id);             -- 0020
 
 -- Parciales por estado activo (feeds y búsqueda solo tocan lo vivo)
 create index idx_jobs_active on jobs(published_at desc)
@@ -1010,6 +1064,12 @@ create policy sector_tr_admin on sector_translations for all using (is_admin());
 create policy geo_prov_read on geo_provincias for select using (true);
 create policy geo_loc_read on geo_localidades for select using (true);
 create policy geo_bar_read on geo_barrios for select using (true);
+
+-- LEGAL_DOCUMENTS y CONSENT_VERSIONS (0020): lectura pública (anon incluido,
+-- las rutas /legal/* funcionan sin sesión); escritura solo migración/service
+-- role (RLS habilitado sin policies de escritura + grants de solo SELECT).
+create policy legal_documents_read on legal_documents for select using (true);
+create policy consent_versions_read on consent_versions for select using (true);
 ```
 
 Notas de diseño:
@@ -1166,6 +1226,10 @@ Matriz mínima a cubrir (una fila = un test): candidato ve/edita lo suyo · cand
 16. `0016_cron.sql` — jobs de retención/vencimiento de §7.
 17. `0017_updated_at_triggers.sql` — triggers `updated_at` de tablas mutables.
 18. `0018_security_hardening.sql` — GRANT explícitos, RPC atómico de empresa y triggers de columnas protegidas.
-19. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos).
+19. `0019_auth_role_claim_sync.sql` — trigger que propaga `profiles.role` al claim `app_metadata.role` (Bloque B).
+20. `0020_onboarding_schema.sql` — Bloque C: `terms_acceptance` en el enum; `sector_id` en candidatos y empresas; cargo/relación en `company_members`; defaults opt-in de `notification_prefs`; `consents.seq`; tablas `legal_documents` y `consent_versions` con su RLS.
+21. `0021_legal_content_and_consent_rules.sql` — textos legales vigentes (borradores honestos), versiones por consentimiento (sin `ai_training`), trigger del ledger (versión vigente + sin duplicados) y candado de la categoría `system` en preferencias.
+22. `0022_onboarding_rpcs.sql` — `is_adult` (mayoría por calendario), derivación server-side de `is_published` con sus triggers, validación de coherencia geo/sector para todos los contextos, protección de `onboarding_completed` e `is_published` frente al cliente, y las RPC `save_candidate_onboarding`, `complete_candidate_onboarding` y `complete_company_onboarding` (transaccionales, idempotentes, fail-closed; errores tipados 42501/TF018/TFDAT/TFCNS/23505).
+23. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos, con estados de onboarding coherentes con la derivación).
 
 Regla: ninguna migración mezcla DDL de tablas con policies; RLS siempre al final del bloque para que los tests pgTAP corran contra el estado completo.

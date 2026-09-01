@@ -6,8 +6,13 @@ import 'package:talentflash_argentina/core/config/env_config.dart';
 import 'package:talentflash_argentina/core/routing/app_entry_point.dart';
 import 'package:talentflash_argentina/core/routing/app_router.dart';
 import 'package:talentflash_argentina/features/authentication/providers/auth_providers.dart';
+import 'package:talentflash_argentina/features/consents/providers/consents_providers.dart';
+import 'package:talentflash_argentina/features/legal/providers/legal_providers.dart';
+import 'package:talentflash_argentina/features/notifications/providers/notification_prefs_providers.dart';
+import 'package:talentflash_argentina/features/onboarding/providers/onboarding_providers.dart';
 
 import 'fake_auth_repository.dart';
+import 'fake_onboarding_repositories.dart';
 
 /// Configuración pública equivalente a `env/dev.json`. Nunca hay secretos en
 /// los tests, igual que en el repositorio.
@@ -20,10 +25,23 @@ const testEnvConfig = EnvConfig(
 
 /// App montada para un test, con acceso al contenedor de providers.
 class TalentFlashHarness {
-  TalentFlashHarness(this.container, this.authRepository);
+  TalentFlashHarness(
+    this.container,
+    this.authRepository,
+    this.onboardingRepository,
+    this.consentsRepository,
+    this.catalogRepository,
+    this.notificationPrefsRepository,
+    this.legalRepository,
+  );
 
   final ProviderContainer container;
   final FakeAuthRepository authRepository;
+  final FakeOnboardingRepository onboardingRepository;
+  final FakeConsentsRepository consentsRepository;
+  final FakeCatalogRepository catalogRepository;
+  final FakeNotificationPrefsRepository notificationPrefsRepository;
+  final FakeLegalRepository legalRepository;
 
   GoRouter get router => container.read(appRouterProvider);
 
@@ -32,19 +50,39 @@ class TalentFlashHarness {
       router.routerDelegate.currentConfiguration.uri.toString();
 }
 
-/// Monta la app real (router, tema y localización incluidos) con el
-/// repositorio de auth falso: ningún test toca `Supabase.instance`.
+/// Monta la app real (router, tema y localización incluidos) con repositorios
+/// falsos: ningún test toca `Supabase.instance`.
+///
+/// Por defecto la cuenta simulada ya completó el onboarding y tiene los
+/// consentimientos obligatorios vigentes, así los tests de auth del Bloque B
+/// conservan su semántica ("una cuenta lista entra directo a su shell").
 Future<TalentFlashHarness> pumpTalentFlashApp(
   WidgetTester tester, {
   required FakeAuthRepository authRepository,
   AppEntryPoint entryPoint = AppEntryPoint.chooser,
+  FakeOnboardingRepository? onboardingRepository,
+  FakeConsentsRepository? consentsRepository,
+  FakeCatalogRepository? catalogRepository,
+  FakeNotificationPrefsRepository? notificationPrefsRepository,
+  FakeLegalRepository? legalRepository,
 }) async {
   addTearDown(authRepository.dispose);
+  final onboarding = onboardingRepository ?? FakeOnboardingRepository();
+  final consents = consentsRepository ?? FakeConsentsRepository();
+  final catalog = catalogRepository ?? FakeCatalogRepository();
+  final prefs =
+      notificationPrefsRepository ?? FakeNotificationPrefsRepository();
+  final legal = legalRepository ?? FakeLegalRepository();
   final container = ProviderContainer.test(
     overrides: [
       envConfigProvider.overrideWithValue(testEnvConfig),
       appEntryPointProvider.overrideWithValue(entryPoint),
       authRepositoryProvider.overrideWithValue(authRepository),
+      onboardingRepositoryProvider.overrideWithValue(onboarding),
+      consentsRepositoryProvider.overrideWithValue(consents),
+      catalogRepositoryProvider.overrideWithValue(catalog),
+      notificationPrefsRepositoryProvider.overrideWithValue(prefs),
+      legalRepositoryProvider.overrideWithValue(legal),
     ],
   );
   await tester.pumpWidget(
@@ -53,5 +91,13 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
       child: const TalentFlashApp(),
     ),
   );
-  return TalentFlashHarness(container, authRepository);
+  return TalentFlashHarness(
+    container,
+    authRepository,
+    onboarding,
+    consents,
+    catalog,
+    prefs,
+    legal,
+  );
 }

@@ -39,7 +39,12 @@ Tres *shells* con navegación propia (candidato, empresa, admin) más rutas púb
 | `/legal/terminos`, `/legal/privacidad` | Documentos legales | Accesibles siempre, también sin sesión. |
 
 Estado de implementación: `/inicio`, `/`, `/auth/*` y `/sesion-invalida` existen
-desde el Bloque B. `/ofertas/:id` y `/legal/*` llegan con sus bloques.
+desde el Bloque B; `/legal/terminos` y `/legal/privacidad` desde el Bloque C
+(públicas de verdad: legibles por `anon` y siempre alcanzables, incluso con el
+onboarding a medio hacer). El Bloque C suma además las rutas privadas
+`/candidato/onboarding`, `/empresa/onboarding` (wizards, guard 4) y
+`/candidato/consentimientos`, `/empresa/consentimientos` (reconsentimiento,
+guard 6). `/ofertas/:id` llega con su bloque.
 
 ### 1.2 Shell candidato (`/candidato/...`) — bottom navigation de 5 ítems
 
@@ -75,9 +80,22 @@ Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/of
 1. `authGuard` **(implementado)**: sin sesión → `/auth/login` (conserva ruta destino para redirigir después; el destino se sanea y solo admite rutas internas).
 2. `roleGuard` **(implementado)**: cada shell exige el rol correcto; un candidato que abre `/empresa/...` vuelve a su shell. Dos matices: intentar entrar al panel admin sin serlo se responde con una negativa explícita en `/sesion-invalida` en vez de un rebote silencioso, y una cuenta `admin` nunca se degrada al shell de candidato o de empresa (va a `/admin`, aunque el binario sea el de un rol). Con sesión, `/auth/*` y `/` redirigen al shell propio.
 3. `claimGuard` **(implementado)**: sesión cuyo claim de rol falta o no es válido → `/sesion-invalida?motivo=claim`. Estado seguro: no se asume ningún rol y la única salida ofrecida es cerrar sesión.
-4. `onboardingGuard`: sesión sin onboarding completo → retoma el paso pendiente (§2/§3).
+4. `onboardingGuard` **(implementado)**: sesión sin onboarding completo → el
+   wizard del rol es la única pantalla disponible (las rutas `/legal/*` y el
+   estado seguro quedan alcanzables). El estado viene SIEMPRE de la base
+   (`profiles.onboarding_completed` + consentimientos vigentes), nunca de
+   estado local ni de `user_metadata`; mientras se carga, se muestra la
+   pantalla de carga y jamás contenido del shell. El wizard de candidato
+   retoma el paso pendiente (§2); el de empresa retoma consentimientos y
+   preferencias (los datos de la empresa viajan en memoria hasta la creación
+   atómica, §3.1). Admin no pasa por onboarding.
 5. `verifiedCompanyGuard`: acciones de empresa sensibles (publicar oferta, invitar, chatear) exigen `empresa.estado_verificacion = verificada` (§3.2).
-6. `consentGuard`: funciones que requieren un consentimiento no otorgado muestran la pantalla de consentimiento contextual en lugar de la función (§2.3).
+6. `consentGuard` **(implementada la parte de reconsentimiento)**: si falta un
+   consentimiento obligatorio de la versión vigente —p. ej. porque el texto
+   subió de versión— la persona va a `/…/consentimientos` aunque
+   `onboarding_completed` sea true, y no vuelve al shell hasta aceptar. La
+   variante contextual por función (activar IA desde un punto de entrada IA)
+   llega con las funciones que la necesitan.
 
 > **Los guards son UX, no seguridad.** Deciden qué pantalla se ve; un cliente
 > manipulado puede saltearlos. Quien realmente impide leer o escribir datos
@@ -105,10 +123,22 @@ propio shell.
 6. **Presentación (opcional):** elegir entre video 20–30 s (§4), audio o texto. Botón "Lo hago después" siempre visible.
 7. **Cierre:** resumen del perfil + estado "visible para empresas: sí/no" (visible solo si otorgó consentimiento B) → `/candidato/feed`.
 
+*Estado (Bloque C):* el wizard implementado en `/candidato/onboarding` cubre
+los pasos 2–4 y 7 en este orden: consentimientos (obligatorios §2.3 +
+opcionales B/C) → nombre y nacimiento → cascada geográfica (barrio obligatorio
+solo cuando la localidad tiene barrios cargados) → sector/disponibilidad/
+modalidad → preferencias de notificaciones (§14) → resumen con el estado de
+visibilidad honesto. La mayoría de 18 se verifica por fecha calendario en el
+cliente y de nuevo en el servidor (`private.is_adult`, mismo redondeo para el
+29 de febrero); detectada una persona menor, el wizard se bloquea con
+explicación y **nada** de esa llamada queda persistido. Los pasos 5 y 6
+(perfil profesional, video/audio/texto) son de los Bloques D y K: no hay
+botones que simulen tenerlos.
+
 ### 2.2 Reglas
 
-- Se puede abandonar en cualquier paso; el progreso se guarda y `onboardingGuard` retoma donde quedó.
-- El perfil no aparece en el feed de empresas hasta: email verificado + consentimiento B otorgado + datos básicos completos.
+- Se puede abandonar en cualquier paso; el progreso se guarda y `onboardingGuard` retoma donde quedó. *(Implementado: cada avance persiste la instantánea completa vía `save_candidate_onboarding`.)*
+- El perfil no aparece en el feed de empresas hasta: email verificado + consentimiento B otorgado + datos básicos completos. *(Implementado server-side: `is_published` es una columna DERIVADA por `private.refresh_candidate_publication` — el cliente no puede forzarla, ni al insertar ni al actualizar; revocar B despublica al instante y una versión nueva del texto de B despublica hasta re-aceptar.)*
 - Sin CV tradicional obligatorio; la IA puede generar un CV a partir del perfil (función posterior al alta, SPEC §6).
 
 ### 2.3 Consentimientos granulares (tres decisiones separadas)
@@ -122,7 +152,8 @@ Pantalla con **tres toggles independientes, ninguno premarcado**, cada uno con t
 | **B** | Publicación de video y perfil ante empresas | Aparecer en feed/búsqueda de empresas; video visible | La cuenta funciona en "modo solo postulación": el candidato ve y se postula a ofertas, pero no es descubrible. |
 | **C** | Funciones de IA (guion, teleprompter, mejoras de texto, subtítulos, coincidencias explicables) | Todas las asistencias IA del lado candidato | Todo funciona en modo manual; los puntos de entrada IA muestran "activá el consentimiento de IA" (consentGuard). |
 
-- **Estado (Bloque B):** el alta ya exige A y A′ como casillas obligatorias, sin premarcar y con el estado anunciado por el lector de pantalla. El **registro versionado** de cada aceptación en la tabla `consents` (qué texto, cuándo, desde dónde) es T-018 del Bloque C: al alta le falta la sesión autenticada que ese insert necesita cuando el proyecto exige confirmar el correo, así que se persiste en el primer paso del onboarding. Ninguna cuenta completa el onboarding sin su consentimiento registrado.
+- **Estado (Bloque C, implementado).** El alta sigue exigiendo A y A′ como casillas obligatorias (gate de UX, sin premarcar). El **registro versionado** vive en el primer paso del onboarding: como no existe forma confiable de conservar la aceptación del alta a través de la confirmación de correo (y `user_metadata` no sirve como prueba legal), el wizard **vuelve a pedir** cada aceptación con la sesión iniciada y recién entonces la inserta en `consents` con versión, timestamp y canal — nunca se inventa una aceptación. Lo ya registrado en su versión vigente se muestra como hecho y no se vuelve a pedir. La pantalla suma la aceptación de los TyC (`terms_acceptance`, exigida por T-018) como decisión separada, también sin premarcar.
+- **Mapa vigente de decisiones (resuelve la inconsistencia documental entre ROADMAP/PRIVACY/DATA_MODEL):** obligatorios = TyC (`terms_acceptance`) + A (`data_processing`) + A′ (`age_declaration`); opcionales = B (`video_profile_publication`) + C (`ai_features`). El tipo `ai_training` existe en el enum de la base pero **no se solicita en el MVP** (SPEC §6): no aparece en ninguna pantalla, no tiene versión vigente en `consent_versions` y por eso la base rechaza cualquier intento de otorgarlo. Habilitarlo algún día exigirá migración y decisión explícitas.
 - Cada consentimiento es **revocable** en `/candidato/ajustes/privacidad`; la revocación de B despublica perfil y video de inmediato; la de C desactiva las funciones IA sin borrar contenido ya creado por el usuario.
 - Se persiste fecha, versión del texto y canal de cada otorgamiento/revocación (tabla de consentimientos en `DATA_MODEL.md`).
 - Nunca se entrena ningún modelo con videos/audio/perfiles: eso requeriría un consentimiento **adicional y específico** que el MVP no solicita (SPEC §6).
@@ -139,6 +170,18 @@ Pantalla con **tres toggles independientes, ninguno premarcado**, cada uno con t
 4. **Datos del solicitante:** nombre, cargo, relación con la empresa.
 5. **Envío a verificación** (§3.2) → mientras tanto puede completar el perfil de empresa y **redactar ofertas en borrador**, pero no publicarlas.
 6. Verificada → elegir plan (Gratuito por defecto; planes según SPEC §7, precios siempre desde backend) → `/empresa/ofertas`.
+
+*Estado (Bloque C):* implementado en `/empresa/onboarding` con este orden:
+consentimientos (TyC + A + A′, mismo patrón que §2.3) → datos de la empresa
+(CUIT normalizado a `XX-XXXXXXXX-X` y validado por formato; el dígito
+verificador es T-027) → provincia/localidad + web opcional → datos del
+solicitante (nombre, cargo y relación de un set cerrado) → preferencias de
+avisos (§14) → resumen que aclara que la empresa nace "no verificada". La
+empresa, su membresía `owner` y los datos del solicitante se crean **en una
+sola transacción** (`complete_company_onboarding`, idempotente: reintentar o
+tocar dos veces no duplica nada); hasta ese paso final los datos viven solo en
+memoria, así jamás queda una empresa a medio crear. La verificación (§3.2) y
+el paso 6 llegan con los Bloques E y N.
 
 ### 3.2 Verificación CUIT — máquina de estados
 
@@ -354,6 +397,14 @@ Canal push: FCM (Android/Web) + APNs (iOS), orquestadas desde el backend (SPEC �
 **Regla aprobada el 12-08-2026 por el fundador:** el cambio a `vista` se muestra **in-app** (estado visible + badge, §12); su push está **desactivada por default** y puede activarse en `/…/ajustes/notificaciones`; los demás cambios de estado sí notifican según las preferencias del usuario. Esta tabla y la de §12 quedan alineadas bajo esa regla.
 
 **Preferencias** (`/…/ajustes/notificaciones`): toggle por categoría (mensajes, postulaciones — incluye el opt-in de push para `vista`, desactivado por default —, matches, avisos de cuenta — los avisos de cuenta y seguridad no se pueden desactivar), horario silencioso opcional (por defecto 22–08, **propuesta a validar**), permiso del SO solicitado **en contexto** (tras la primera acción que genera notificaciones, no en el primer arranque).
+
+*Estado (Bloque C, T-019):* el opt-in explícito vive en el paso "Avisos" de
+ambos wizards: switches de push y correo por categoría, **ninguno premarcado**
+(los defaults de `notification_prefs` pasaron a `false` por la migración 0020:
+"sin fila" ya no significa "todo habilitado"). Los avisos de cuenta y
+seguridad se muestran bloqueados y la base impide desactivarles in-app y
+correo. El permiso del SO y el envío real (FCM/APNs) son del Bloque M: acá no
+se pide ningún permiso todavía.
 
 ---
 

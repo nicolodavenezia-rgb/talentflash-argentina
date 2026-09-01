@@ -205,7 +205,25 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   l10n.authSignUpConsentNote,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                const SizedBox(height: 24),
+                // T-020: los textos completos son públicos y se pueden leer
+                // antes de aceptar nada.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () =>
+                        context.pushNamed(AppRoute.legalTerms.name),
+                    child: Text(l10n.consentReadTerms),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () =>
+                        context.pushNamed(AppRoute.legalPrivacy.name),
+                    child: Text(l10n.consentReadPrivacy),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 AuthSubmitButton(
                   label: l10n.authSubmitSignUp,
                   isLoading: isLoading,

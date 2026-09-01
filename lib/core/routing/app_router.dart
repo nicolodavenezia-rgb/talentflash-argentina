@@ -11,8 +11,14 @@ import '../../features/authentication/presentation/session_loading_screen.dart';
 import '../../features/authentication/presentation/sign_up_screen.dart';
 import '../../features/authentication/providers/auth_providers.dart';
 import '../../features/companies/presentation/company_home_screen.dart';
+import '../../features/legal/domain/legal_document.dart';
+import '../../features/legal/presentation/legal_document_screen.dart';
 import '../../features/moderation/presentation/admin_home_screen.dart';
+import '../../features/onboarding/presentation/candidate_onboarding_screen.dart';
+import '../../features/onboarding/presentation/company_onboarding_screen.dart';
+import '../../features/onboarding/presentation/reconsent_screen.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
+import '../../features/onboarding/providers/onboarding_providers.dart';
 import '../../features/profiles/presentation/candidate_home_screen.dart';
 import 'app_entry_point.dart';
 import 'app_routes.dart';
@@ -32,6 +38,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final entryPoint = ref.watch(appEntryPointProvider);
   final refresh = _AuthRefreshNotifier();
   ref.listen(authStatusProvider, (_, _) => refresh.onAuthChanged());
+  // El estado de onboarding también mueve al router (guard 4/6): terminar el
+  // wizard o aceptar un reconsentimiento reevalúa la política sin recrearlo.
+  ref.listen(onboardingResolutionProvider, (_, _) => refresh.onAuthChanged());
 
   final router = GoRouter(
     initialLocation: entryPoint.initialLocation,
@@ -40,6 +49,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       status: ref.read(authStatusProvider),
       entryPoint: entryPoint,
       location: state.uri,
+      onboarding: ref.read(onboardingResolutionProvider),
     ),
     routes: [
       GoRoute(
@@ -90,6 +100,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.companyHome.path,
         name: AppRoute.companyHome.name,
         builder: (context, state) => const CompanyHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.candidateOnboarding.path,
+        name: AppRoute.candidateOnboarding.name,
+        builder: (context, state) => const CandidateOnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.companyOnboarding.path,
+        name: AppRoute.companyOnboarding.name,
+        builder: (context, state) => const CompanyOnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.candidateReconsent.path,
+        name: AppRoute.candidateReconsent.name,
+        builder: (context, state) => const ReconsentScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.companyReconsent.path,
+        name: AppRoute.companyReconsent.name,
+        builder: (context, state) => const ReconsentScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.legalTerms.path,
+        name: AppRoute.legalTerms.name,
+        builder: (context, state) =>
+            const LegalDocumentScreen(slug: LegalSlug.terms),
+      ),
+      GoRoute(
+        path: AppRoute.legalPrivacy.path,
+        name: AppRoute.legalPrivacy.name,
+        builder: (context, state) =>
+            const LegalDocumentScreen(slug: LegalSlug.privacy),
       ),
       GoRoute(
         path: AppRoute.adminHome.path,

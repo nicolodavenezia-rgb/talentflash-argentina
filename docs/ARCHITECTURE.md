@@ -97,11 +97,12 @@ Convenciones por feature (obligatorias, se validan en code review):
 
 - **Riverpod**: cada feature expone sus providers en `features/<x>/providers/`. Estado asíncrono con `AsyncNotifier`/`AsyncNotifierProvider`; nada de `StateProvider` para lógica de negocio.
 - **Repositorios**: la única clase que toca el SDK de Supabase es `<Feature>Repository` (`features/<x>/data/`). Los notifiers dependen del repositorio por interfaz abstracta — esto es también la palanca de salida de Supabase (§11).
-- **GoRouter** con una única política de redirección en `core/routing/`, implementada como función pura `resolveAuthRedirect(status, entryPoint, location)` (`auth_redirect.dart`) para poder probar cada regla sin widgets:
+- **GoRouter** con una única política de redirección en `core/routing/`, implementada como función pura `resolveAuthRedirect(status, entryPoint, location, onboarding)` (`auth_redirect.dart`) para poder probar cada regla sin widgets:
   - sesión sin resolver → `/inicio` (pantalla de carga), recordando el destino;
   - sin sesión → `/auth/login` con `destino` de vuelta post-login (el `destino` se sanea: solo rutas internas, nunca una URL externa);
   - con sesión, el rol del claim decide el shell: una empresa no entra a rutas de candidato y viceversa (vuelve al propio, `UX_FLOWS.md` §1.5), un intento contra `/admin` sin serlo responde con negativa explícita, y un `admin` nunca se degrada a otro shell;
-  - claim ausente o inválido → `/sesion-invalida`, estado seguro sin rol asumido.
+  - claim ausente o inválido → `/sesion-invalida`, estado seguro sin rol asumido;
+  - **gate de onboarding (Bloque C):** el estado viene de la base (`OnboardingResolution`: sin resolver / listo / no aplica) — mientras se resuelve, pantalla de carga; con onboarding incompleto, el wizard del rol es el único destino; con un consentimiento obligatorio de versión vieja, la pantalla de reconsentimiento; completo, wizard y reconsentimiento redirigen al shell. Las rutas `/legal/*` quedan siempre alcanzables y admin nunca pasa por onboarding.
   El guard es UX, no seguridad: la seguridad real es RLS.
 - El catálogo de rutas vive en `core/routing/app_routes.dart` (`AppRoute`: nombre, path y rol requerido). Se navega siempre por nombre.
 - Cada feature tiene tests de notifier (con repositorio mockeado) y golden tests de sus pantallas principales.
@@ -123,10 +124,34 @@ lib/features/authentication/
 
 Reglas que sostiene esta capa (verificadas por `test/architecture/`):
 
-- el único código que importa `package:supabase_flutter` es `bootstrap.dart`, el provider del cliente, el repositorio y el mapeo de errores; ninguna pantalla toca `Supabase.instance`;
+- el único código que importa `package:supabase_flutter` es `bootstrap.dart`, el provider del cliente, los repositorios de cada feature y los mapeos de errores; ninguna pantalla toca `Supabase.instance`;
 - `SupabaseAuthRepository` recibe el `GoTrueClient` por constructor, así que los tests lo ejercitan contra un cliente HTTP falso con las respuestas reales de GoTrue, sin proyecto remoto;
 - los errores del SDK se traducen a `AuthFailure` (código enum) y la UI los muestra desde el ARB: el mensaje interno de Supabase nunca llega a la pantalla;
 - el rol de negocio se lee **solo** de `app_metadata.role` (§3.1).
+
+#### Capa de onboarding y consentimientos (Bloque C)
+
+El mismo patrón se replica en cuatro features nuevas/ampliadas, cada una con
+su repositorio inyectable (reciben el `SupabaseClient` por constructor y se
+testean contra un cliente HTTP falso con las formas reales de PostgREST):
+
+```
+features/onboarding/     # wizards C y E, catálogo geo/sectores, resolución
+│                        # del estado (OnboardingResolution) para el router,
+│                        # RPCs save/complete_*; controllers AsyncNotifier con
+│                        # bloqueo de doble submit
+features/consents/       # dominio + repositorio del ledger consents (T-018):
+│                        # snapshot de versiones vigentes y última decisión
+features/notifications/  # preferencias por categoría/canal (T-019), upsert
+│                        # idempotente bajo RLS
+features/legal/          # documentos legales versionados (T-020), lectura
+                         # pública también para anon
+```
+
+Los errores de PostgREST/RPC se traducen a `DataFailure`
+(`shared/models/data_failure.dart`, códigos 42501/TF018/TFDAT/TFCNS/23505 →
+enum) y la UI muestra siempre un texto del ARB. `ai_training` no existe en el
+código Dart (test de arquitectura): ninguna superficie puede otorgarlo.
 
 ---
 

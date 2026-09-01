@@ -1,5 +1,6 @@
 import '../../features/authentication/domain/auth_status.dart';
 import '../../features/authentication/domain/business_role.dart';
+import '../../features/onboarding/domain/onboarding_progress.dart';
 import 'app_entry_point.dart';
 import 'app_routes.dart';
 
@@ -8,7 +9,8 @@ import 'app_routes.dart';
 ///
 /// **Los guards son UX, no seguridad.** Evitan que alguien vea una pantalla que
 /// no le corresponde; lo que impide realmente leer o escribir datos ajenos son
-/// las policies RLS (`SECURITY.md` §3, `ARCHITECTURE.md` §3.2).
+/// las policies RLS (`SECURITY.md` §3, `ARCHITECTURE.md` §3.2). El estado de
+/// onboarding que recibe viene de la base de datos, nunca de estado local.
 ///
 /// Devuelve `null` cuando la ubicación actual es correcta (go_router entiende
 /// `null` como "quedate donde estás"), o el destino al que hay que ir.
@@ -16,6 +18,7 @@ String? resolveAuthRedirect({
   required AuthStatus status,
   required AppEntryPoint entryPoint,
   required Uri location,
+  required OnboardingResolution onboarding,
 }) {
   final path = location.path;
   final destination = sanitizeDestination(
@@ -61,6 +64,35 @@ String? resolveAuthRedirect({
         // Pantalla informativa: se llega acá a propósito y se sale con un
         // botón, nunca con un rebote automático que parezca un bug.
         return null;
+      }
+      // 4.a Gate de onboarding (guards 4 y 6 de UX_FLOWS.md §1.5). Admin no
+      //     pasa por onboarding, y las rutas legales quedan alcanzables
+      //     siempre: el wizard enlaza a los textos que se están aceptando.
+      if (role != BusinessRole.admin && !_isLegalPath(path)) {
+        switch (onboarding) {
+          case OnboardingResolving():
+            // Todavía no se sabe si falta onboarding: nada del shell se
+            // dibuja mientras tanto (misma regla que la sesión sin resolver).
+            if (path == AppRoute.splash.path) {
+              return null;
+            }
+            return _splashWith(sanitizeDestination(location.toString()));
+          case OnboardingReady(:final progress) when progress.needsWizard:
+            final wizard = AppRoute.onboardingFor(role).path;
+            return path == wizard ? null : wizard;
+          case OnboardingReady(:final progress) when progress.needsReconsent:
+            final reconsent = AppRoute.reconsentFor(role).path;
+            return path == reconsent ? null : reconsent;
+          case OnboardingReady():
+            // Completo: el wizard y el reconsentimiento dejan de ser
+            // destinos válidos (evita loops y pantallas sin propósito).
+            if (path == AppRoute.onboardingFor(role).path ||
+                path == AppRoute.reconsentFor(role).path) {
+              return home;
+            }
+          case OnboardingNotRequired():
+            break;
+        }
       }
       if (path == AppRoute.splash.path ||
           path == AppRoute.welcome.path ||
@@ -121,6 +153,10 @@ bool _isReachableWhileSignedIn(String destination, BusinessRole role) {
 }
 
 bool _isAuthPath(String path) => path.startsWith('/auth');
+
+/// Los documentos legales (T-020) se pueden leer siempre: sin sesión, con el
+/// onboarding a medio hacer o durante un reconsentimiento.
+bool _isLegalPath(String path) => path.startsWith('/legal');
 
 String _splashWith(String? destination) {
   if (destination == null) {

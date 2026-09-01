@@ -555,6 +555,666 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El enlace puede estar viejo o mal escrito. Volvé al inicio y buscá desde ahí.'**
   String get authSessionIssueNotFoundBody;
+
+  /// No description provided for @retryLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get retryLabel;
+
+  /// No description provided for @sessionLoadFailedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar los datos de tu cuenta. Revisá tu conexión y reintentá.'**
+  String get sessionLoadFailedBody;
+
+  /// No description provided for @dataFailureNotAllowed.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta no puede hacer esta acción.'**
+  String get dataFailureNotAllowed;
+
+  /// No description provided for @dataFailureInvalidData.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay datos incompletos o inválidos. Revisá los pasos y probá de nuevo.'**
+  String get dataFailureInvalidData;
+
+  /// No description provided for @dataFailureStaleConsent.
+  ///
+  /// In es, this message translates to:
+  /// **'Los textos legales cambiaron mientras completabas el formulario. Volvé al paso de consentimientos y aceptá la versión nueva.'**
+  String get dataFailureStaleConsent;
+
+  /// No description provided for @dataFailureDuplicate.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese CUIT ya está registrado en TalentFlash. Si es tu empresa, escribinos.'**
+  String get dataFailureDuplicate;
+
+  /// No description provided for @dataFailureNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos conectarnos. Revisá tu conexión y reintentá.'**
+  String get dataFailureNetwork;
+
+  /// No description provided for @dataFailureUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos completar la acción. Reintentá en unos minutos.'**
+  String get dataFailureUnknown;
+
+  /// No description provided for @onboardingErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos guardar'**
+  String get onboardingErrorTitle;
+
+  /// Progreso del wizard, anunciado por el lector de pantalla (UX_FLOWS §20)
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {current} de {total}'**
+  String onboardingStepLabel(int current, int total);
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get onboardingBack;
+
+  /// No description provided for @onboardingFinish.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar'**
+  String get onboardingFinish;
+
+  /// No description provided for @onboardingConsentsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus consentimientos'**
+  String get onboardingConsentsTitle;
+
+  /// No description provided for @onboardingConsentsIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Para registrar tu aceptación de forma válida necesitamos que la confirmes acá, con tu sesión iniciada. Cada punto es una decisión separada y nada viene marcado.'**
+  String get onboardingConsentsIntro;
+
+  /// No description provided for @consentTermsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Leí y acepto los Términos y condiciones.'**
+  String get consentTermsLabel;
+
+  /// No description provided for @consentAlreadyAccepted.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya lo aceptaste; queda registrado con fecha y versión.'**
+  String get consentAlreadyAccepted;
+
+  /// No description provided for @consentReadTerms.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer los términos y condiciones'**
+  String get consentReadTerms;
+
+  /// No description provided for @consentReadPrivacy.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer la política de privacidad'**
+  String get consentReadPrivacy;
+
+  /// No description provided for @candidateOnboardingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá tu perfil'**
+  String get candidateOnboardingTitle;
+
+  /// No description provided for @candidateStepIdentityTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobre vos'**
+  String get candidateStepIdentityTitle;
+
+  /// No description provided for @candidateStepPlaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Dónde buscás trabajo?'**
+  String get candidateStepPlaceTitle;
+
+  /// No description provided for @candidateStepPreferencesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu búsqueda'**
+  String get candidateStepPreferencesTitle;
+
+  /// No description provided for @candidateStepPrivacyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Privacidad de tu perfil'**
+  String get candidateStepPrivacyTitle;
+
+  /// No description provided for @onboardingNotificationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisos'**
+  String get onboardingNotificationsTitle;
+
+  /// No description provided for @onboardingSummaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá y confirmá'**
+  String get onboardingSummaryTitle;
+
+  /// No description provided for @fullNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre y apellido'**
+  String get fullNameLabel;
+
+  /// No description provided for @fullNameError.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá tu nombre y apellido.'**
+  String get fullNameError;
+
+  /// No description provided for @birthDateLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get birthDateLabel;
+
+  /// No description provided for @birthDateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'DD/MM/AAAA'**
+  String get birthDateHint;
+
+  /// No description provided for @birthDateHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'La usamos solo para confirmar que sos mayor de 18 años.'**
+  String get birthDateHelp;
+
+  /// No description provided for @birthDateErrorRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá tu fecha de nacimiento.'**
+  String get birthDateErrorRequired;
+
+  /// No description provided for @birthDateErrorInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa fecha no parece válida. Usá el formato DD/MM/AAAA.'**
+  String get birthDateErrorInvalid;
+
+  /// No description provided for @birthDateErrorFuture.
+  ///
+  /// In es, this message translates to:
+  /// **'La fecha no puede estar en el futuro.'**
+  String get birthDateErrorFuture;
+
+  /// No description provided for @underageTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'TalentFlash es solo para mayores de 18'**
+  String get underageTitle;
+
+  /// No description provided for @underageBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Por la fecha que ingresaste todavía no cumpliste los 18 años, así que no podemos crearte el perfil. No guardamos ningún dato de este formulario. Te esperamos cuando los cumplas.'**
+  String get underageBody;
+
+  /// No description provided for @provinceLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Provincia'**
+  String get provinceLabel;
+
+  /// No description provided for @localityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Localidad'**
+  String get localityLabel;
+
+  /// No description provided for @neighborhoodLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Barrio'**
+  String get neighborhoodLabel;
+
+  /// No description provided for @selectOptionError.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí una opción.'**
+  String get selectOptionError;
+
+  /// No description provided for @sectorLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sector o rubro'**
+  String get sectorLabel;
+
+  /// No description provided for @availabilityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad'**
+  String get availabilityLabel;
+
+  /// No description provided for @availabilityImmediate.
+  ///
+  /// In es, this message translates to:
+  /// **'Inmediata'**
+  String get availabilityImmediate;
+
+  /// No description provided for @availabilityOneWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'En 1 semana'**
+  String get availabilityOneWeek;
+
+  /// No description provided for @availabilityTwoWeeks.
+  ///
+  /// In es, this message translates to:
+  /// **'En 2 semanas'**
+  String get availabilityTwoWeeks;
+
+  /// No description provided for @availabilityOneMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'En 1 mes'**
+  String get availabilityOneMonth;
+
+  /// No description provided for @availabilityToAgree.
+  ///
+  /// In es, this message translates to:
+  /// **'A convenir'**
+  String get availabilityToAgree;
+
+  /// No description provided for @workModesLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modalidad preferida'**
+  String get workModesLabel;
+
+  /// No description provided for @workModesError.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí al menos una modalidad.'**
+  String get workModesError;
+
+  /// No description provided for @workModeOnSite.
+  ///
+  /// In es, this message translates to:
+  /// **'Presencial'**
+  String get workModeOnSite;
+
+  /// No description provided for @workModeHybrid.
+  ///
+  /// In es, this message translates to:
+  /// **'Híbrido'**
+  String get workModeHybrid;
+
+  /// No description provided for @workModeRemote.
+  ///
+  /// In es, this message translates to:
+  /// **'Remoto'**
+  String get workModeRemote;
+
+  /// No description provided for @privacyIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Estas dos opciones son tuyas: nada viene marcado, no cambian lo que podés hacer en la app y las revocás cuando quieras.'**
+  String get privacyIntro;
+
+  /// No description provided for @consentVideoLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Quiero que las empresas descubran mi perfil (publicación de perfil y video).'**
+  String get consentVideoLabel;
+
+  /// No description provided for @consentVideoHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Si no lo activás, igual vas a poder ver ofertas y postularte; solo no aparecés en las búsquedas de las empresas.'**
+  String get consentVideoHelp;
+
+  /// No description provided for @consentAiLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Quiero usar las funciones de inteligencia artificial sobre mis datos.'**
+  String get consentAiLabel;
+
+  /// No description provided for @consentAiHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin esto, todo funciona en modo manual. Nunca usamos tus datos para entrenar modelos.'**
+  String get consentAiHelp;
+
+  /// No description provided for @notifPrefsIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí qué avisos querés recibir por cada canal. Nada viene activado de fábrica: si no marcás nada, solo vas a ver avisos dentro de la app.'**
+  String get notifPrefsIntro;
+
+  /// No description provided for @notifChannelPush.
+  ///
+  /// In es, this message translates to:
+  /// **'Push'**
+  String get notifChannelPush;
+
+  /// No description provided for @notifChannelEmail.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo'**
+  String get notifChannelEmail;
+
+  /// No description provided for @notifCategoryApplicationUpdate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus postulaciones'**
+  String get notifCategoryApplicationUpdate;
+
+  /// No description provided for @notifCategoryNewApplication.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevas postulaciones'**
+  String get notifCategoryNewApplication;
+
+  /// No description provided for @notifCategoryInvitation.
+  ///
+  /// In es, this message translates to:
+  /// **'Invitaciones'**
+  String get notifCategoryInvitation;
+
+  /// No description provided for @notifCategoryMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensajes'**
+  String get notifCategoryMessage;
+
+  /// No description provided for @notifCategoryVerificationUpdate.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificación de tu empresa'**
+  String get notifCategoryVerificationUpdate;
+
+  /// No description provided for @notifCategorySystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta y seguridad'**
+  String get notifCategorySystem;
+
+  /// No description provided for @notifSystemLockedNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Los avisos de cuenta y seguridad llegan siempre dentro de la app y por correo; no se pueden desactivar.'**
+  String get notifSystemLockedNote;
+
+  /// Etiqueta accesible del switch de push por categoría
+  ///
+  /// In es, this message translates to:
+  /// **'Push para {category}'**
+  String notifPushSwitchLabel(String category);
+
+  /// Etiqueta accesible del switch de correo por categoría
+  ///
+  /// In es, this message translates to:
+  /// **'Correo para {category}'**
+  String notifEmailSwitchLabel(String category);
+
+  /// No description provided for @summaryIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá que esté todo bien antes de terminar. Podés volver a cualquier paso.'**
+  String get summaryIntro;
+
+  /// No description provided for @summaryVisibleYes.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu perfil va a ser visible para las empresas verificadas.'**
+  String get summaryVisibleYes;
+
+  /// No description provided for @summaryVisibleNo.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu perfil NO va a ser visible para las empresas: no activaste la publicación. Podés cambiarlo cuando quieras.'**
+  String get summaryVisibleNo;
+
+  /// No description provided for @summaryMissingValue.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin completar'**
+  String get summaryMissingValue;
+
+  /// No description provided for @companyOnboardingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrá tu empresa'**
+  String get companyOnboardingTitle;
+
+  /// No description provided for @companyStepDataTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos de la empresa'**
+  String get companyStepDataTitle;
+
+  /// No description provided for @companyStepPlaceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ubicación y web'**
+  String get companyStepPlaceTitle;
+
+  /// No description provided for @companyStepApplicantTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobre vos'**
+  String get companyStepApplicantTitle;
+
+  /// No description provided for @legalNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Razón social'**
+  String get legalNameLabel;
+
+  /// No description provided for @legalNameError.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá la razón social.'**
+  String get legalNameError;
+
+  /// No description provided for @tradeNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de fantasía'**
+  String get tradeNameLabel;
+
+  /// No description provided for @tradeNameError.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el nombre de fantasía.'**
+  String get tradeNameError;
+
+  /// No description provided for @cuitLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'CUIT'**
+  String get cuitLabel;
+
+  /// No description provided for @cuitHint.
+  ///
+  /// In es, this message translates to:
+  /// **'30-12345678-9'**
+  String get cuitHint;
+
+  /// No description provided for @cuitHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Once números. La verificación de la empresa se hace después, con revisión humana.'**
+  String get cuitHelp;
+
+  /// No description provided for @cuitErrorRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el CUIT de la empresa.'**
+  String get cuitErrorRequired;
+
+  /// No description provided for @cuitErrorLength.
+  ///
+  /// In es, this message translates to:
+  /// **'El CUIT debe tener 11 números.'**
+  String get cuitErrorLength;
+
+  /// No description provided for @companySizeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tamaño de la empresa'**
+  String get companySizeLabel;
+
+  /// No description provided for @companySize1to10.
+  ///
+  /// In es, this message translates to:
+  /// **'1 a 10 personas'**
+  String get companySize1to10;
+
+  /// No description provided for @companySize11to50.
+  ///
+  /// In es, this message translates to:
+  /// **'11 a 50 personas'**
+  String get companySize11to50;
+
+  /// No description provided for @companySize51to200.
+  ///
+  /// In es, this message translates to:
+  /// **'51 a 200 personas'**
+  String get companySize51to200;
+
+  /// No description provided for @companySize201to500.
+  ///
+  /// In es, this message translates to:
+  /// **'201 a 500 personas'**
+  String get companySize201to500;
+
+  /// No description provided for @companySizeMoreThan500.
+  ///
+  /// In es, this message translates to:
+  /// **'Más de 500 personas'**
+  String get companySizeMoreThan500;
+
+  /// No description provided for @websiteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web (opcional)'**
+  String get websiteLabel;
+
+  /// No description provided for @websiteError.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa dirección no parece una URL válida.'**
+  String get websiteError;
+
+  /// No description provided for @positionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cargo'**
+  String get positionLabel;
+
+  /// No description provided for @positionError.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá tu cargo.'**
+  String get positionError;
+
+  /// No description provided for @relationshipLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu relación con la empresa'**
+  String get relationshipLabel;
+
+  /// No description provided for @relationshipOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'Dueño/a'**
+  String get relationshipOwner;
+
+  /// No description provided for @relationshipPartner.
+  ///
+  /// In es, this message translates to:
+  /// **'Socio/a'**
+  String get relationshipPartner;
+
+  /// No description provided for @relationshipManager.
+  ///
+  /// In es, this message translates to:
+  /// **'Gerente o encargado/a'**
+  String get relationshipManager;
+
+  /// No description provided for @relationshipHr.
+  ///
+  /// In es, this message translates to:
+  /// **'Recursos Humanos'**
+  String get relationshipHr;
+
+  /// No description provided for @relationshipOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra'**
+  String get relationshipOther;
+
+  /// No description provided for @companyPendingNote.
+  ///
+  /// In es, this message translates to:
+  /// **'La empresa se crea en estado \"no verificada\": hasta que verifiquemos el CUIT vas a poder preparar todo, pero no publicar búsquedas.'**
+  String get companyPendingNote;
+
+  /// No description provided for @reconsentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitamos tu aceptación de nuevo'**
+  String get reconsentTitle;
+
+  /// No description provided for @reconsentBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizamos textos que ya habías aceptado. Leélos y confirmá cada punto para seguir usando tu cuenta; nada viene marcado.'**
+  String get reconsentBody;
+
+  /// No description provided for @reconsentAccept.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptar y continuar'**
+  String get reconsentAccept;
+
+  /// No description provided for @legalVersionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión vigente: {version}'**
+  String legalVersionLabel(String version);
+
+  /// No description provided for @legalTermsFallbackTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Términos y condiciones'**
+  String get legalTermsFallbackTitle;
+
+  /// No description provided for @legalPrivacyFallbackTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Política de privacidad'**
+  String get legalPrivacyFallbackTitle;
+
+  /// No description provided for @legalLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar el documento. Revisá tu conexión y reintentá.'**
+  String get legalLoadError;
 }
 
 class _AppLocalizationsDelegate

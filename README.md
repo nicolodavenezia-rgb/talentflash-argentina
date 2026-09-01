@@ -10,15 +10,19 @@ hotelería, CABA + GBA). App Flutter multiplataforma + Supabase.
 
 ## Estado
 
-**Bloque A — Fundaciones** completo y **Bloque B — Auth, primera parte** (ver
-[docs/ROADMAP.md](docs/ROADMAP.md)): esquema SQL completo con RLS, tooling, CI y
-autenticación local con correo y contraseña — alta de candidato y de empresa,
-login, sesión persistente, cierre de sesión, solicitud de recuperación y
-navegación protegida por rol.
+**Bloque A — Fundaciones**, **Bloque B — Auth (primera parte)** y **Bloque C —
+Onboarding + consentimientos** completos en local (ver
+[docs/ROADMAP.md](docs/ROADMAP.md)): esquema SQL con RLS, tooling, CI,
+autenticación con correo y contraseña, y el onboarding completo de candidato y
+empresa — wizards con reanudación, verificación de mayoría de 18 server-side,
+consentimientos versionados append-only con reconsentimiento automático,
+preferencias de notificaciones con opt-in explícito y documentos legales
+públicos en `/legal/*`.
 
 Todavía **no** están hechos (y no se simulan en la UI): Google y Apple (T-012),
 la pantalla in-app de cambio de contraseña, que depende del enlace profundo
-(T-013), MFA, CAPTCHA y cualquier proyecto remoto.
+(T-013), MFA, CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
+FCM/APNs y cualquier proyecto remoto.
 
 ## Requisitos
 
@@ -71,15 +75,27 @@ hay ningún proyecto remoto.
 
 **Usuarios del seed** (contraseña única: `password123`):
 
-| Usuario | Correo | Rol |
-|---|---|---|
-| Candidatos 1–20 | `candidato1@dev.talentflash.test` … `candidato20@…` | `candidate` |
-| Empresas 1–5 | `empresa1@dev.talentflash.test` … `empresa5@…` | `company` |
+| Usuario | Correo | Rol | Estado de onboarding |
+|---|---|---|---|
+| Candidatos 1–15 | `candidato1@dev.talentflash.test` … | `candidate` | completo, perfil **publicado** (consentimiento de publicación otorgado) |
+| Candidatos 16–18 | `candidato16@…` … | `candidate` | completo, **sin** publicar (no dieron ese consentimiento) |
+| Candidatos 19–20 | `candidato19@…`, `candidato20@…` | `candidate` | **incompleto**: al entrar, el wizard retoma donde quedó |
+| Empresas 1–5 | `empresa1@…` … `empresa5@…` | `company` | completo, empresa creada y verificada |
+| Empresa 6 | `empresa6@dev.talentflash.test` | `company` | **incompleto**: al entrar abre el wizard de empresa |
 
-Los candidatos 1–15 tienen el perfil publicado y las 5 empresas están
-verificadas. No hay ninguna cuenta `admin` en el seed: el rol de administración
-se provisiona solo desde un contexto con `service_role` (ver `docs/SECURITY.md`
-§3); al hacerlo, la migración `0019` propaga el rol al claim del JWT.
+La publicación de los candidatos 1–15 no está forzada en el seed: la deriva el
+trigger de la migración `0022` a partir de los datos mínimos + el
+consentimiento vigente, así el seed nunca puede contradecir la regla real. No
+hay ninguna cuenta `admin` en el seed: el rol de administración se provisiona
+solo desde un contexto con `service_role` (ver `docs/SECURITY.md` §3); al
+hacerlo, la migración `0019` propaga el rol al claim del JWT y `0022` lo exime
+del onboarding.
+
+**Documentos legales:** `/legal/terminos` y `/legal/privacidad` se leen también
+sin sesión. El texto vive versionado en la tabla `legal_documents` (única
+fuente de verdad para la UI y para la versión que se registra en `consents`);
+son borradores de trabajo y lo dicen explícitamente: ningún abogado los validó
+todavía.
 
 **Correos locales (verificación de cuenta y recuperación de contraseña):** el
 stack local no envía nada afuera. Todos los correos quedan en el buzón de
@@ -120,14 +136,13 @@ cuando el repo tenga remoto en GitHub.
 lib/
 ├── core/           # config (flavors), localization (ARB es-AR), routing,
 │                   # security, theme, networking
-├── features/       # feature-first: onboarding, profiles, companies, videos,
-│                   # jobs, discovery, applications, matches, chat, billing,
-│                   # notifications, moderation, authentication
-└── shared/         # widgets/utilidades compartidas
+├── features/       # feature-first: authentication, onboarding, consents,
+│                   # legal, notifications, profiles, companies, moderation…
+└── shared/         # widgets/modelos compartidos (fallos tipados, banners)
 supabase/
-├── migrations/     # 0001–0019 — esquema completo + RLS deny-by-default
-├── tests/database/ # pgTAP (RLS)
-├── seed/           # seed de desarrollo (T-008)
+├── migrations/     # 0001–0022 — esquema completo + RLS deny-by-default
+├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents)
+├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)
 └── functions/      # Edge Functions (Bloques B+)
 docs/               # los 8 documentos técnicos (fuente de verdad)
 env/                # flavors dev/staging/prod (sin secretos)

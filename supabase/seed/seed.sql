@@ -1,8 +1,8 @@
 -- ===========================================================================
--- Seed de DESARROLLO (T-008): 20 candidatos, 5 empresas, 10 ofertas activas.
--- SOLO para entorno local (`supabase db reset` lo aplica). Jamás en prod.
+-- Seed de DESARROLLO (T-008): 20 candidatos, 6 usuarios de empresa (5 con
+-- empresa creada), 10 ofertas activas. SOLO para entorno local
+-- (`supabase db reset` lo aplica). Jamás en prod.
 -- Contraseña de todos los usuarios de prueba: password123
--- Verificado localmente mediante `npm run db:reset`.
 --
 -- Bloque B: los usuarios sembrados tienen que poder INICIAR SESIÓN de verdad.
 -- Para eso hacen falta dos cosas que un insert ingenuo omite:
@@ -13,6 +13,16 @@
 --   2) cada usuario necesita su fila en `auth.identities` con provider
 --      `email`, igual que la que crea un alta real.
 -- Sin esto, login y recuperación fallan solo para los usuarios del seed.
+--
+-- Bloque C: estados de onboarding coherentes con la derivación server-side:
+--   candidatos 1–15  onboarding completo + consentimiento de publicación
+--                    → el trigger de 0022 los publica (no se fuerza a mano);
+--   candidatos 16–18 onboarding completo SIN consentimiento de publicación
+--                    → cuentas usables pero no descubribles;
+--   candidatos 19–20 onboarding INCOMPLETO (sin nacimiento/sector/consents)
+--                    → el wizard retoma donde quedó;
+--   empresas 1–5     onboarding completo, empresa creada y verificada;
+--   empresa6         onboarding INCOMPLETO (usuario sin empresa creada).
 -- ===========================================================================
 
 -- --- 20 candidatos (auth.users; el trigger handle_new_user crea profiles) ---
@@ -33,7 +43,7 @@ select
   now(), now()
 from generate_series(1, 20) as i;
 
--- --- 5 usuarios de empresa ---
+-- --- 6 usuarios de empresa (empresa6 queda sin empresa: onboarding a medio) --
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
                         confirmation_token, recovery_token,
@@ -49,7 +59,7 @@ select
   '{"role":"company"}'::jsonb,
   '', '', '', '',
   now(), now()
-from generate_series(1, 5) as i;
+from generate_series(1, 6) as i;
 
 -- --- Identidad `email` de cada usuario sembrado (la crea un alta real) ---
 insert into auth.identities (provider_id, user_id, identity_data, provider,
@@ -67,32 +77,55 @@ from auth.users u
 where u.email like '%@dev.talentflash.test'
 on conflict (provider_id, provider) do nothing;
 
--- --- Perfiles de candidato (15 publicados, 5 en borrador) ---
-insert into candidate_profiles (profile_id, headline, bio, provincia_id,
-                                localidad_id, barrio_id, work_mode_prefs,
+-- --- Nombre y estado de onboarding en profiles (Bloque C) ---
+-- Candidatos 1–18 y empresas 1–5 terminaron el onboarding; el resto no.
+update profiles p
+set full_name = 'Candidato de Prueba ' || substring(u.email from 'candidato([0-9]+)@'),
+    onboarding_completed = substring(u.email from 'candidato([0-9]+)@')::int <= 18
+from auth.users u
+where u.id = p.id and u.email like 'candidato%@dev.talentflash.test';
+
+update profiles p
+set full_name = case
+      when substring(u.email from 'empresa([0-9]+)@')::int <= 5
+      then 'Referente Empresa ' || substring(u.email from 'empresa([0-9]+)@')
+    end,
+    onboarding_completed = substring(u.email from 'empresa([0-9]+)@')::int <= 5
+from auth.users u
+where u.id = p.id and u.email like 'empresa%@dev.talentflash.test';
+
+-- --- Perfiles de candidato ---
+-- La publicación NO se fuerza acá: la deriva `refresh_candidate_publication`
+-- (0022) cuando más abajo se insertan los consentimientos. Así el seed no
+-- puede divergir de la regla real.
+insert into candidate_profiles (profile_id, headline, bio, birth_date,
+                                provincia_id, localidad_id, barrio_id,
+                                sector_id, work_mode_prefs,
                                 expected_salary_min, expected_salary_max,
-                                availability, experience, skills,
-                                is_published, published_at)
+                                availability, experience, skills)
 select
   ('00000000-0000-4000-8000-0000000001' || lpad(i::text, 2, '0'))::uuid,
   (array['Moza/o de salón con experiencia', 'Cocinero/a de línea',
          'Recepcionista de hotel', 'Bartender', 'Ayudante de cocina'])[1 + (i % 5)],
   'Perfil de prueba generado por el seed de desarrollo.',
+  case when i <= 18 then date '1990-01-01' + (i * 211) end,
   'b0000000-0000-4000-8000-000000000001',
   'b1000000-0000-4000-8000-000000000001',
   ('b2000000-0000-4000-8000-00000000000' || (1 + (i % 3))::text)::uuid,
+  case when i <= 18 then 'a0000000-0000-4000-8000-000000000001'::uuid end,
   array['presencial']::work_mode[],
   1000000, 1600000,
-  (array['inmediata','en_1_semana','en_2_semanas'])[1 + (i % 3)]::availability_type,
+  case when i <= 18
+    then (array['inmediata','en_1_semana','en_2_semanas'])[1 + (i % 3)]::availability_type
+  end,
   (array['sin_experiencia','hasta_1_anio','1_a_3_anios','3_a_5_anios'])[1 + (i % 4)]::experience_level,
-  array['atención al cliente','trabajo en equipo'],
-  i <= 15, case when i <= 15 then now() end
+  array['atención al cliente','trabajo en equipo']
 from generate_series(1, 20) as i;
 
--- --- 5 empresas verificadas + membresía owner ---
+-- --- 5 empresas verificadas + membresía owner con cargo y relación ---
 insert into company_profiles (id, name, legal_name, cuit, verification_status,
-                              industry, size_range, description, provincia_id,
-                              localidad_id, created_by)
+                              industry, sector_id, size_range, description,
+                              provincia_id, localidad_id, created_by)
 select
   ('c0000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid,
   (array['Parrilla Don Julio Dev','Hotel Palermo Suites Dev','Café Martínez Dev',
@@ -100,18 +133,23 @@ select
   'Empresa de prueba ' || i || ' S.A.S.',
   '30-7000000' || i || '-' || (i % 10),
   'approved',
-  'Gastronomía y hotelería', '11-50',
+  'Gastronomía y hotelería',
+  'a0000000-0000-4000-8000-000000000001',
+  '11-50',
   'Empresa de prueba generada por el seed de desarrollo.',
   'b0000000-0000-4000-8000-000000000001',
   'b1000000-0000-4000-8000-000000000001',
   ('00000000-0000-4000-8000-0000000002' || lpad(i::text, 2, '0'))::uuid
 from generate_series(1, 5) as i;
 
-insert into company_members (company_id, profile_id, member_role)
+insert into company_members (company_id, profile_id, member_role,
+                             position_title, relationship)
 select
   ('c0000000-0000-4000-8000-0000000000' || lpad(i::text, 2, '0'))::uuid,
   ('00000000-0000-4000-8000-0000000002' || lpad(i::text, 2, '0'))::uuid,
-  'owner'
+  'owner',
+  (array['Dueño','Gerente general','Encargada de RRHH','Socio gerente','Dueña'])[i],
+  (array['owner','manager','hr','partner','owner'])[i]
 from generate_series(1, 5) as i;
 
 -- --- 10 ofertas activas (2 por empresa) con TODOS los campos obligatorios ---
@@ -142,3 +180,50 @@ select
   array['comida incluida','propinas'],
   now() + interval '30 days', 'active', now()
 from generate_series(1, 10) as i;
+
+-- --- Consentimientos (Bloque C, T-018) ---
+-- La versión se toma de `consent_versions` (única fuente de verdad): si una
+-- migración sube la versión, el seed sigue siendo coherente.
+
+-- Obligatorios (TyC + tratamiento de datos + mayoría de edad) para quienes
+-- completaron el onboarding: candidatos 1–18 y empresas 1–5.
+insert into consents (profile_id, consent_type, granted, version, user_agent)
+select u.id, cv.consent_type, true, cv.version, 'seed'
+from auth.users u
+cross join consent_versions cv
+where cv.is_mandatory
+  and (
+    (u.email like 'candidato%@dev.talentflash.test'
+     and substring(u.email from 'candidato([0-9]+)@')::int <= 18)
+    or
+    (u.email like 'empresa%@dev.talentflash.test'
+     and substring(u.email from 'empresa([0-9]+)@')::int <= 5)
+  );
+
+-- Publicación del perfil (opcional): solo candidatos 1–15. Al insertarse,
+-- el trigger de 0022 recalcula y publica esos perfiles.
+insert into consents (profile_id, consent_type, granted, version, user_agent)
+select u.id, cv.consent_type, true, cv.version, 'seed'
+from auth.users u
+join consent_versions cv on cv.consent_type = 'video_profile_publication'
+where u.email like 'candidato%@dev.talentflash.test'
+  and substring(u.email from 'candidato([0-9]+)@')::int <= 15;
+
+-- Funciones de IA (opcional): un solo ejemplo, para probar la revocación.
+insert into consents (profile_id, consent_type, granted, version, user_agent)
+select u.id, cv.consent_type, true, cv.version, 'seed'
+from auth.users u
+join consent_versions cv on cv.consent_type = 'ai_features'
+where u.email = 'candidato2@dev.talentflash.test';
+
+-- --- Preferencias de notificaciones (Bloque C, T-019) ---
+-- Opt-in explícito: sin fila, push y email quedan APAGADOS. Ejemplos:
+insert into notification_prefs (profile_id, category, push_enabled,
+                                email_enabled, in_app_enabled)
+select u.id, x.category::notification_type, x.push_on, x.email_on, true
+from (values
+  ('candidato1@dev.talentflash.test', 'application_update', true,  false),
+  ('candidato1@dev.talentflash.test', 'message',            true,  true),
+  ('empresa1@dev.talentflash.test',   'new_application',    false, true)
+) as x(user_email, category, push_on, email_on)
+join auth.users u on u.email = x.user_email;

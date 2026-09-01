@@ -25,6 +25,22 @@ enum AppRoute {
   candidateHome('/candidato', BusinessRole.candidate),
   companyHome('/empresa', BusinessRole.company),
 
+  /// Wizards de onboarding (Bloque C). Mientras el onboarding no está
+  /// completo, el guard 4 (UX_FLOWS.md §1.5) convierte estas rutas en la
+  /// única pantalla disponible del shell.
+  candidateOnboarding('/candidato/onboarding', BusinessRole.candidate),
+  companyOnboarding('/empresa/onboarding', BusinessRole.company),
+
+  /// Reconsentimiento (T-018): un texto obligatorio subió de versión y hay
+  /// que volver a aceptarlo aunque `onboarding_completed` sea true.
+  candidateReconsent('/candidato/consentimientos', BusinessRole.candidate),
+  companyReconsent('/empresa/consentimientos', BusinessRole.company),
+
+  /// Documentos legales (T-020): públicos, accesibles también sin sesión y
+  /// SIEMPRE alcanzables, incluso con onboarding a medio hacer.
+  legalTerms('/legal/terminos', null),
+  legalPrivacy('/legal/privacidad', null),
+
   /// Panel admin (UX_FLOWS.md §1.4). En este bloque es solo el marcador de
   /// posición: existe para que un `admin` nunca se degrade a otro shell.
   adminHome('/admin', BusinessRole.admin),
@@ -53,6 +69,21 @@ enum AppRoute {
   static AppRoute homeFor(BusinessRole role) => switch (role) {
     BusinessRole.candidate => AppRoute.candidateHome,
     BusinessRole.company => AppRoute.companyHome,
+    BusinessRole.admin => AppRoute.adminHome,
+  };
+
+  /// Wizard de onboarding de cada rol. Admin no pasa por onboarding: se le
+  /// asigna su home para que ningún guard pueda mandarlo a un wizard.
+  static AppRoute onboardingFor(BusinessRole role) => switch (role) {
+    BusinessRole.candidate => AppRoute.candidateOnboarding,
+    BusinessRole.company => AppRoute.companyOnboarding,
+    BusinessRole.admin => AppRoute.adminHome,
+  };
+
+  /// Pantalla de reconsentimiento de cada rol (ídem admin).
+  static AppRoute reconsentFor(BusinessRole role) => switch (role) {
+    BusinessRole.candidate => AppRoute.candidateReconsent,
+    BusinessRole.company => AppRoute.companyReconsent,
     BusinessRole.admin => AppRoute.adminHome,
   };
 }

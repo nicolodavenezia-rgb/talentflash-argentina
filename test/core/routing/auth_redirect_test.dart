@@ -5,6 +5,8 @@ import 'package:talentflash_argentina/core/routing/auth_redirect.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
 import 'package:talentflash_argentina/features/authentication/domain/authenticated_user.dart';
 import 'package:talentflash_argentina/features/authentication/domain/business_role.dart';
+import 'package:talentflash_argentina/features/consents/domain/consent_type.dart';
+import 'package:talentflash_argentina/features/onboarding/domain/onboarding_progress.dart';
 
 AuthStatus signedInAs(BusinessRole role) => AuthStatusSignedIn(
   AuthenticatedUser(
@@ -14,14 +16,31 @@ AuthStatus signedInAs(BusinessRole role) => AuthStatusSignedIn(
   ),
 );
 
+/// Estados de onboarding representativos para la política pura.
+const onboardingDone = OnboardingReady(
+  OnboardingProgress.completedAndCurrent(),
+);
+const onboardingPending = OnboardingReady(
+  OnboardingProgress(completed: false, pendingMandatoryConsents: []),
+);
+const onboardingReconsent = OnboardingReady(
+  OnboardingProgress(
+    completed: true,
+    pendingMandatoryConsents: [ConsentType.dataProcessing],
+  ),
+);
+const onboardingLoading = OnboardingResolving();
+
 String? redirect(
   AuthStatus status,
   String location, {
   AppEntryPoint entryPoint = AppEntryPoint.chooser,
+  OnboardingResolution onboarding = onboardingDone,
 }) => resolveAuthRedirect(
   status: status,
   entryPoint: entryPoint,
   location: Uri.parse(location),
+  onboarding: onboarding,
 );
 
 void main() {
@@ -304,15 +323,170 @@ void main() {
       expect(AppRoute.passwordRecovery.path, '/auth/recuperar');
     });
 
-    test('solo los tres shells exigen rol', () {
+    test('exigen rol los shells, los wizards y el reconsentimiento', () {
       final withRole = AppRoute.values
           .where((route) => route.requiredRole != null)
           .toList();
       expect(withRole, <AppRoute>[
         AppRoute.candidateHome,
         AppRoute.companyHome,
+        AppRoute.candidateOnboarding,
+        AppRoute.companyOnboarding,
+        AppRoute.candidateReconsent,
+        AppRoute.companyReconsent,
         AppRoute.adminHome,
       ]);
+    });
+
+    test('las rutas legales son públicas', () {
+      expect(AppRoute.legalTerms.requiredRole, isNull);
+      expect(AppRoute.legalPrivacy.requiredRole, isNull);
+      expect(AppRoute.legalTerms.path, '/legal/terminos');
+      expect(AppRoute.legalPrivacy.path, '/legal/privacidad');
+    });
+  });
+
+  group('gate de onboarding (guard 4/6 de UX_FLOWS §1.5)', () {
+    final candidate = signedInAs(BusinessRole.candidate);
+    final company = signedInAs(BusinessRole.company);
+    final admin = signedInAs(BusinessRole.admin);
+
+    test('mientras el estado no se conoce, nada privado se dibuja', () {
+      expect(
+        redirect(candidate, '/candidato', onboarding: onboardingLoading),
+        '/inicio?destino=%2Fcandidato',
+      );
+      expect(
+        redirect(candidate, '/inicio', onboarding: onboardingLoading),
+        isNull,
+      );
+      // Los documentos legales son públicos: se pueden leer igual.
+      expect(
+        redirect(candidate, '/legal/terminos', onboarding: onboardingLoading),
+        isNull,
+      );
+    });
+
+    test(
+      'candidato con onboarding incompleto va a su wizard desde donde sea',
+      () {
+        for (final path in <String>[
+          '/candidato',
+          '/inicio',
+          '/',
+          '/auth/login',
+          '/empresa',
+          '/admin',
+          '/empresa/onboarding',
+        ]) {
+          expect(
+            redirect(candidate, path, onboarding: onboardingPending),
+            '/candidato/onboarding',
+            reason: 'desde $path',
+          );
+        }
+      },
+    );
+
+    test('el wizard propio no rebota (sin loops)', () {
+      expect(
+        redirect(
+          candidate,
+          '/candidato/onboarding',
+          onboarding: onboardingPending,
+        ),
+        isNull,
+      );
+      expect(
+        redirect(company, '/empresa/onboarding', onboarding: onboardingPending),
+        isNull,
+      );
+    });
+
+    test('empresa con onboarding incompleto va a su wizard', () {
+      expect(
+        redirect(company, '/empresa', onboarding: onboardingPending),
+        '/empresa/onboarding',
+      );
+      expect(
+        redirect(
+          company,
+          '/candidato/onboarding',
+          onboarding: onboardingPending,
+        ),
+        '/empresa/onboarding',
+      );
+    });
+
+    test('los legales quedan alcanzables durante el onboarding', () {
+      expect(
+        redirect(candidate, '/legal/privacidad', onboarding: onboardingPending),
+        isNull,
+      );
+      expect(
+        redirect(company, '/legal/terminos', onboarding: onboardingPending),
+        isNull,
+      );
+    });
+
+    test('admin jamás pasa por onboarding', () {
+      expect(redirect(admin, '/admin', onboarding: onboardingPending), isNull);
+      expect(
+        redirect(admin, '/candidato', onboarding: onboardingLoading),
+        '/admin',
+      );
+    });
+
+    test(
+      'reconsentimiento: onboarding completo pero versión vieja obligatoria',
+      () {
+        expect(
+          redirect(candidate, '/candidato', onboarding: onboardingReconsent),
+          '/candidato/consentimientos',
+        );
+        expect(
+          redirect(
+            candidate,
+            '/candidato/consentimientos',
+            onboarding: onboardingReconsent,
+          ),
+          isNull,
+        );
+        expect(
+          redirect(company, '/empresa', onboarding: onboardingReconsent),
+          '/empresa/consentimientos',
+        );
+        expect(
+          redirect(
+            candidate,
+            '/legal/privacidad',
+            onboarding: onboardingReconsent,
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'con todo al día, wizard y reconsentimiento dejan de ser destinos',
+      () {
+        expect(redirect(candidate, '/candidato/onboarding'), '/candidato');
+        expect(redirect(candidate, '/candidato/consentimientos'), '/candidato');
+        expect(redirect(company, '/empresa/onboarding'), '/empresa');
+        expect(redirect(company, '/empresa/consentimientos'), '/empresa');
+      },
+    );
+
+    test('sin sesión, el wizard es privado y los legales no', () {
+      expect(
+        redirect(const AuthStatusSignedOut(), '/candidato/onboarding'),
+        '/auth/login?destino=%2Fcandidato%2Fonboarding',
+      );
+      expect(redirect(const AuthStatusSignedOut(), '/legal/terminos'), isNull);
+      expect(
+        redirect(const AuthStatusSignedOut(), '/legal/privacidad'),
+        isNull,
+      );
     });
   });
 }
