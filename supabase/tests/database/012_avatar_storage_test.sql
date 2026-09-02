@@ -59,6 +59,15 @@ select results_eq(
   $$ values (0) $$,
   'NEGATIVO: una empresa pendiente de verificación no lee ningún avatar');
 
+-- Limpieza de los claims del authenticate_as previo: un anon real no trae
+-- ningún sub (si quedaran, auth.uid() seguiría devolviendo a empresa7 y el
+-- caso probaría a la empresa pendiente en vez de a anon).
+do $$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'anon', true);
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+end $$;
 set local role anon;
 select results_eq(
   $$ select count(*)::int from storage.objects where bucket_id = 'avatars' $$,

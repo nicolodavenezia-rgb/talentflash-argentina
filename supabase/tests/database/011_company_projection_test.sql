@@ -77,6 +77,14 @@ select results_eq(
   $$ values (true) $$,
   'NEGATIVO: un candidato no puede usar la proyección empresarial');
 
+-- Limpieza de los claims del authenticate_as previo: un anon real no trae
+-- ningún sub (si quedaran, auth.uid() seguiría devolviendo al usuario).
+do $$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'anon', true);
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+end $$;
 set local role anon;
 select throws_ok(
   $$ select public.get_candidate_public_profile('00000000-0000-4000-8000-000000000101'::uuid) $$,
