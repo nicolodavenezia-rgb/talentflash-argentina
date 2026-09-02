@@ -22,7 +22,8 @@ mismas versiones.
 | `esm.sh/` | `@supabase/supabase-js@2.49.4` y sus dependencias, como bundles ESM `es2022` de esm.sh: `@supabase/auth-js@2.69.1`, `functions-js@2.4.4`, `postgrest-js@1.19.4`, `realtime-js@2.11.2`, `storage-js@2.7.1`, `@supabase/node-fetch@2.6.15`, el stub de navegador de `ws@8.21.3` y el polyfill `node/buffer.mjs` (proyecto `unenv`) | 9 |
 | `deno.land/x/imagescript@1.3.0/` | ImageScript completo (28 módulos) más sus 7 binarios `utils/wasm/*.wasm` | 35 |
 | `manifest.json` | URL de origen, ruta local, paquete, versión, licencia, SHA-256 y tamaño de cada archivo | 1 |
-| `sync.mjs` | Regenera (`--update`) o verifica (`--check`) los archivos contra el manifest | 1 |
+| `sync.mjs` | Verifica (`--check`) el conjunto exacto de archivos contra el manifest o los regenera (`--update`, con aceptación explícita) | 1 |
+| `sync.spec.mjs` | Pruebas de `sync.mjs` sin red (`node --test`); el sufijo `.spec` evita que `deno test` las descubra | 1 |
 | `types/supabase-js.d.ts` | Declaración mínima de tipos del cliente, escrita a mano (ver abajo) | 1 |
 | `LICENSES.md` | Texto completo de cada licencia | 1 |
 
@@ -101,15 +102,45 @@ directorio de la función.
 ## Verificar y actualizar
 
 ```powershell
-node supabase/functions/avatar/deps/sync.mjs --check    # sin red: SHA-256 de cada archivo contra manifest.json
-node supabase/functions/avatar/deps/sync.mjs --update   # vuelve a descargar todo y reescribe hashes y tamaños
+node supabase/functions/avatar/deps/sync.mjs --check              # sin red: conjunto exacto de archivos, tamaños y SHA-256
+node supabase/functions/avatar/deps/sync.mjs --update             # descarga a un temporal y MUESTRA qué cambiaría; no escribe
+node supabase/functions/avatar/deps/sync.mjs --update --accept    # aplica los cambios mostrados, solo si todas las descargas fueron válidas
+node --test supabase/functions/avatar/deps/sync.spec.mjs          # pruebas del sincronizador, sin red
 deno check --config supabase/functions/avatar/deno.json supabase/functions/avatar/index.ts
 deno info --config supabase/functions/avatar/deno.json supabase/functions/avatar/index.ts   # no debe listar ningún https:// ni node:
 ```
 
+Qué garantiza `--check`: recorre `esm.sh/` y `deno.land/` sin seguir enlaces
+y exige que el conjunto real de archivos sea exactamente el del manifest.
+Falla, con salida 1 y sin imprimir contenido, ante un archivo faltante
+(`FALTA`), un tamaño distinto (`TAMAÑO`), un hash distinto (`HASH`), un
+archivo que no figura en el manifest (`INESPERADO`), un enlace simbólico
+(`SYMLINK`) o cualquier cosa que no sea un archivo regular (`TIPO`). También
+rechaza un manifest malformado: rutas fuera de esos dos directorios o con
+`..`, URLs que no cumplan las reglas de abajo, hashes o tamaños inválidos,
+entradas sin paquete, versión o licencia. Fuera del alcance del manifest
+quedan solo los archivos administrativos de este directorio: `manifest.json`,
+`README.md`, `LICENSES.md`, `.gitattributes`, `types/`, `sync.mjs` y
+`sync.spec.mjs`.
+
+Qué garantiza `--update`: acepta únicamente URLs `https://` de la lista
+cerrada de hosts (`esm.sh`, `deno.land`), sin credenciales embebidas ni
+puerto explícito. No sigue redirecciones automáticamente: si el origen
+redirige, procesa el salto a mano, registra origen y destino, vuelve a
+aplicar las mismas reglas al destino y corta a partir del cuarto salto. Solo
+refresca dependencias que ya tienen archivo local: una entrada nueva en el
+manifest se rechaza salvo con `--allow-new`, para que incorporar una
+dependencia sea siempre una decisión explícita. Descarga todo a un directorio
+temporal; si una sola descarga falla, no toca ningún archivo. Sin `--accept`
+solo informa (`CAMBIA` / `NUEVO`, con hash y tamaño viejos y nuevos) y sale
+con 3 si hay cambios pendientes; con `--accept` reemplaza cada archivo
+cambiado escribiendo primero un temporal junto al destino y reescribe el
+manifest al final.
+
 Para cambiar de versión: editar `manifest.json` (URL y ruta de cada archivo
 del paquete), ajustar las claves de `../deno.json` y los imports de
-`index.ts`, correr `--update`, comprobar con `deno info` que el grafo siga sin
-módulos remotos ni `node:`, y volver a ejecutar `npm run storage:test` y
-`npm run functions:test`. Si el host está detrás de un TLS interceptado,
-`--update` necesita `NODE_OPTIONS=--use-system-ca`.
+`index.ts`, correr `--update --accept --allow-new`, revisar el diff,
+comprobar con `deno info` que el grafo siga sin módulos remotos ni `node:`, y
+volver a ejecutar `npm run storage:test` y `npm run functions:test`. Si el
+host está detrás de un TLS interceptado, `--update` necesita
+`NODE_OPTIONS=--use-system-ca`.
