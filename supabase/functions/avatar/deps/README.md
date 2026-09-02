@@ -144,3 +144,24 @@ comprobar con `deno info` que el grafo siga sin módulos remotos ni `node:`, y
 volver a ejecutar `npm run storage:test` y `npm run functions:test`. Si el
 host está detrás de un TLS interceptado, `--update` necesita
 `NODE_OPTIONS=--use-system-ca`.
+
+## Riesgos aceptados
+
+Dos observaciones de la revisión quedan abiertas a propósito; no son errores
+resueltos, son límites conocidos de este empaquetado.
+
+- **Polyfill sin versión en la URL.** `esm.sh/node/buffer.mjs` (proyecto
+  `unenv`, licencia MIT) se sirve desde una URL sin número de versión, así
+  que esm.sh podría cambiar su contenido sin avisar. La copia local está
+  fijada por SHA-256 y tamaño en `manifest.json`: `--check` detecta cualquier
+  diferencia y `--update` la muestra como `CAMBIA` y no la aplica sin
+  `--accept`, de modo que un cambio en el origen siempre pasa por revisión
+  explícita. Lo que no existe es una forma de pedirle a esm.sh una versión
+  concreta de ese archivo.
+- **WASM que la función no usa.** ImageScript importa de forma ansiosa sus
+  siete cargadores (`svg`, `gif`, `png`, `font`, `jpeg`, `tiff`, `zlib`) y
+  cada uno lee su `.wasm` al cargar, así que el runtime lee los 7 binarios
+  (1,77 MB) en cada arranque aunque `avatar` solo decodifica JPEG y PNG y
+  re-encodea JPEG; `svg`, `gif`, `tiff` y `font` suman cerca de 1,5 MB sin
+  uso directo. Reducirlo exigiría modificar código de terceros o cambiar de
+  biblioteca, y no se hace en este bloque.
