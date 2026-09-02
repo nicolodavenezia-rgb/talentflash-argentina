@@ -10,19 +10,32 @@ hotelería, CABA + GBA). App Flutter multiplataforma + Supabase.
 
 ## Estado
 
-**Bloque A — Fundaciones**, **Bloque B — Auth (primera parte)** y **Bloque C —
-Onboarding + consentimientos** completos en local (ver
-[docs/ROADMAP.md](docs/ROADMAP.md)): esquema SQL con RLS, tooling, CI,
+**Bloque A — Fundaciones**, **Bloque B — Auth (primera parte)**, **Bloque C —
+Onboarding + consentimientos** y **Bloque D — Perfiles** completos en local
+(ver [docs/ROADMAP.md](docs/ROADMAP.md)): esquema SQL con RLS, tooling, CI,
 autenticación con correo y contraseña, y el onboarding completo de candidato y
 empresa — wizards con reanudación, verificación de mayoría de 18 server-side,
 consentimientos versionados append-only con reconsentimiento automático,
 preferencias de notificaciones con opt-in explícito y documentos legales
 públicos en `/legal/*`.
 
+Del Bloque D (migraciones `0023`–`0024`): CRUD del perfil profesional del
+candidato con validación de contenido server-side y disponibilidad horaria
+semanal (T-021); foto de perfil en bucket **privado** con thumbnail, URLs
+firmadas de TTL corto y re-encoding sin EXIF vía la Edge Function `avatar`
+(T-022); estado honesto de la presentación, sin ningún CTA falso — el video
+real llega en el Bloque K (T-023); vista de candidato para empresas SOLO por
+una proyección con whitelist de campos, fail-closed (la policy que dejaba leer
+la fila cruda fue eliminada, T-024); y score de completitud calculado en el
+cliente, separado del "listo para postularse" server-side (T-025).
+
 Todavía **no** están hechos (y no se simulan en la UI): Google y Apple (T-012),
 la pantalla in-app de cambio de contraseña, que depende del enlace profundo
 (T-013), MFA, CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
-FCM/APNs y cualquier proyecto remoto.
+FCM/APNs y cualquier proyecto remoto. Del Bloque D queda pendiente el soporte
+de avatares WebP: la Edge Function los rechaza con `unsupported_format`
+(la librería de imágenes no los decodifica), así que el whitelist efectivo hoy
+es JPEG/PNG.
 
 ## Requisitos
 
@@ -82,6 +95,14 @@ hay ningún proyecto remoto.
 | Candidatos 19–20 | `candidato19@…`, `candidato20@…` | `candidate` | **incompleto**: al entrar, el wizard retoma donde quedó |
 | Empresas 1–5 | `empresa1@…` … `empresa5@…` | `company` | completo, empresa creada y verificada |
 | Empresa 6 | `empresa6@dev.talentflash.test` | `company` | **incompleto**: al entrar abre el wizard de empresa |
+| Empresa 7 | `empresa7@dev.talentflash.test` | `company` | completo, empresa creada **pendiente** de verificación (para probar los estados de la vista de candidato) |
+
+El seed del Bloque D suma además: perfiles ricos para `candidato1` y
+`candidato2` (este último con turnos que cruzan la medianoche), filas de
+videos de presentación en estados `ready`/`processing`/`failed` para
+candidato1/4/5 (solo filas: el pipeline real de video es del Bloque K) y un
+bloqueo de `candidato15` al owner de `empresa1` (corta la proyección). Sin
+binarios ni PII: los avatares reales los ejercita `npm run storage:test`.
 
 La publicación de los candidatos 1–15 no está forzada en el seed: la deriva el
 trigger de la migración `0022` a partir de los datos mínimos + el
@@ -124,10 +145,16 @@ formulario que no podría funcionar.
 dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test
+
+# Bloque D — requieren el stack local levantado (db:start) y Deno 2:
+npm run functions:test   # deno test de la Edge Function avatar (magic bytes + parser EXIF)
+npm run storage:test     # integración real contra el bucket avatars (upload, thumbnail,
+                         # URL firmada vigente y vencida, permisos, DELETE)
 ```
 
 La CI (`.github/workflows/ci.yml`) corre formato + analyze + tests Flutter,
-reset/lint/pgTAP de Supabase y scan de secretos (gitleaks) en cada push/PR
+reset/lint/pgTAP de Supabase, `functions:test` y `storage:test` (con
+`denoland/setup-deno@v2`) y scan de secretos (gitleaks) en cada push/PR
 cuando el repo tenga remoto en GitHub.
 
 ## Estructura
@@ -140,10 +167,11 @@ lib/
 │                   # legal, notifications, profiles, companies, moderation…
 └── shared/         # widgets/modelos compartidos (fallos tipados, banners)
 supabase/
-├── migrations/     # 0001–0022 — esquema completo + RLS deny-by-default
-├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents)
+├── migrations/     # 0001–0024 — esquema completo + RLS deny-by-default
+├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents
+│                   # + perfiles, proyección de empresa y storage de avatares)
 ├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)
-└── functions/      # Edge Functions (Bloques B+)
+└── functions/      # Edge Functions (avatar — T-022; el resto llega con sus bloques)
 docs/               # los 8 documentos técnicos (fuente de verdad)
 env/                # flavors dev/staging/prod (sin secretos)
 ```

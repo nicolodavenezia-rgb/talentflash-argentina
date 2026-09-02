@@ -10,9 +10,11 @@ import 'package:talentflash_argentina/features/consents/providers/consents_provi
 import 'package:talentflash_argentina/features/legal/providers/legal_providers.dart';
 import 'package:talentflash_argentina/features/notifications/providers/notification_prefs_providers.dart';
 import 'package:talentflash_argentina/features/onboarding/providers/onboarding_providers.dart';
+import 'package:talentflash_argentina/features/profiles/providers/profile_providers.dart';
 
 import 'fake_auth_repository.dart';
 import 'fake_onboarding_repositories.dart';
+import 'fake_profile_repositories.dart';
 
 /// Configuración pública equivalente a `env/dev.json`. Nunca hay secretos en
 /// los tests, igual que en el repositorio.
@@ -33,6 +35,9 @@ class TalentFlashHarness {
     this.catalogRepository,
     this.notificationPrefsRepository,
     this.legalRepository,
+    this.profileRepository,
+    this.companyAccessRepository,
+    this.avatarPicker,
   );
 
   final ProviderContainer container;
@@ -42,6 +47,9 @@ class TalentFlashHarness {
   final FakeCatalogRepository catalogRepository;
   final FakeNotificationPrefsRepository notificationPrefsRepository;
   final FakeLegalRepository legalRepository;
+  final FakeProfileRepository profileRepository;
+  final FakeCompanyAccessRepository companyAccessRepository;
+  final FakeAvatarImagePicker avatarPicker;
 
   GoRouter get router => container.read(appRouterProvider);
 
@@ -65,6 +73,9 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
   FakeCatalogRepository? catalogRepository,
   FakeNotificationPrefsRepository? notificationPrefsRepository,
   FakeLegalRepository? legalRepository,
+  FakeProfileRepository? profileRepository,
+  FakeCompanyAccessRepository? companyAccessRepository,
+  FakeAvatarImagePicker? avatarPicker,
 }) async {
   addTearDown(authRepository.dispose);
   final onboarding = onboardingRepository ?? FakeOnboardingRepository();
@@ -73,7 +84,15 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
   final prefs =
       notificationPrefsRepository ?? FakeNotificationPrefsRepository();
   final legal = legalRepository ?? FakeLegalRepository();
+  final profiles = profileRepository ?? FakeProfileRepository();
+  final companyAccess =
+      companyAccessRepository ?? FakeCompanyAccessRepository();
+  final picker = avatarPicker ?? FakeAvatarImagePicker();
   final container = ProviderContainer.test(
+    // Riverpod 3 reintenta con backoff los providers que fallan; en tests eso
+    // vuelve no determinista cualquier escenario de error (el fake consume el
+    // fallo y el reintento "se cura" solo). Acá los errores son finales.
+    retry: (retryCount, error) => null,
     overrides: [
       envConfigProvider.overrideWithValue(testEnvConfig),
       appEntryPointProvider.overrideWithValue(entryPoint),
@@ -83,6 +102,9 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
       catalogRepositoryProvider.overrideWithValue(catalog),
       notificationPrefsRepositoryProvider.overrideWithValue(prefs),
       legalRepositoryProvider.overrideWithValue(legal),
+      profileRepositoryProvider.overrideWithValue(profiles),
+      companyAccessRepositoryProvider.overrideWithValue(companyAccess),
+      avatarImagePickerProvider.overrideWithValue(picker),
     ],
   );
   await tester.pumpWidget(
@@ -99,5 +121,8 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
     catalog,
     prefs,
     legal,
+    profiles,
+    companyAccess,
+    picker,
   );
 }

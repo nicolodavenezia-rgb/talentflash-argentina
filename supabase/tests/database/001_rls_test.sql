@@ -3,10 +3,16 @@ begin;
 select plan(7);
 
 select tests.authenticate_as('user_empresa_ok');
+-- Endurecido en el Bloque D (T-024): la policy de lectura empresarial directa
+-- sobre candidate_profiles se eliminó (exponía birth_date y otras columnas
+-- privadas). La empresa accede SOLO a la proyección con whitelist de campos
+-- (get_candidate_public_profile, cubierta en 011_company_projection_test.sql).
+-- La existencia del fixture cand_pub la garantiza 011 (proyección not null):
+-- este count=0 solo es significativo dentro de la suite completa.
 select results_eq(
   $$ select count(*)::int from candidate_profiles where id = tests.get_uuid('cand_pub') $$,
-  $$ values (1) $$,
-  'POSITIVO: empresa verificada ve perfil de candidato publicado');
+  $$ values (0) $$,
+  'NEGATIVO: la empresa ya no lee la fila cruda de un candidato publicado (T-024)');
 
 select results_eq(
   $$ select count(*)::int from candidate_profiles where id = tests.get_uuid('cand_priv') $$,

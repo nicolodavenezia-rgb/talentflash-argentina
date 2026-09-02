@@ -642,4 +642,492 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get legalLoadError =>
       'No pudimos cargar el documento. Revisá tu conexión y reintentá.';
+
+  @override
+  String get profileTitle => 'Mi perfil';
+
+  @override
+  String get profileEditAction => 'Editar perfil';
+
+  @override
+  String get profileLoadError =>
+      'No pudimos cargar tu perfil. Revisá tu conexión y reintentá.';
+
+  @override
+  String get profilePublishedBadge => 'Visible para empresas verificadas';
+
+  @override
+  String get profileNotPublishedBadge => 'No visible para empresas';
+
+  @override
+  String get profileReadyBadge => 'Tenés los datos mínimos para postularte';
+
+  @override
+  String get profileNotReadyBadge => 'Te faltan datos mínimos para postularte';
+
+  @override
+  String get profileSectionIdentity => 'Sobre vos';
+
+  @override
+  String get profileSectionLocation => 'Dónde buscás trabajo';
+
+  @override
+  String get profileSectionPreferences => 'Tu búsqueda';
+
+  @override
+  String get profileSectionSchedule => 'Disponibilidad horaria';
+
+  @override
+  String get profileSectionSalary => 'Expectativa salarial';
+
+  @override
+  String get profileSectionSkills => 'Habilidades';
+
+  @override
+  String get profileSectionLanguages => 'Idiomas';
+
+  @override
+  String get profileSectionExperience => 'Experiencia laboral';
+
+  @override
+  String get profileSectionEducation => 'Educación';
+
+  @override
+  String get profileEmptyValue => 'Sin completar';
+
+  @override
+  String get profileOptionalEmptyValue => 'Sin especificar (es opcional)';
+
+  @override
+  String profileSalaryRange(String min, String max) {
+    return 'ARS $min a $max por mes';
+  }
+
+  @override
+  String profileExperiencePeriod(String from, String to) {
+    return '$from a $to';
+  }
+
+  @override
+  String profileExperienceCurrent(String from) {
+    return '$from a la actualidad';
+  }
+
+  @override
+  String profileScheduleNextDay(String day, String start, String end) {
+    return '$day de $start a $end (termina el día siguiente)';
+  }
+
+  @override
+  String profileScheduleSameDay(String day, String start, String end) {
+    return '$day de $start a $end';
+  }
+
+  @override
+  String get profileCompletenessTitle => 'Completitud del perfil';
+
+  @override
+  String profileCompletenessValue(int score) {
+    return '$score % completo';
+  }
+
+  @override
+  String get profileCompletenessHint =>
+      'Es una guía solo para vos: las empresas no la ven y no cambia ningún orden de resultados.';
+
+  @override
+  String get profileCompletenessPendingTitle => 'Si querés, podés sumar:';
+
+  @override
+  String get profileCompletenessItemBase => 'Los datos básicos del onboarding';
+
+  @override
+  String get profileCompletenessItemHeadline => 'Un titular que te presente';
+
+  @override
+  String get profileCompletenessItemBio => 'Una breve biografía';
+
+  @override
+  String get profileCompletenessItemExperience =>
+      'Al menos una experiencia laboral';
+
+  @override
+  String get profileCompletenessItemSkills => 'Tres habilidades o más';
+
+  @override
+  String get profileCompletenessItemLanguages => 'Al menos un idioma';
+
+  @override
+  String get profileCompletenessItemSchedule => 'Tu disponibilidad horaria';
+
+  @override
+  String get profileCompletenessItemEducation => 'Tu educación (opcional)';
+
+  @override
+  String get profileCompletenessItemAvatar => 'Una foto de perfil (opcional)';
+
+  @override
+  String get profileCompletenessItemPresentation =>
+      'Una presentación (opcional)';
+
+  @override
+  String get profilePresentationNone =>
+      'Todavía no tenés una presentación cargada.';
+
+  @override
+  String get profilePresentationProcessing =>
+      'Tu video de presentación se está procesando.';
+
+  @override
+  String get profilePresentationReady => 'Tu presentación en video está lista.';
+
+  @override
+  String get profilePresentationFailed => 'El procesamiento de tu video falló.';
+
+  @override
+  String get profilePresentationExpired => 'Tu video de presentación venció.';
+
+  @override
+  String get profilePresentationOptionalNote =>
+      'La presentación es opcional y nunca es requisito para postularte. La grabación en video, audio o texto —con igual jerarquía— llega en una etapa posterior del desarrollo.';
+
+  @override
+  String get profileAvatarLabel => 'Foto de perfil';
+
+  @override
+  String get profileAvatarAdd => 'Agregar foto';
+
+  @override
+  String get profileAvatarReplace => 'Cambiar foto';
+
+  @override
+  String get profileAvatarDelete => 'Quitar foto';
+
+  @override
+  String get profileAvatarOptionalNote =>
+      'La foto es opcional: no tenerla no te resta en nada.';
+
+  @override
+  String get profileAvatarUploaded => 'Foto de perfil actualizada.';
+
+  @override
+  String get profileAvatarDeleted => 'Foto de perfil eliminada.';
+
+  @override
+  String get avatarErrorTooLarge =>
+      'La imagen supera los 2 MB. Elegí una más liviana.';
+
+  @override
+  String get avatarErrorInvalid =>
+      'El archivo no parece una imagen JPEG o PNG válida.';
+
+  @override
+  String get avatarErrorUnsupported =>
+      'Por ahora aceptamos JPEG o PNG; el soporte de WebP llega más adelante.';
+
+  @override
+  String get avatarErrorNotAllowed =>
+      'No pudimos actualizar tu foto con esta sesión. Volvé a entrar y reintentá.';
+
+  @override
+  String get avatarErrorNetwork =>
+      'No pudimos conectarnos para subir la foto. Revisá tu conexión.';
+
+  @override
+  String get avatarErrorUnknown =>
+      'No pudimos procesar la foto. Reintentá en unos minutos.';
+
+  @override
+  String get profileEditTitle => 'Editar perfil';
+
+  @override
+  String get profileSaveAction => 'Guardar cambios';
+
+  @override
+  String get profileSavedMessage => 'Cambios guardados.';
+
+  @override
+  String get profileDiscardTitle => '¿Salir sin guardar?';
+
+  @override
+  String get profileDiscardBody =>
+      'Tenés cambios sin guardar. Si salís ahora, se pierden.';
+
+  @override
+  String get profileDiscardConfirm => 'Salir sin guardar';
+
+  @override
+  String get profileDiscardCancel => 'Seguir editando';
+
+  @override
+  String get headlineLabel => 'Titular';
+
+  @override
+  String get headlineHelp =>
+      'Una línea que te presente (hasta 120 caracteres).';
+
+  @override
+  String get bioLabel => 'Biografía';
+
+  @override
+  String get bioHelp =>
+      'Contá tu experiencia y qué buscás (hasta 2000 caracteres).';
+
+  @override
+  String get experienceLevelLabel => 'Nivel de experiencia';
+
+  @override
+  String get salaryMinLabel => 'Mínimo (ARS por mes)';
+
+  @override
+  String get salaryMaxLabel => 'Máximo (ARS por mes)';
+
+  @override
+  String get salaryOptionalNote =>
+      'La expectativa salarial es opcional; podés dejarla vacía.';
+
+  @override
+  String get skillsAddLabel => 'Agregar habilidad';
+
+  @override
+  String get languagesAddLabel => 'Agregar idioma';
+
+  @override
+  String get chipAddAction => 'Agregar';
+
+  @override
+  String chipRemoveLabel(String value) {
+    return 'Quitar $value';
+  }
+
+  @override
+  String get profileErrorNameRequired =>
+      'El nombre necesita entre 2 y 80 caracteres.';
+
+  @override
+  String get profileErrorHeadlineTooLong =>
+      'El titular admite hasta 120 caracteres.';
+
+  @override
+  String get profileErrorBioTooLong =>
+      'La biografía admite hasta 2000 caracteres.';
+
+  @override
+  String get profileErrorSalaryInvalid =>
+      'Revisá el rango: el mínimo no puede superar al máximo.';
+
+  @override
+  String get profileErrorSalaryFormat =>
+      'Ingresá solo números, sin puntos ni comas.';
+
+  @override
+  String get profileErrorChipEmpty => 'Escribí un valor antes de agregar.';
+
+  @override
+  String get profileErrorChipDuplicate => 'Ese valor ya está en la lista.';
+
+  @override
+  String get profileErrorChipTooLong => 'Ese valor es demasiado largo.';
+
+  @override
+  String get profileErrorTooManyChips => 'Llegaste al máximo de esta lista.';
+
+  @override
+  String get experienceAdd => 'Agregar experiencia';
+
+  @override
+  String get experienceEditAction => 'Editar';
+
+  @override
+  String get experienceDeleteAction => 'Eliminar';
+
+  @override
+  String get experienceMoveUp => 'Subir en la lista';
+
+  @override
+  String get experienceMoveDown => 'Bajar en la lista';
+
+  @override
+  String get experienceCompanyLabel => 'Empresa o lugar';
+
+  @override
+  String get experiencePositionLabel => 'Puesto';
+
+  @override
+  String get experienceFromLabel => 'Desde (MM/AAAA)';
+
+  @override
+  String get experienceToLabel => 'Hasta (MM/AAAA)';
+
+  @override
+  String get experienceCurrentLabel => 'Trabajo acá actualmente';
+
+  @override
+  String get experienceDescriptionLabel => 'Descripción (opcional)';
+
+  @override
+  String get experienceErrorRequired =>
+      'Completá empresa, puesto y fecha de inicio.';
+
+  @override
+  String get experienceErrorDates =>
+      'Revisá las fechas: formato MM/AAAA y el fin no puede ser anterior al inicio.';
+
+  @override
+  String get experienceDialogSave => 'Guardar experiencia';
+
+  @override
+  String get educationAdd => 'Agregar educación';
+
+  @override
+  String get educationLevelLabel => 'Nivel';
+
+  @override
+  String get educationInstitutionLabel => 'Institución';
+
+  @override
+  String get educationDegreeLabel => 'Título (opcional)';
+
+  @override
+  String get educationOptionalNote =>
+      'La educación es opcional: no es requisito para postularte.';
+
+  @override
+  String get educationErrorRequired => 'Completá nivel e institución.';
+
+  @override
+  String get educationDialogSave => 'Guardar educación';
+
+  @override
+  String get educationLevelPrimario => 'Primario';
+
+  @override
+  String get educationLevelSecundario => 'Secundario';
+
+  @override
+  String get educationLevelTerciario => 'Terciario';
+
+  @override
+  String get educationLevelUniversitario => 'Universitario';
+
+  @override
+  String get educationLevelPosgrado => 'Posgrado';
+
+  @override
+  String get educationLevelCurso => 'Curso o capacitación';
+
+  @override
+  String get scheduleAdd => 'Agregar franja';
+
+  @override
+  String get scheduleDayLabel => 'Día';
+
+  @override
+  String get scheduleStartLabel => 'Desde (HH:MM)';
+
+  @override
+  String get scheduleEndLabel => 'Hasta (HH:MM)';
+
+  @override
+  String get scheduleCrossesNote =>
+      'Si el fin es menor que el inicio, el turno termina el día siguiente (por ejemplo, 22:00 a 02:00).';
+
+  @override
+  String get scheduleErrorFormat => 'Usá el formato HH:MM, por ejemplo 18:30.';
+
+  @override
+  String get scheduleErrorOverlap =>
+      'Esa franja se superpone con otra que ya cargaste.';
+
+  @override
+  String get scheduleErrorTooMany =>
+      'Podés cargar hasta 21 franjas, con un máximo de 3 por día.';
+
+  @override
+  String get scheduleErrorZeroLength =>
+      'El inicio y el fin no pueden ser iguales.';
+
+  @override
+  String scheduleDeleteLabel(String day) {
+    return 'Quitar la franja de $day';
+  }
+
+  @override
+  String get scheduleDialogSave => 'Guardar franja';
+
+  @override
+  String get dayLun => 'Lunes';
+
+  @override
+  String get dayMar => 'Martes';
+
+  @override
+  String get dayMie => 'Miércoles';
+
+  @override
+  String get dayJue => 'Jueves';
+
+  @override
+  String get dayVie => 'Viernes';
+
+  @override
+  String get daySab => 'Sábado';
+
+  @override
+  String get dayDom => 'Domingo';
+
+  @override
+  String get experienceLevelSinExperiencia => 'Sin experiencia';
+
+  @override
+  String get experienceLevelHasta1Anio => 'Hasta 1 año';
+
+  @override
+  String get experienceLevel1a3 => '1 a 3 años';
+
+  @override
+  String get experienceLevel3a5 => '3 a 5 años';
+
+  @override
+  String get experienceLevelMas5 => 'Más de 5 años';
+
+  @override
+  String get companyCandidateTitle => 'Perfil de candidato';
+
+  @override
+  String get companyCandidateBack => 'Volver';
+
+  @override
+  String get companyCandidateNotAvailableTitle => 'Candidato no disponible';
+
+  @override
+  String get companyCandidateNotAvailableBody =>
+      'Este perfil no está disponible. Puede haber dejado de estar publicado o el enlace ya no es válido.';
+
+  @override
+  String get companyCandidatePendingTitle => 'Tu empresa está en verificación';
+
+  @override
+  String get companyCandidatePendingBody =>
+      'Hasta que se apruebe la verificación de tu empresa no podés ver perfiles de candidatos. Te avisamos apenas esté lista.';
+
+  @override
+  String get companyCandidateRejectedTitle =>
+      'La verificación de tu empresa fue rechazada';
+
+  @override
+  String get companyCandidateRejectedBody =>
+      'Mientras la verificación no esté aprobada no es posible ver candidatos. Corregí los datos y volvé a enviarla.';
+
+  @override
+  String get companyCandidateLoadError =>
+      'No pudimos cargar el perfil. Revisá tu conexión y reintentá.';
+
+  @override
+  String get companyCandidatePresentationReady =>
+      'Tiene una presentación lista para ver (la reproducción llega en una etapa posterior).';
+
+  @override
+  String get companyCandidateNoPresentation =>
+      'Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).';
 }

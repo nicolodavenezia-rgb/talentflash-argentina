@@ -60,11 +60,13 @@ void main() {
       'lib/core/networking/supabase_client_provider.dart',
       'lib/features/authentication/data/supabase_auth_repository.dart',
       'lib/features/authentication/domain/auth_failure.dart',
+      'lib/features/companies/data/supabase_company_access_repository.dart',
       'lib/features/consents/data/supabase_consents_repository.dart',
       'lib/features/legal/data/supabase_legal_repository.dart',
       'lib/features/notifications/data/supabase_notification_prefs_repository.dart',
       'lib/features/onboarding/data/supabase_catalog_repository.dart',
       'lib/features/onboarding/data/supabase_onboarding_repository.dart',
+      'lib/features/profiles/data/supabase_profile_repository.dart',
       'lib/shared/models/data_failure.dart',
     ]);
   });

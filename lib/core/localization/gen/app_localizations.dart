@@ -1215,6 +1215,876 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos cargar el documento. Revisá tu conexión y reintentá.'**
   String get legalLoadError;
+
+  /// Titulo de la pantalla del perfil propio y del boton de entrada desde el home
+  ///
+  /// In es, this message translates to:
+  /// **'Mi perfil'**
+  String get profileTitle;
+
+  /// No description provided for @profileEditAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar perfil'**
+  String get profileEditAction;
+
+  /// No description provided for @profileLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar tu perfil. Revisá tu conexión y reintentá.'**
+  String get profileLoadError;
+
+  /// No description provided for @profilePublishedBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Visible para empresas verificadas'**
+  String get profilePublishedBadge;
+
+  /// No description provided for @profileNotPublishedBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'No visible para empresas'**
+  String get profileNotPublishedBadge;
+
+  /// No description provided for @profileReadyBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Tenés los datos mínimos para postularte'**
+  String get profileReadyBadge;
+
+  /// No description provided for @profileNotReadyBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Te faltan datos mínimos para postularte'**
+  String get profileNotReadyBadge;
+
+  /// No description provided for @profileSectionIdentity.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobre vos'**
+  String get profileSectionIdentity;
+
+  /// No description provided for @profileSectionLocation.
+  ///
+  /// In es, this message translates to:
+  /// **'Dónde buscás trabajo'**
+  String get profileSectionLocation;
+
+  /// No description provided for @profileSectionPreferences.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu búsqueda'**
+  String get profileSectionPreferences;
+
+  /// No description provided for @profileSectionSchedule.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad horaria'**
+  String get profileSectionSchedule;
+
+  /// No description provided for @profileSectionSalary.
+  ///
+  /// In es, this message translates to:
+  /// **'Expectativa salarial'**
+  String get profileSectionSalary;
+
+  /// No description provided for @profileSectionSkills.
+  ///
+  /// In es, this message translates to:
+  /// **'Habilidades'**
+  String get profileSectionSkills;
+
+  /// No description provided for @profileSectionLanguages.
+  ///
+  /// In es, this message translates to:
+  /// **'Idiomas'**
+  String get profileSectionLanguages;
+
+  /// No description provided for @profileSectionExperience.
+  ///
+  /// In es, this message translates to:
+  /// **'Experiencia laboral'**
+  String get profileSectionExperience;
+
+  /// No description provided for @profileSectionEducation.
+  ///
+  /// In es, this message translates to:
+  /// **'Educación'**
+  String get profileSectionEducation;
+
+  /// No description provided for @profileEmptyValue.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin completar'**
+  String get profileEmptyValue;
+
+  /// No description provided for @profileOptionalEmptyValue.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin especificar (es opcional)'**
+  String get profileOptionalEmptyValue;
+
+  /// No description provided for @profileSalaryRange.
+  ///
+  /// In es, this message translates to:
+  /// **'ARS {min} a {max} por mes'**
+  String profileSalaryRange(String min, String max);
+
+  /// No description provided for @profileExperiencePeriod.
+  ///
+  /// In es, this message translates to:
+  /// **'{from} a {to}'**
+  String profileExperiencePeriod(String from, String to);
+
+  /// No description provided for @profileExperienceCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'{from} a la actualidad'**
+  String profileExperienceCurrent(String from);
+
+  /// No description provided for @profileScheduleNextDay.
+  ///
+  /// In es, this message translates to:
+  /// **'{day} de {start} a {end} (termina el día siguiente)'**
+  String profileScheduleNextDay(String day, String start, String end);
+
+  /// No description provided for @profileScheduleSameDay.
+  ///
+  /// In es, this message translates to:
+  /// **'{day} de {start} a {end}'**
+  String profileScheduleSameDay(String day, String start, String end);
+
+  /// No description provided for @profileCompletenessTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Completitud del perfil'**
+  String get profileCompletenessTitle;
+
+  /// No description provided for @profileCompletenessValue.
+  ///
+  /// In es, this message translates to:
+  /// **'{score} % completo'**
+  String profileCompletenessValue(int score);
+
+  /// No description provided for @profileCompletenessHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Es una guía solo para vos: las empresas no la ven y no cambia ningún orden de resultados.'**
+  String get profileCompletenessHint;
+
+  /// No description provided for @profileCompletenessPendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Si querés, podés sumar:'**
+  String get profileCompletenessPendingTitle;
+
+  /// No description provided for @profileCompletenessItemBase.
+  ///
+  /// In es, this message translates to:
+  /// **'Los datos básicos del onboarding'**
+  String get profileCompletenessItemBase;
+
+  /// No description provided for @profileCompletenessItemHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Un titular que te presente'**
+  String get profileCompletenessItemHeadline;
+
+  /// No description provided for @profileCompletenessItemBio.
+  ///
+  /// In es, this message translates to:
+  /// **'Una breve biografía'**
+  String get profileCompletenessItemBio;
+
+  /// No description provided for @profileCompletenessItemExperience.
+  ///
+  /// In es, this message translates to:
+  /// **'Al menos una experiencia laboral'**
+  String get profileCompletenessItemExperience;
+
+  /// No description provided for @profileCompletenessItemSkills.
+  ///
+  /// In es, this message translates to:
+  /// **'Tres habilidades o más'**
+  String get profileCompletenessItemSkills;
+
+  /// No description provided for @profileCompletenessItemLanguages.
+  ///
+  /// In es, this message translates to:
+  /// **'Al menos un idioma'**
+  String get profileCompletenessItemLanguages;
+
+  /// No description provided for @profileCompletenessItemSchedule.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu disponibilidad horaria'**
+  String get profileCompletenessItemSchedule;
+
+  /// No description provided for @profileCompletenessItemEducation.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu educación (opcional)'**
+  String get profileCompletenessItemEducation;
+
+  /// No description provided for @profileCompletenessItemAvatar.
+  ///
+  /// In es, this message translates to:
+  /// **'Una foto de perfil (opcional)'**
+  String get profileCompletenessItemAvatar;
+
+  /// No description provided for @profileCompletenessItemPresentation.
+  ///
+  /// In es, this message translates to:
+  /// **'Una presentación (opcional)'**
+  String get profileCompletenessItemPresentation;
+
+  /// No description provided for @profilePresentationNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no tenés una presentación cargada.'**
+  String get profilePresentationNone;
+
+  /// No description provided for @profilePresentationProcessing.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu video de presentación se está procesando.'**
+  String get profilePresentationProcessing;
+
+  /// No description provided for @profilePresentationReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu presentación en video está lista.'**
+  String get profilePresentationReady;
+
+  /// No description provided for @profilePresentationFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'El procesamiento de tu video falló.'**
+  String get profilePresentationFailed;
+
+  /// No description provided for @profilePresentationExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu video de presentación venció.'**
+  String get profilePresentationExpired;
+
+  /// Banner informativo sin CTA (T-023): honesto sobre lo que falta, sin botones que no funcionen
+  ///
+  /// In es, this message translates to:
+  /// **'La presentación es opcional y nunca es requisito para postularte. La grabación en video, audio o texto —con igual jerarquía— llega en una etapa posterior del desarrollo.'**
+  String get profilePresentationOptionalNote;
+
+  /// No description provided for @profileAvatarLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Foto de perfil'**
+  String get profileAvatarLabel;
+
+  /// No description provided for @profileAvatarAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar foto'**
+  String get profileAvatarAdd;
+
+  /// No description provided for @profileAvatarReplace.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar foto'**
+  String get profileAvatarReplace;
+
+  /// No description provided for @profileAvatarDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar foto'**
+  String get profileAvatarDelete;
+
+  /// No description provided for @profileAvatarOptionalNote.
+  ///
+  /// In es, this message translates to:
+  /// **'La foto es opcional: no tenerla no te resta en nada.'**
+  String get profileAvatarOptionalNote;
+
+  /// No description provided for @profileAvatarUploaded.
+  ///
+  /// In es, this message translates to:
+  /// **'Foto de perfil actualizada.'**
+  String get profileAvatarUploaded;
+
+  /// No description provided for @profileAvatarDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Foto de perfil eliminada.'**
+  String get profileAvatarDeleted;
+
+  /// No description provided for @avatarErrorTooLarge.
+  ///
+  /// In es, this message translates to:
+  /// **'La imagen supera los 2 MB. Elegí una más liviana.'**
+  String get avatarErrorTooLarge;
+
+  /// No description provided for @avatarErrorInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'El archivo no parece una imagen JPEG o PNG válida.'**
+  String get avatarErrorInvalid;
+
+  /// No description provided for @avatarErrorUnsupported.
+  ///
+  /// In es, this message translates to:
+  /// **'Por ahora aceptamos JPEG o PNG; el soporte de WebP llega más adelante.'**
+  String get avatarErrorUnsupported;
+
+  /// No description provided for @avatarErrorNotAllowed.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos actualizar tu foto con esta sesión. Volvé a entrar y reintentá.'**
+  String get avatarErrorNotAllowed;
+
+  /// No description provided for @avatarErrorNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos conectarnos para subir la foto. Revisá tu conexión.'**
+  String get avatarErrorNetwork;
+
+  /// No description provided for @avatarErrorUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos procesar la foto. Reintentá en unos minutos.'**
+  String get avatarErrorUnknown;
+
+  /// No description provided for @profileEditTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar perfil'**
+  String get profileEditTitle;
+
+  /// No description provided for @profileSaveAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar cambios'**
+  String get profileSaveAction;
+
+  /// No description provided for @profileSavedMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambios guardados.'**
+  String get profileSavedMessage;
+
+  /// No description provided for @profileDiscardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Salir sin guardar?'**
+  String get profileDiscardTitle;
+
+  /// No description provided for @profileDiscardBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tenés cambios sin guardar. Si salís ahora, se pierden.'**
+  String get profileDiscardBody;
+
+  /// No description provided for @profileDiscardConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir sin guardar'**
+  String get profileDiscardConfirm;
+
+  /// No description provided for @profileDiscardCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get profileDiscardCancel;
+
+  /// No description provided for @headlineLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Titular'**
+  String get headlineLabel;
+
+  /// No description provided for @headlineHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Una línea que te presente (hasta 120 caracteres).'**
+  String get headlineHelp;
+
+  /// No description provided for @bioLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Biografía'**
+  String get bioLabel;
+
+  /// No description provided for @bioHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Contá tu experiencia y qué buscás (hasta 2000 caracteres).'**
+  String get bioHelp;
+
+  /// No description provided for @experienceLevelLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nivel de experiencia'**
+  String get experienceLevelLabel;
+
+  /// No description provided for @salaryMinLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Mínimo (ARS por mes)'**
+  String get salaryMinLabel;
+
+  /// No description provided for @salaryMaxLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Máximo (ARS por mes)'**
+  String get salaryMaxLabel;
+
+  /// No description provided for @salaryOptionalNote.
+  ///
+  /// In es, this message translates to:
+  /// **'La expectativa salarial es opcional; podés dejarla vacía.'**
+  String get salaryOptionalNote;
+
+  /// No description provided for @skillsAddLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar habilidad'**
+  String get skillsAddLabel;
+
+  /// No description provided for @languagesAddLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar idioma'**
+  String get languagesAddLabel;
+
+  /// No description provided for @chipAddAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar'**
+  String get chipAddAction;
+
+  /// No description provided for @chipRemoveLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar {value}'**
+  String chipRemoveLabel(String value);
+
+  /// No description provided for @profileErrorNameRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'El nombre necesita entre 2 y 80 caracteres.'**
+  String get profileErrorNameRequired;
+
+  /// No description provided for @profileErrorHeadlineTooLong.
+  ///
+  /// In es, this message translates to:
+  /// **'El titular admite hasta 120 caracteres.'**
+  String get profileErrorHeadlineTooLong;
+
+  /// No description provided for @profileErrorBioTooLong.
+  ///
+  /// In es, this message translates to:
+  /// **'La biografía admite hasta 2000 caracteres.'**
+  String get profileErrorBioTooLong;
+
+  /// No description provided for @profileErrorSalaryInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá el rango: el mínimo no puede superar al máximo.'**
+  String get profileErrorSalaryInvalid;
+
+  /// No description provided for @profileErrorSalaryFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá solo números, sin puntos ni comas.'**
+  String get profileErrorSalaryFormat;
+
+  /// No description provided for @profileErrorChipEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribí un valor antes de agregar.'**
+  String get profileErrorChipEmpty;
+
+  /// No description provided for @profileErrorChipDuplicate.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese valor ya está en la lista.'**
+  String get profileErrorChipDuplicate;
+
+  /// No description provided for @profileErrorChipTooLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese valor es demasiado largo.'**
+  String get profileErrorChipTooLong;
+
+  /// No description provided for @profileErrorTooManyChips.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al máximo de esta lista.'**
+  String get profileErrorTooManyChips;
+
+  /// No description provided for @experienceAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar experiencia'**
+  String get experienceAdd;
+
+  /// No description provided for @experienceEditAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get experienceEditAction;
+
+  /// No description provided for @experienceDeleteAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get experienceDeleteAction;
+
+  /// No description provided for @experienceMoveUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Subir en la lista'**
+  String get experienceMoveUp;
+
+  /// No description provided for @experienceMoveDown.
+  ///
+  /// In es, this message translates to:
+  /// **'Bajar en la lista'**
+  String get experienceMoveDown;
+
+  /// No description provided for @experienceCompanyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa o lugar'**
+  String get experienceCompanyLabel;
+
+  /// No description provided for @experiencePositionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Puesto'**
+  String get experiencePositionLabel;
+
+  /// No description provided for @experienceFromLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde (MM/AAAA)'**
+  String get experienceFromLabel;
+
+  /// No description provided for @experienceToLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta (MM/AAAA)'**
+  String get experienceToLabel;
+
+  /// No description provided for @experienceCurrentLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Trabajo acá actualmente'**
+  String get experienceCurrentLabel;
+
+  /// No description provided for @experienceDescriptionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción (opcional)'**
+  String get experienceDescriptionLabel;
+
+  /// No description provided for @experienceErrorRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá empresa, puesto y fecha de inicio.'**
+  String get experienceErrorRequired;
+
+  /// No description provided for @experienceErrorDates.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá las fechas: formato MM/AAAA y el fin no puede ser anterior al inicio.'**
+  String get experienceErrorDates;
+
+  /// No description provided for @experienceDialogSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar experiencia'**
+  String get experienceDialogSave;
+
+  /// No description provided for @educationAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar educación'**
+  String get educationAdd;
+
+  /// No description provided for @educationLevelLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nivel'**
+  String get educationLevelLabel;
+
+  /// No description provided for @educationInstitutionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Institución'**
+  String get educationInstitutionLabel;
+
+  /// No description provided for @educationDegreeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Título (opcional)'**
+  String get educationDegreeLabel;
+
+  /// No description provided for @educationOptionalNote.
+  ///
+  /// In es, this message translates to:
+  /// **'La educación es opcional: no es requisito para postularte.'**
+  String get educationOptionalNote;
+
+  /// No description provided for @educationErrorRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá nivel e institución.'**
+  String get educationErrorRequired;
+
+  /// No description provided for @educationDialogSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar educación'**
+  String get educationDialogSave;
+
+  /// No description provided for @educationLevelPrimario.
+  ///
+  /// In es, this message translates to:
+  /// **'Primario'**
+  String get educationLevelPrimario;
+
+  /// No description provided for @educationLevelSecundario.
+  ///
+  /// In es, this message translates to:
+  /// **'Secundario'**
+  String get educationLevelSecundario;
+
+  /// No description provided for @educationLevelTerciario.
+  ///
+  /// In es, this message translates to:
+  /// **'Terciario'**
+  String get educationLevelTerciario;
+
+  /// No description provided for @educationLevelUniversitario.
+  ///
+  /// In es, this message translates to:
+  /// **'Universitario'**
+  String get educationLevelUniversitario;
+
+  /// No description provided for @educationLevelPosgrado.
+  ///
+  /// In es, this message translates to:
+  /// **'Posgrado'**
+  String get educationLevelPosgrado;
+
+  /// No description provided for @educationLevelCurso.
+  ///
+  /// In es, this message translates to:
+  /// **'Curso o capacitación'**
+  String get educationLevelCurso;
+
+  /// No description provided for @scheduleAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar franja'**
+  String get scheduleAdd;
+
+  /// No description provided for @scheduleDayLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Día'**
+  String get scheduleDayLabel;
+
+  /// No description provided for @scheduleStartLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde (HH:MM)'**
+  String get scheduleStartLabel;
+
+  /// No description provided for @scheduleEndLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta (HH:MM)'**
+  String get scheduleEndLabel;
+
+  /// No description provided for @scheduleCrossesNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Si el fin es menor que el inicio, el turno termina el día siguiente (por ejemplo, 22:00 a 02:00).'**
+  String get scheduleCrossesNote;
+
+  /// No description provided for @scheduleErrorFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'Usá el formato HH:MM, por ejemplo 18:30.'**
+  String get scheduleErrorFormat;
+
+  /// No description provided for @scheduleErrorOverlap.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa franja se superpone con otra que ya cargaste.'**
+  String get scheduleErrorOverlap;
+
+  /// No description provided for @scheduleErrorTooMany.
+  ///
+  /// In es, this message translates to:
+  /// **'Podés cargar hasta 21 franjas, con un máximo de 3 por día.'**
+  String get scheduleErrorTooMany;
+
+  /// No description provided for @scheduleErrorZeroLength.
+  ///
+  /// In es, this message translates to:
+  /// **'El inicio y el fin no pueden ser iguales.'**
+  String get scheduleErrorZeroLength;
+
+  /// No description provided for @scheduleDeleteLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar la franja de {day}'**
+  String scheduleDeleteLabel(String day);
+
+  /// No description provided for @scheduleDialogSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar franja'**
+  String get scheduleDialogSave;
+
+  /// No description provided for @dayLun.
+  ///
+  /// In es, this message translates to:
+  /// **'Lunes'**
+  String get dayLun;
+
+  /// No description provided for @dayMar.
+  ///
+  /// In es, this message translates to:
+  /// **'Martes'**
+  String get dayMar;
+
+  /// No description provided for @dayMie.
+  ///
+  /// In es, this message translates to:
+  /// **'Miércoles'**
+  String get dayMie;
+
+  /// No description provided for @dayJue.
+  ///
+  /// In es, this message translates to:
+  /// **'Jueves'**
+  String get dayJue;
+
+  /// No description provided for @dayVie.
+  ///
+  /// In es, this message translates to:
+  /// **'Viernes'**
+  String get dayVie;
+
+  /// No description provided for @daySab.
+  ///
+  /// In es, this message translates to:
+  /// **'Sábado'**
+  String get daySab;
+
+  /// No description provided for @dayDom.
+  ///
+  /// In es, this message translates to:
+  /// **'Domingo'**
+  String get dayDom;
+
+  /// No description provided for @experienceLevelSinExperiencia.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin experiencia'**
+  String get experienceLevelSinExperiencia;
+
+  /// No description provided for @experienceLevelHasta1Anio.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta 1 año'**
+  String get experienceLevelHasta1Anio;
+
+  /// No description provided for @experienceLevel1a3.
+  ///
+  /// In es, this message translates to:
+  /// **'1 a 3 años'**
+  String get experienceLevel1a3;
+
+  /// No description provided for @experienceLevel3a5.
+  ///
+  /// In es, this message translates to:
+  /// **'3 a 5 años'**
+  String get experienceLevel3a5;
+
+  /// No description provided for @experienceLevelMas5.
+  ///
+  /// In es, this message translates to:
+  /// **'Más de 5 años'**
+  String get experienceLevelMas5;
+
+  /// No description provided for @companyCandidateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil de candidato'**
+  String get companyCandidateTitle;
+
+  /// No description provided for @companyCandidateBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get companyCandidateBack;
+
+  /// No description provided for @companyCandidateNotAvailableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Candidato no disponible'**
+  String get companyCandidateNotAvailableTitle;
+
+  /// Mensaje fail-closed: identico exista o no el candidato (T-024)
+  ///
+  /// In es, this message translates to:
+  /// **'Este perfil no está disponible. Puede haber dejado de estar publicado o el enlace ya no es válido.'**
+  String get companyCandidateNotAvailableBody;
+
+  /// No description provided for @companyCandidatePendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu empresa está en verificación'**
+  String get companyCandidatePendingTitle;
+
+  /// No description provided for @companyCandidatePendingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta que se apruebe la verificación de tu empresa no podés ver perfiles de candidatos. Te avisamos apenas esté lista.'**
+  String get companyCandidatePendingBody;
+
+  /// No description provided for @companyCandidateRejectedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación de tu empresa fue rechazada'**
+  String get companyCandidateRejectedTitle;
+
+  /// No description provided for @companyCandidateRejectedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Mientras la verificación no esté aprobada no es posible ver candidatos. Corregí los datos y volvé a enviarla.'**
+  String get companyCandidateRejectedBody;
+
+  /// No description provided for @companyCandidateLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar el perfil. Revisá tu conexión y reintentá.'**
+  String get companyCandidateLoadError;
+
+  /// No description provided for @companyCandidatePresentationReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiene una presentación lista para ver (la reproducción llega en una etapa posterior).'**
+  String get companyCandidatePresentationReady;
+
+  /// No description provided for @companyCandidateNoPresentation.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).'**
+  String get companyCandidateNoPresentation;
 }
 
 class _AppLocalizationsDelegate

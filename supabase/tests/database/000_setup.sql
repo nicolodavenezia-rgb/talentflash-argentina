@@ -205,6 +205,28 @@ insert into tests.identifiers (identifier, id) values
   ('user_company_new', '90000000-0000-4000-8000-000000000002')
 on conflict (identifier) do update set id = excluded.id;
 
+-- Identificadores del Bloque D: empresa pendiente del seed, candidato que
+-- bloqueó a empresa1 y un candidato publicado adicional.
+insert into tests.identifiers (identifier, id)
+select 'user_empresa_pend_seed', id from auth.users where email = 'empresa7@dev.talentflash.test'
+union all
+select 'user_cand_blocker', id from auth.users where email = 'candidato15@dev.talentflash.test'
+union all
+select 'user_cand3', id from auth.users where email = 'candidato3@dev.talentflash.test'
+on conflict (identifier) do update set id = excluded.id;
+
+insert into tests.identifiers (identifier, id)
+select 'cand_blocker', cp.id
+from public.candidate_profiles cp
+join auth.users u on u.id = cp.profile_id
+where u.email = 'candidato15@dev.talentflash.test'
+union all
+select 'cand3', cp.id
+from public.candidate_profiles cp
+join auth.users u on u.id = cp.profile_id
+where u.email = 'candidato3@dev.talentflash.test'
+on conflict (identifier) do update set id = excluded.id;
+
 select pass('fixtures y helpers pgTAP creados');
 select * from finish();
 commit;

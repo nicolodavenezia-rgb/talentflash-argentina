@@ -25,6 +25,15 @@ enum AppRoute {
   candidateHome('/candidato', BusinessRole.candidate),
   companyHome('/empresa', BusinessRole.company),
 
+  /// Perfil profesional del candidato (Bloque D, T-021/T-023/T-025).
+  candidateProfile('/candidato/perfil', BusinessRole.candidate),
+  candidateProfileEdit('/candidato/perfil/editar', BusinessRole.candidate),
+
+  /// Vista limitada de un candidato para la empresa (T-024). El `:id` es el
+  /// candidate_profile_id; la autorización real la decide el servidor
+  /// (proyección fail-closed), el rol acá es solo UX.
+  companyCandidateDetail('/empresa/candidatos/:id', BusinessRole.company),
+
   /// Wizards de onboarding (Bloque C). Mientras el onboarding no está
   /// completo, el guard 4 (UX_FLOWS.md §1.5) convierte estas rutas en la
   /// única pantalla disponible del shell.
@@ -57,12 +66,42 @@ enum AppRoute {
   final BusinessRole? requiredRole;
 
   static AppRoute? forPath(String path) {
+    // Primero igualdad exacta: una ruta literal nunca puede quedar capturada
+    // por el patrón de otra ('/candidato/perfil/editar' vs. ':id').
     for (final route in AppRoute.values) {
       if (route.path == path) {
         return route;
       }
     }
+    for (final route in AppRoute.values) {
+      if (_matchesPattern(route.path, path)) {
+        return route;
+      }
+    }
     return null;
+  }
+
+  /// Matcheo por segmentos para paths con parámetros (`:id`): mismo largo,
+  /// segmentos literales idénticos y parámetros no vacíos.
+  static bool _matchesPattern(String pattern, String path) {
+    if (!pattern.contains('/:')) {
+      return false;
+    }
+    final patternSegments = pattern.split('/');
+    final pathSegments = path.split('/');
+    if (patternSegments.length != pathSegments.length) {
+      return false;
+    }
+    for (var i = 0; i < patternSegments.length; i++) {
+      if (patternSegments[i].startsWith(':')) {
+        if (pathSegments[i].isEmpty) {
+          return false;
+        }
+      } else if (patternSegments[i] != pathSegments[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Shell inicial de cada rol.

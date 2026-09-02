@@ -41,6 +41,11 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   supabase_flutter: 2.17.2
+  # Selector de archivos multiplataforma (Web/Windows/Android/iOS) para la
+  # foto de perfil (T-022). Paquete oficial de flutter.dev, sin servicio ni
+  # costo asociado; encapsulado tras AvatarImagePicker para poder testear
+  # sin abrir UI nativa.
+  file_selector: ^1.0.3
 
 dev_dependencies:
   flutter_test:

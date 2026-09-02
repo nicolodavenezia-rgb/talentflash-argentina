@@ -7,7 +7,9 @@
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --schema public",
     "db:test": "node scripts/run-db-tests.mjs",
-    "db:test:supabase": "supabase test db"
+    "db:test:supabase": "supabase test db",
+    "storage:test": "node scripts/storage-test.mjs",
+    "functions:test": "deno test supabase/functions/avatar"
   },
   "devDependencies": {
     "supabase": "2.115.0"

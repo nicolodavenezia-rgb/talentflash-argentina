@@ -38,6 +38,11 @@ jobs:
       - run: npm run db:reset
       - run: npm run db:lint
       - run: npm run db:test
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm run functions:test
+      - run: npm run storage:test
 
   secret-scan:
     name: Scan de secretos (gitleaks)

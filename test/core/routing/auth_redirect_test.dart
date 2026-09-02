@@ -330,6 +330,9 @@ void main() {
       expect(withRole, <AppRoute>[
         AppRoute.candidateHome,
         AppRoute.companyHome,
+        AppRoute.candidateProfile,
+        AppRoute.candidateProfileEdit,
+        AppRoute.companyCandidateDetail,
         AppRoute.candidateOnboarding,
         AppRoute.companyOnboarding,
         AppRoute.candidateReconsent,
@@ -343,6 +346,61 @@ void main() {
       expect(AppRoute.legalPrivacy.requiredRole, isNull);
       expect(AppRoute.legalTerms.path, '/legal/terminos');
       expect(AppRoute.legalPrivacy.path, '/legal/privacidad');
+    });
+
+    test('la ruta con parámetro matchea por segmentos, sin ambigüedad', () {
+      expect(
+        AppRoute.forPath('/empresa/candidatos/abc-123'),
+        AppRoute.companyCandidateDetail,
+      );
+      // Un segmento vacío o de más no matchea nada.
+      expect(AppRoute.forPath('/empresa/candidatos/'), isNull);
+      expect(AppRoute.forPath('/empresa/candidatos/a/b'), isNull);
+      // Las rutas literales nunca caen en un patrón.
+      expect(
+        AppRoute.forPath('/candidato/perfil/editar'),
+        AppRoute.candidateProfileEdit,
+      );
+    });
+  });
+
+  group('rutas de perfiles (Bloque D)', () {
+    final candidate = signedInAs(BusinessRole.candidate);
+    final company = signedInAs(BusinessRole.company);
+    const detail = '/empresa/candidatos/11111111-2222-4333-8444-555555555555';
+
+    test('el perfil propio exige sesión de candidato', () {
+      expect(
+        redirect(const AuthStatusSignedOut(), '/candidato/perfil'),
+        '/auth/login?destino=%2Fcandidato%2Fperfil',
+      );
+      expect(redirect(candidate, '/candidato/perfil'), isNull);
+      expect(redirect(company, '/candidato/perfil'), '/empresa');
+    });
+
+    test('la vista empresarial de un candidato exige sesión de empresa', () {
+      expect(
+        redirect(const AuthStatusSignedOut(), detail),
+        '/auth/login?destino=${Uri.encodeComponent(detail)}',
+      );
+      expect(redirect(company, detail), isNull);
+      expect(redirect(candidate, detail), '/candidato');
+    });
+
+    test('el destino con parámetro sobrevive al login', () {
+      expect(sanitizeDestination(detail), detail);
+      expect(redirect(company, '/auth/login?destino=$detail'), detail);
+    });
+
+    test('con onboarding incompleto el perfil también manda al wizard', () {
+      expect(
+        redirect(candidate, '/candidato/perfil', onboarding: onboardingPending),
+        '/candidato/onboarding',
+      );
+      expect(
+        redirect(company, detail, onboarding: onboardingReconsent),
+        '/empresa/consentimientos',
+      );
     });
   });
 

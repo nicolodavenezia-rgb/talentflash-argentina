@@ -20,6 +20,9 @@ import '../../features/onboarding/presentation/reconsent_screen.dart';
 import '../../features/onboarding/presentation/welcome_screen.dart';
 import '../../features/onboarding/providers/onboarding_providers.dart';
 import '../../features/profiles/presentation/candidate_home_screen.dart';
+import '../../features/profiles/presentation/candidate_profile_edit_screen.dart';
+import '../../features/profiles/presentation/candidate_profile_screen.dart';
+import '../../features/profiles/presentation/company_candidate_screen.dart';
 import 'app_entry_point.dart';
 import 'app_routes.dart';
 import 'auth_redirect.dart';
@@ -95,6 +98,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.candidateHome.path,
         name: AppRoute.candidateHome.name,
         builder: (context, state) => const CandidateHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.candidateProfile.path,
+        name: AppRoute.candidateProfile.name,
+        builder: (context, state) => const CandidateProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.candidateProfileEdit.path,
+        name: AppRoute.candidateProfileEdit.name,
+        builder: (context, state) => const CandidateProfileEditScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.companyCandidateDetail.path,
+        name: AppRoute.companyCandidateDetail.name,
+        builder: (context, state) => CompanyCandidateScreen(
+          candidateProfileId: state.pathParameters['id'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoute.companyHome.path,

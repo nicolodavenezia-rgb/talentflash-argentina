@@ -1,6 +1,6 @@
 # TalentFlash Argentina — Flujos de UX
 
-**Última actualización:** 2026-08-12
+**Última actualización:** 2026-09-02
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 > Documento de referencia de todos los flujos de usuario del MVP (alcance §5 del SPEC).
@@ -44,7 +44,10 @@ desde el Bloque B; `/legal/terminos` y `/legal/privacidad` desde el Bloque C
 onboarding a medio hacer). El Bloque C suma además las rutas privadas
 `/candidato/onboarding`, `/empresa/onboarding` (wizards, guard 4) y
 `/candidato/consentimientos`, `/empresa/consentimientos` (reconsentimiento,
-guard 6). `/ofertas/:id` llega con su bloque.
+guard 6). El Bloque D implementa `/candidato/perfil` y
+`/candidato/perfil/editar` (§1.2) y `/empresa/candidatos/:id` (§1.3) — la
+primera ruta con parámetro del router: `AppRoute.forPath` ahora matchea
+patrones por segmentos. `/ofertas/:id` llega con su bloque.
 
 ### 1.2 Shell candidato (`/candidato/...`) — bottom navigation de 5 ítems
 
@@ -58,6 +61,11 @@ guard 6). `/ofertas/:id` llega con su bloque.
 
 Sub-rutas destacadas: `/candidato/video/grabar`, `/candidato/video/revisar`, `/candidato/ofertas/:id`, `/candidato/notificaciones`, `/candidato/ajustes/notificaciones`, `/candidato/ajustes/privacidad` (exportación/eliminación, §18).
 
+*Estado (Bloque D):* `/candidato/perfil` (vista propia con completitud y
+estado honesto de la presentación) y `/candidato/perfil/editar` (formulario
+completo) están **implementadas**, con entrada "Mi perfil" desde el home del
+candidato. El resto de las sub-rutas llega con sus bloques.
+
 ### 1.3 Shell empresa (`/empresa/...`) — bottom navigation de 5 ítems
 
 | Tab | Ruta | Pantalla raíz |
@@ -68,7 +76,7 @@ Sub-rutas destacadas: `/candidato/video/grabar`, `/candidato/video/revisar`, `/c
 | Chat | `/empresa/chat` y `/empresa/chat/:conversacionId` | Conversaciones (§11) |
 | Empresa | `/empresa/cuenta` | Perfil de empresa, verificación CUIT, plan y facturación, equipo |
 
-Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/ofertas/:id/editar`, `/empresa/candidatos/:id` (perfil de candidato), `/empresa/verificacion` (§3.2).
+Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/ofertas/:id/editar`, `/empresa/candidatos/:id` (perfil de candidato — **implementada en el Bloque D**: renderiza solo la proyección limitada de §6.2), `/empresa/verificacion` (§3.2).
 
 ### 1.4 Shell admin (`/admin/...`) — solo Web, roles `M` y `A`
 
@@ -134,6 +142,22 @@ cliente y de nuevo en el servidor (`private.is_adult`, mismo redondeo para el
 explicación y **nada** de esa llamada queda persistido. Los pasos 5 y 6
 (perfil profesional, video/audio/texto) son de los Bloques D y K: no hay
 botones que simulen tenerlos.
+
+*Estado del paso 5 (Bloque D):* el perfil profesional estructurado vive en
+`/candidato/perfil` + `/candidato/perfil/editar` (no dentro del wizard):
+experiencias, habilidades, idiomas, educación y disponibilidad horaria
+semanal, todo salteable. El "medidor de perfil" es la tarjeta de completitud
+de T-025 — cálculo puro en el cliente, visible solo para el dueño. PESOS:
+datos básicos del onboarding 25 · titular 10 · bio 10 · experiencia laboral
+(≥1) 15 · habilidades (≥3 distintas) 10 · idiomas (≥1) 5 · disponibilidad
+horaria (≥1 franja) 10 · educación (≥1) 5 · foto 5 · presentación lista 5 =
+100. Foto, presentación y educación SUMAN pero jamás son requisito. El score
+está SEPARADO del booleano "listo para postularse" (server-side: onboarding
+completo + datos mínimos legítimos; nunca exige foto, video, educación, CV,
+IA ni salario). El score no viaja a empresas, no se persiste, no ordena
+resultados ni mide empleabilidad. El paso 6 (video/audio/texto) sigue siendo
+del Bloque K: la vista de perfil muestra el estado de la presentación sin
+ningún CTA falso.
 
 ### 2.2 Reglas
 
@@ -260,6 +284,17 @@ Sueldo o rango salarial (en ARS) · modalidad contractual · relación de depend
 - Selector superior "candidatos para: [oferta activa]" que ajusta coincidencias y filtros.
 - Acciones: ver perfil completo, **invitar** (§9), guardar en lista corta.
 - El orden jamás usa "popularidad" ni likes (SPEC §6).
+
+*Estado (Bloque D):* la "vista de perfil completo" existe en
+`/empresa/candidatos/:id` y renderiza **solo la proyección con whitelist** de
+`get_candidate_public_profile` (T-024): nombre de pila, titular, bio, zona,
+sector, disponibilidad, contenido profesional y presentación como booleano —
+sin edad, sin salario esperado y sin ningún dato de contacto (minimización;
+el contacto completo llega recién con el match, T-045). Es fail-closed: si la
+empresa no está verificada, el candidato no está publicado o hay bloqueo, la
+pantalla de "no disponible" es idéntica exista o no el perfil. El **feed** de
+candidatos de esta sección sigue siendo del Bloque G (T-036): todavía no hay
+listado, solo la vista por id.
 
 ---
 

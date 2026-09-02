@@ -1,6 +1,6 @@
 # ROADMAP.md — TalentFlash Argentina: Roadmap y desglose del MVP
 
-**Última actualización:** 2026-08-12
+**Última actualización:** 2026-09-02
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 > **Nota:** la estructura de fases de la §1 sigue el **SPEC §12**. Todos los números de costos son orden de magnitud: la **fuente de verdad es el Excel de costos (`02_business_e_costi/Costi_TalentFlash_Argentina.xlsx`)**, con las decisiones económicas registradas en COST_DECISIONS.md. Precios citados verificados al 2026-08-12 según la investigación de precios del proyecto. Todo precio propio de TalentFlash (planes B2B) está marcado como *propuesta a validar*.
@@ -67,13 +67,13 @@ Convenciones: cada tarea es chica (≤2–3 días), tiene **criterio verificable
 
 ### Bloque D — Perfiles
 
-| ID | Tarea | Criterio verificable | Dep. |
-|---|---|---|---|
-| T-021 | CRUD perfil candidato (experiencia, disponibilidad horaria, zona/barrio, rubro) con RLS: dueño edita | Test RLS: otro usuario no puede editar; empresa ve solo campos públicos | T-016 |
-| T-022 | Foto de perfil: bucket Storage con policies + thumbnail | Subir/reemplazar funciona; URL firmada vencida no sirve el archivo | T-021 |
-| T-023 | Estado de perfil con/sin video-CV (el video real llega en Bloque K) | Banner "completá tu video-CV" aparece solo si falta video | T-021 |
-| T-024 | Vista de perfil de candidato para empresa (campos limitados según reglas de PRODUCT.md) | Test RLS + snapshot: empresa sin match no ve datos de contacto | T-021 |
-| T-025 | Score de completitud de perfil (gating de postulación) | Unit tests del cálculo con casos borde | T-021 |
+| ID | Tarea | Criterio verificable | Dep. | Estado |
+|---|---|---|---|---|
+| T-021 | CRUD perfil candidato (experiencia, disponibilidad horaria, zona/barrio, rubro) con RLS: dueño edita | Test RLS: otro usuario no puede editar; empresa ve solo campos públicos | T-016 | **Hecho en local** (migración `0023`). Vista propia en `/candidato/perfil` y edición completa en `/candidato/perfil/editar`: lista de experiencia laboral (agregar/editar/eliminar/reordenar con botones accesibles) y de educación, chips de habilidades e idiomas, salario opcional con limpieza explícita y franjas de disponibilidad semanal (`weekly_availability`, hasta 21 franjas, ≤3 por día, sin solapamientos sobre la línea de tiempo circular de la semana — el cruce de medianoche se valida igual en cliente y servidor). El servidor valida TODO el contenido (`validate_candidate_content`: largos, duplicados, fechas de `work_history`, niveles de `education`, salario 0..999.999.999 en ARS; errores `TFDAT`) y las RPC `get_my_candidate_profile` / `update_my_candidate_profile` operan con whitelist de claves editables en un solo UPDATE idempotente. |
+| T-022 | Foto de perfil: bucket Storage con policies + thumbnail | Subir/reemplazar funciona; URL firmada vencida no sirve el archivo | T-021 | **Hecho en local** (migración `0024`). Bucket `avatars` **privado** (2 MiB, paths canónicos por `candidate_profile_id`), lectura solo vía `can_read_avatar_object` y escritura EXCLUSIVA por la Edge Function `avatar` (valida magic bytes, re-encodea sin EXIF corrigiendo la orientación, genera thumbnail 128×128; DELETE idempotente que limpia ambos objetos). El cliente muestra con URLs firmadas de 300 s renovables; la URL vencida se verifica denegada por `storage:test`. **Pendiente documentado:** WebP se rechaza con `unsupported_format` (la librería no lo decodifica) — whitelist efectivo hoy: JPEG/PNG. |
+| T-023 | Estado de perfil con/sin video-CV (el video real llega en Bloque K) | Banner "completá tu video-CV" aparece solo si falta video | T-021 | **Hecho en local**, implementado como **estado honesto sin CTA**: la vista propia muestra el estado de la presentación (`presentation_status` del video vinculado) con un texto informativo y ningún botón falso, porque grabar video/audio/texto llega recién con el Bloque K (T-084). |
+| T-024 | Vista de perfil de candidato para empresa (campos limitados según reglas de PRODUCT.md) | Test RLS + snapshot: empresa sin match no ve datos de contacto | T-021 | **Hecho en local** (migración `0023`). La policy `cand_visible_to_verified_companies` fue **eliminada**: la empresa ya no lee la fila cruda de `candidate_profiles` (exponía birth_date, salario esperado, video_id, cv_url). Accede SOLO por el RPC `get_candidate_public_profile` (fail-closed: NULL indistinguible ante empresa no verificada, candidato no publicado, bloqueo o id inexistente) con whitelist exacta de campos — nombre de pila, sin contacto, sin nacimiento, sin salario. Vista en `/empresa/candidatos/:id` con estados de carga/no disponible/empresa en verificación; snapshot determinista verifica que no aparece nombre completo, correo, salario ni score. |
+| T-025 | Score de completitud de perfil (gating de postulación) | Unit tests del cálculo con casos borde | T-021 | **Hecho en local.** Cálculo PURO en el cliente (determinista, clamp 0–100, orden-independiente); solo lo ve el dueño, no se persiste ni viaja a empresas. SEPARADO del booleano "listo para postularse", que es server-side (`private.candidate_application_ready`: onboarding completo + datos mínimos) para que T-040 aplique la MISMA regla al postular. Foto, presentación y educación suman puntos pero jamás son requisito. |
 
 ### Bloque E — Empresas + verificación CUIT
 
@@ -227,7 +227,7 @@ Los costos "mensual: cero (dentro de Supabase Pro)" refieren a la base de **USD 
 ### F-03 Perfiles
 - **Objetivo:** perfil de candidato orientado a gastronomía (disponibilidad, zona, experiencia) que alimenta discovery e IA.
 - **Dependencias:** F-02.
-- **Acceptance criteria:** ☐ CRUD completo con RLS ☐ foto con thumbnail y URL firmada ☐ score de completitud correcto ☐ empresa sin match no ve contacto.
+- **Acceptance criteria:** ☑ CRUD del contenido del perfil con RLS (en local; la presentación en video/audio/texto es del Bloque K, T-084, y la carga de CV como archivo no está implementada) ☑ foto con thumbnail y URL firmada (bucket privado; WebP pendiente documentado) ☑ score de completitud correcto (cliente puro, separado del readiness server-side) ☑ empresa sin match no ve contacto (proyección con whitelist; el contacto completo llega recién con el match, T-045).
 - **Tests:** unit (score), widget (edición), integration, RLS (visibilidad por rol y por match).
 - **Riesgos:** exponer de más un perfil (privacidad) o de menos (matching pobre) — las reglas de visibilidad viven en PRODUCT.md y se testean acá.
 - **Costos:** inicial cero · mensual cero (fotos dentro de los 100 GB de Storage incluidos) · variable: USD 0,0213/GB-mes por encima de 100 GB (Supabase Storage).

@@ -22,7 +22,17 @@
 --   candidatos 19–20 onboarding INCOMPLETO (sin nacimiento/sector/consents)
 --                    → el wizard retoma donde quedó;
 --   empresas 1–5     onboarding completo, empresa creada y verificada;
---   empresa6         onboarding INCOMPLETO (usuario sin empresa creada).
+--   empresa6         onboarding INCOMPLETO (usuario sin empresa creada);
+--   empresa7         onboarding completo, empresa creada PENDIENTE de
+--                    verificación (no puede ver candidatos — Bloque D).
+--
+-- Bloque D: candidato1 y candidato2 tienen perfil profesional rico
+-- (experiencia, educación, idiomas, franjas horarias — candidato2 con un
+-- turno que cruza la medianoche); candidato1/4/5 tienen video de presentación
+-- en estados ready/processing/failed (T-023; el pipeline real es Bloque K);
+-- candidato15 bloqueó al owner de empresa1 (el bloqueo corta la proyección).
+-- Avatares: no se siembran binarios — `npm run storage:test` ejercita el
+-- flujo real de subida contra el stack local.
 -- ===========================================================================
 
 -- --- 20 candidatos (auth.users; el trigger handle_new_user crea profiles) ---
@@ -43,7 +53,8 @@ select
   now(), now()
 from generate_series(1, 20) as i;
 
--- --- 6 usuarios de empresa (empresa6 queda sin empresa: onboarding a medio) --
+-- --- 7 usuarios de empresa (empresa6 sin empresa: onboarding a medio;
+-- --- empresa7 con empresa pendiente de verificación) ---
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
                         confirmation_token, recovery_token,
@@ -59,7 +70,7 @@ select
   '{"role":"company"}'::jsonb,
   '', '', '', '',
   now(), now()
-from generate_series(1, 6) as i;
+from generate_series(1, 7) as i;
 
 -- --- Identidad `email` de cada usuario sembrado (la crea un alta real) ---
 insert into auth.identities (provider_id, user_id, identity_data, provider,
@@ -87,10 +98,10 @@ where u.id = p.id and u.email like 'candidato%@dev.talentflash.test';
 
 update profiles p
 set full_name = case
-      when substring(u.email from 'empresa([0-9]+)@')::int <= 5
+      when substring(u.email from 'empresa([0-9]+)@')::int <> 6
       then 'Referente Empresa ' || substring(u.email from 'empresa([0-9]+)@')
     end,
-    onboarding_completed = substring(u.email from 'empresa([0-9]+)@')::int <= 5
+    onboarding_completed = substring(u.email from 'empresa([0-9]+)@')::int <> 6
 from auth.users u
 where u.id = p.id and u.email like 'empresa%@dev.talentflash.test';
 
@@ -197,7 +208,7 @@ where cv.is_mandatory
      and substring(u.email from 'candidato([0-9]+)@')::int <= 18)
     or
     (u.email like 'empresa%@dev.talentflash.test'
-     and substring(u.email from 'empresa([0-9]+)@')::int <= 5)
+     and substring(u.email from 'empresa([0-9]+)@')::int <> 6)
   );
 
 -- Publicación del perfil (opcional): solo candidatos 1–15. Al insertarse,
@@ -227,3 +238,86 @@ from (values
   ('empresa1@dev.talentflash.test',   'new_application',    false, true)
 ) as x(user_email, category, push_on, email_on)
 join auth.users u on u.email = x.user_email;
+
+-- ===========================================================================
+-- Bloque D — Perfiles (T-021…T-024)
+-- ===========================================================================
+
+-- --- Empresa 7: empresa creada y PENDIENTE de verificación ---
+-- Su usuaria terminó el onboarding, pero hasta que un admin apruebe el CUIT
+-- (T-028) no puede ver candidatos: la proyección de T-024 devuelve vacío.
+insert into company_profiles (id, name, legal_name, cuit, verification_status,
+                              industry, sector_id, size_range, description,
+                              provincia_id, localidad_id, created_by)
+values ('c0000000-0000-4000-8000-000000000007',
+        'Cantina Puerto Madero Dev',
+        'Empresa de prueba 7 S.A.S.',
+        '30-70000007-7',
+        'pending',
+        'Gastronomía y hotelería',
+        'a0000000-0000-4000-8000-000000000001',
+        '1-10',
+        'Empresa pendiente de verificación generada por el seed de desarrollo.',
+        'b0000000-0000-4000-8000-000000000001',
+        'b1000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000207');
+
+insert into company_members (company_id, profile_id, member_role,
+                             position_title, relationship)
+values ('c0000000-0000-4000-8000-000000000007',
+        '00000000-0000-4000-8000-000000000207',
+        'owner', 'Dueña', 'owner');
+
+-- --- Perfiles profesionales ricos (validados por validate_candidate_content) ---
+update candidate_profiles set
+  work_history = '[
+    {"empresa": "Parrilla La Cabrera", "puesto": "Moza de salón", "desde": "2021-03", "hasta": "2023-11", "descripcion": "Atención de salón y manejo de caja en servicio nocturno."},
+    {"empresa": "Café Tortoni", "puesto": "Camarera", "desde": "2024-02", "hasta": null}
+  ]'::jsonb,
+  education = '[
+    {"nivel": "secundario", "institucion": "Escuela Normal 1", "titulo": "Bachiller", "desde": "2013-03", "hasta": "2018-12"}
+  ]'::jsonb,
+  languages = array['español', 'inglés básico'],
+  skills = array['atención al cliente', 'trabajo en equipo', 'manejo de caja', 'protocolo de servicio'],
+  weekly_availability = '[
+    {"day": "lun", "start": "18:00", "end": "23:30"},
+    {"day": "mar", "start": "18:00", "end": "23:30"},
+    {"day": "sab", "start": "10:00", "end": "16:00"}
+  ]'::jsonb
+where profile_id = '00000000-0000-4000-8000-000000000101';
+
+-- candidato2: turnos nocturnos que cruzan la medianoche (caso límite real).
+update candidate_profiles set
+  work_history = '[
+    {"empresa": "Bar Notable", "puesto": "Bartender", "desde": "2022-06", "hasta": null, "descripcion": "Barra clásica y coctelería de autor."}
+  ]'::jsonb,
+  languages = array['español', 'portugués'],
+  weekly_availability = '[
+    {"day": "vie", "start": "22:00", "end": "02:00"},
+    {"day": "sab", "start": "22:00", "end": "02:00"},
+    {"day": "dom", "start": "11:00", "end": "15:00"}
+  ]'::jsonb
+where profile_id = '00000000-0000-4000-8000-000000000102';
+
+-- --- Estados de presentación (T-023; el pipeline real llega en Bloque K) ---
+insert into videos (id, owner_profile_id, purpose, status, duration_seconds, error_reason)
+values
+  ('d0000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000101',
+   'candidate_presentation', 'ready', 25, null),
+  ('d0000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000104',
+   'candidate_presentation', 'processing', null, null),
+  ('d0000000-0000-4000-8000-000000000005', '00000000-0000-4000-8000-000000000105',
+   'candidate_presentation', 'failed', null, 'Encoding de prueba fallido (seed)');
+
+update candidate_profiles set video_id = 'd0000000-0000-4000-8000-000000000001'
+where profile_id = '00000000-0000-4000-8000-000000000101';
+update candidate_profiles set video_id = 'd0000000-0000-4000-8000-000000000004'
+where profile_id = '00000000-0000-4000-8000-000000000104';
+update candidate_profiles set video_id = 'd0000000-0000-4000-8000-000000000005'
+where profile_id = '00000000-0000-4000-8000-000000000105';
+
+-- --- Bloqueo de ejemplo: candidato15 bloqueó al owner de empresa1 ---
+-- empresa1 no puede ver su proyección ni su avatar; empresa3 sí.
+insert into blocks (blocker_profile_id, blocked_profile_id)
+values ('00000000-0000-4000-8000-000000000115',
+        '00000000-0000-4000-8000-000000000201');

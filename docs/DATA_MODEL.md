@@ -1,6 +1,6 @@
 # TalentFlash Argentina — Modelo de Datos (PostgreSQL / Supabase)
 
-**Última actualización:** 2026-08-20
+**Última actualización:** 2026-09-02
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 > Fuente de verdad: el SPEC de producto (`SPEC_TALENTFLASH.md`); las referencias "SPEC §5" (ofertas) y "SPEC §8" (pagos) apuntan a ese documento. Documentos hermanos en `01_app/docs/` (SPEC §11): `PRODUCT.md`, `UX_FLOWS.md`, `ARCHITECTURE.md`, `PRIVACY.md`, `SECURITY.md`, `COST_DECISIONS.md`, `ROADMAP.md`.
@@ -92,6 +92,9 @@ create table candidate_profiles (
   languages      text[] not null default '{}',
   education      jsonb not null default '[]',  -- [{nivel, institucion, titulo, desde, hasta}]
   work_history   jsonb not null default '[]',  -- [{empresa, puesto, desde, hasta, descripcion}]
+  weekly_availability jsonb not null default '[]', -- (0023) franjas [{day,start,end}]: day lun..dom
+                                               -- (mismo formato que jobs.schedule_days), horas 'HH:MM';
+                                               -- end < start = el turno cruza la medianoche
   cv_url         text,                         -- storage path (opcional, el video es lo central)
   video_id       uuid references videos(id),   -- video de presentación publicado
   sector_id      uuid references sectors(id),  -- sector de interés (T-016, 0020): UNO por candidato,
@@ -167,6 +170,23 @@ marcan las RPC de finalización (`complete_candidate_onboarding`,
 `complete_company_onboarding`), que validan datos mínimos, mayoría de edad y
 consentimientos obligatorios vigentes y fallan cerradas. Un `UPDATE` directo
 del cliente recibe 42501.
+
+**Validación de contenido del perfil (0023, T-021).** El trigger
+`validate_candidate_content` (SECURITY DEFINER, aplica en TODOS los contextos
+— cliente, RPC y seed) valida: `headline` ≤120 y `bio` ≤2000; `skills` ≤20
+ítems de ≤40 caracteres, sin vacíos ni duplicados case-insensitive;
+`languages` ≤10×30; `work_history` ≤20 objetos `{empresa, puesto, desde,
+hasta, descripcion}` con fechas `'YYYY-MM'` entre 1950-01 y el mes actual,
+`desde ≤ hasta`, `hasta = null` = actualidad y claves extra rechazadas;
+`education` ≤10 objetos `{nivel ∈ primario|secundario|terciario|universitario|
+posgrado|curso, institucion, titulo?, desde?, hasta?}`; `weekly_availability`
+≤21 franjas y ≤3 por día sin solapamientos sobre la línea de tiempo circular
+de la semana (un turno vie 22–02 choca con sab 01–03; dom 23–01 choca con
+lun); salario 0..999.999.999 con `salary_currency = 'ARS'`. Errores `TFDAT`.
+Además, `protect_candidate_profile_update` exige que `video_id` solo pueda
+vincular un video PROPIO con `purpose = 'candidate_presentation'` (o null), y
+`protect_profile_update` suma `avatar_url` a las columnas protegidas de
+`profiles`: solo la escribe la Edge Function `avatar` (0024).
 
 > **Decisión de roles vigente:** rol único en `profiles.role`; no existe tabla
 > `user_roles`. Un eventual modelo multi-rol requiere una decisión y migración
@@ -822,12 +842,23 @@ language sql stable security definer set search_path = '' as $$
                    and ((p_company_id is not null and s.company_id = p_company_id)
                      or (p_company_id is null and s.profile_id = auth.uid())));
 $$;
+-- (0023 la endurece: con p_company_id ajeno — ni miembro ni admin — devuelve
+-- false; el estado de suscripción de otra empresa no se filtra por RPC.)
 
+-- Endurecida en 0023 (auditoría del Bloque D): PostgREST expone toda función
+-- de `public` como RPC y las policies necesitan su EXECUTE, así que la
+-- defensa vive adentro — el caller debe SER una de las dos partes; si no,
+-- devuelve false (nadie sondea bloqueos entre terceros).
 create or replace function are_blocked(p_a uuid, p_b uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.blocks
+  select case
+    when auth.uid() is null then false
+    when p_a is distinct from auth.uid() and p_b is distinct from auth.uid()
+      then false
+    else exists (select 1 from public.blocks
                  where (blocker_profile_id = p_a and blocked_profile_id = p_b)
-                    or (blocker_profile_id = p_b and blocked_profile_id = p_a));
+                    or (blocker_profile_id = p_b and blocked_profile_id = p_a))
+  end;
 $$;
 
 create or replace function candidate_id() returns uuid
@@ -848,18 +879,15 @@ create policy profiles_update_own on profiles for update
 -- El trigger protect_profile_update bloquea role, email, suspended_until,
 -- created_at y deleted_at para usuarios comunes.
 
--- CANDIDATE_PROFILES: dueño CRUD; empresas VERIFICADAS ven solo perfiles PUBLICADOS
--- (regla explícita de visibilidad) y sin bloqueo cruzado.
+-- CANDIDATE_PROFILES: dueño CRUD; admin todo. La policy
+-- `cand_visible_to_verified_companies` (empresas verificadas leían la FILA
+-- CRUDA de perfiles publicados) fue ELIMINADA en 0023 (auditoría de
+-- privacidad, T-024): exponía birth_date, expectativa salarial, video_id y
+-- cv_url. Las empresas acceden SOLO por la proyección con whitelist del RPC
+-- `get_candidate_public_profile` (ver "Helpers y RPCs del Bloque D", abajo).
 create policy cand_owner_all on candidate_profiles for all
   using (profile_id = auth.uid())
   with check (profile_id = auth.uid());
-create policy cand_visible_to_verified_companies on candidate_profiles for select
-  using (
-    is_published
-    and deleted_at is null
-    and is_verified_company_member()
-    and not are_blocked(profile_id, auth.uid())
-  );
 create policy cand_admin on candidate_profiles for all using (is_admin());
 
 -- COMPANY_PROFILES: miembros gestionan; cualquiera autenticado ve empresas verificadas
@@ -894,20 +922,22 @@ create policy cv_company_select on company_verifications for select
 create policy cv_admin_update on company_verifications for update
   using (is_admin());
 
--- VIDEOS: dueño CRUD; empresa ve el video si ve el contexto (perfil publicado o postulación a SU oferta).
+-- VIDEOS: dueño CRUD; empresa ve el video solo por postulación a SU oferta.
+-- videos_company_select fue RE-CREADA en 0023 SIN su rama 1 (videos de
+-- candidatos publicados): esa rama entregaba la fila completa — con
+-- owner_profile_id, el id de auth del candidato — y permitía enumerar
+-- candidatos publicados por REST. La reproducción para empresas llega con el
+-- Bloque K (URLs firmadas, T-054); hoy la empresa solo conoce el booleano
+-- presentation_available de la proyección de T-024.
 create policy videos_owner_all on videos for all
   using (owner_profile_id = auth.uid())
   with check (owner_profile_id = auth.uid());
 create policy videos_company_select on videos for select
   using (
     deleted_at is null and status = 'ready' and (
-      exists (select 1 from candidate_profiles c
-              where c.video_id = videos.id and c.is_published
-                and is_verified_company_member()
-                and not are_blocked(c.profile_id, auth.uid()))
-      or exists (select 1 from job_applications a
-                 join jobs j on j.id = a.job_id
-                 where a.video_id = videos.id and is_company_member(j.company_id))
+      exists (select 1 from job_applications a
+              join jobs j on j.id = a.job_id
+              where a.video_id = videos.id and is_company_member(j.company_id))
       or exists (select 1 from jobs j            -- video pitch de la propia oferta, visible a todos
                  where j.video_id = videos.id and j.status = 'active')
     )
@@ -961,12 +991,15 @@ create policy match_company_select on matches for select
   using (exists (select 1 from jobs j where j.id = job_id and is_company_member(j.company_id)));
 
 -- CONVERSATIONS y MESSAGES: solo participantes; blocks cortan visibilidad y escritura.
+-- Re-creada en 0023 (auditoría): la subconsulta original sobre
+-- candidate_profiles corría bajo el RLS del caller y, sin la policy de
+-- lectura empresarial, daba NULL — el corte por bloqueo quedaba muerto para
+-- la empresa. El lookup pasa al helper DEFINER blocked_with_candidate, que
+-- devuelve solo un booleano.
 create policy conv_participants_select on conversations for select
   using (
     (candidate_profile_id = candidate_id() or is_company_member(company_id))
-    and not are_blocked(
-      (select profile_id from candidate_profiles c where c.id = candidate_profile_id),
-      auth.uid())
+    and not blocked_with_candidate(candidate_profile_id)
   );
 create policy msg_participants_select on messages for select
   using (deleted_at is null
@@ -1077,6 +1110,66 @@ Notas de diseño:
 - **Admin siempre vía `is_admin()`** + trigger que escribe en `admin_audit_log` en cada mutación admin sobre tablas sensibles (`company_verifications`, `moderation_actions`, `jobs`, `profiles`).
 - Los **límites de plan** (ej. cantidad de ofertas activas) no van en RLS: se validan en la API con `has_active_subscription()` + `plans.limits` para no acoplar negocio a seguridad.
 
+### 5.3 Helpers y RPCs de perfiles (Bloque D, 0023)
+
+Convención de errores (el cliente traduce; el texto interno nunca llega a la
+pantalla): `42501` sin permiso · `TFDAT` datos inválidos · `TFCNS`
+consentimientos · `TF018` minoría · `23505` unicidad.
+
+- **`public.company_can_view_candidate(candidate_profile_id)`** — la regla
+  ÚNICA de visibilidad candidato→empresa, SECURITY DEFINER y fail-closed:
+  `is_published` (que ya implica consentimiento de publicación vigente, por la
+  derivación de 0022) + no borrado + empresa verificada + sin bloqueo mutuo.
+  La usan la proyección y la policy de avatares (0024); además exige que el
+  propio caller no esté borrado ni suspendido por moderación.
+- **`public.blocked_with_candidate(candidate_profile_id)`** — booleano DEFINER
+  para la policy de conversaciones: ¿hay bloqueo entre el dueño de ese perfil
+  de candidato y el caller? (el lookup del profile_id no se expone).
+- **`private.candidate_application_ready(profile_id)`** — booleano "listo para
+  postularse": onboarding completo + datos mínimos legítimos (los de
+  `candidate_min_data_complete`); jamás exige foto, video, educación, CV ni
+  expectativa salarial. Existe para que T-040 aplique la MISMA regla
+  server-side (las postulaciones NO están implementadas). Es independiente del
+  score de completitud de T-025, que se calcula solo en el cliente y no se
+  persiste.
+- **`get_my_candidate_profile()`** — perfil propio completo con nombres de
+  catálogo resueltos (geo/sector), `presentation_status` del video vinculado y
+  `application_ready`. El score NO se calcula ni persiste server-side.
+- **`update_my_candidate_profile(p_patch jsonb)`** — edición del perfil propio
+  con whitelist de claves editables: `full_name`, `headline`, `bio`, la terna
+  geográfica, `sector_id`, `availability`, `work_mode_prefs`, `experience`,
+  `weekly_availability`, `expected_salary_min/max`, `skills`, `languages`,
+  `work_history`, `education`. Clave presente = escribe, `null` = limpia,
+  ausente = intacta, desconocida = `TFDAT`. Ejecuta UN solo `UPDATE` para que
+  los triggers validen el estado final; idempotente.
+- **`get_candidate_public_profile(p_candidate_profile_id)`** — la proyección
+  para empresas (T-024), SECURITY DEFINER y fail-closed: devuelve `NULL`
+  indistinguible ante cualquier condición fallida (empresa no verificada,
+  candidato no publicado, bloqueo mutuo, perfil borrado, id inexistente).
+  **Whitelist EXACTA de campos:** `candidate_profile_id`, `display_name`
+  (nombre de pila solamente — split del `full_name`; minimización, UX_FLOWS
+  §6.2: el contacto completo llega recién con el match, T-045), `headline`,
+  `bio`, provincia/localidad/barrio (nombres), sector (nombre es-AR),
+  `availability`, `work_modes`, `experience`, `weekly_availability`, `skills`,
+  `languages`, `work_history`, `education`, `presentation_available`
+  (booleano), `avatar_path` y `avatar_thumb_path`. **Jamás viajan:** email,
+  teléfono, `birth_date`, id de auth, expectativa salarial, consents,
+  preferencias, `is_published`, score ni columnas administrativas. Un test
+  pgTAP (`011`) asserta la igualdad EXACTA del conjunto de claves.
+
+### 5.4 Storage: bucket `avatars` (Bloque D, 0024)
+
+Bucket **privado** (`file_size_limit` 2 MiB; MIME jpeg/png/webp), objetos
+`avatars/<candidate_profile_id>/avatar.jpg` y `.../thumb.jpg` — namespace por
+`candidate_profile_id` (no por auth uid, así la proyección no expone el id de
+auth) y nombres estables (reemplazo sin huérfanos). `profiles.avatar_url`
+guarda SOLO el path canónico, nunca una URL firmada. Única policy: SELECT vía
+`public.can_read_avatar_object(name)` — dueño, empresa que puede ver al
+candidato (misma regla que la proyección) o admin; un path malformado devuelve
+`false`. **Cero policies de INSERT/UPDATE/DELETE:** toda escritura pasa por la
+Edge Function `avatar` (magic bytes, re-encoding sin EXIF, thumbnail; ver
+ARCHITECTURE.md §3.4) con el service role del runtime — jamás en el repo.
+
 ---
 
 ## 6. Tests RLS con pgTAP (`supabase/tests`)
@@ -1095,6 +1188,16 @@ supabase/tests/
 ```
 
 Convención: cada policy tiene al menos **un test positivo (puede) y uno negativo (no puede)**. Se ejecutan con `supabase test db`.
+
+> **Nota (Bloque D):** los ejemplos de abajo son anteriores a la migración
+> `0023`. En la suite real (`supabase/tests/database/`), el test "empresa
+> verificada ve perfil publicado" de `001_rls_test.sql` se **invirtió
+> deliberadamente**: la empresa ya NO lee la fila cruda de
+> `candidate_profiles` (T-024); su acceso se testea contra la proyección en
+> `011_company_projection_test.sql`. Las suites nuevas del bloque son
+> `010_candidate_profile_test.sql` (contenido y disponibilidad),
+> `011_company_projection_test.sql` (whitelist exacta y fail-closed) y
+> `012_avatar_storage_test.sql` (lectura del bucket).
 
 ```sql
 -- 020-candidate-visibility.test.sql
@@ -1183,7 +1286,7 @@ select * from finish();
 rollback;
 ```
 
-Matriz mínima a cubrir (una fila = un test): candidato ve/edita lo suyo · candidato NO ve otros candidatos · empresa verificada ve publicados · empresa no verificada no ve nada · empresa ve postulaciones a sus ofertas y no a ajenas · mensajes solo participantes · bloqueo corta select e insert de mensajes · admin lee todo y queda auditado · payments/payment_events/reconcile_log inaccesibles en escritura para `authenticated` · consents y audit log inmutables (sin UPDATE/DELETE) · geo y sectors legibles por `anon`.
+Matriz mínima a cubrir (una fila = un test): candidato ve/edita lo suyo · candidato NO ve otros candidatos · empresa verificada accede a publicados SOLO por la proyección (la fila cruda no, 0023) · empresa no verificada no ve nada · empresa ve postulaciones a sus ofertas y no a ajenas · mensajes solo participantes · bloqueo corta select e insert de mensajes · admin lee todo y queda auditado · payments/payment_events/reconcile_log inaccesibles en escritura para `authenticated` · consents y audit log inmutables (sin UPDATE/DELETE) · geo y sectors legibles por `anon`.
 
 ---
 
@@ -1230,6 +1333,8 @@ Matriz mínima a cubrir (una fila = un test): candidato ve/edita lo suyo · cand
 20. `0020_onboarding_schema.sql` — Bloque C: `terms_acceptance` en el enum; `sector_id` en candidatos y empresas; cargo/relación en `company_members`; defaults opt-in de `notification_prefs`; `consents.seq`; tablas `legal_documents` y `consent_versions` con su RLS.
 21. `0021_legal_content_and_consent_rules.sql` — textos legales vigentes (borradores honestos), versiones por consentimiento (sin `ai_training`), trigger del ledger (versión vigente + sin duplicados) y candado de la categoría `system` en preferencias.
 22. `0022_onboarding_rpcs.sql` — `is_adult` (mayoría por calendario), derivación server-side de `is_published` con sus triggers, validación de coherencia geo/sector para todos los contextos, protección de `onboarding_completed` e `is_published` frente al cliente, y las RPC `save_candidate_onboarding`, `complete_candidate_onboarding` y `complete_company_onboarding` (transaccionales, idempotentes, fail-closed; errores tipados 42501/TF018/TFDAT/TFCNS/23505).
-23. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos, con estados de onboarding coherentes con la derivación).
+23. `0023_candidate_profile_management.sql` — Bloque D: `weekly_availability`; trigger `validate_candidate_content`; **eliminación** de la policy `cand_visible_to_verified_companies` y proyección `get_candidate_public_profile` con whitelist (§5.3); helpers `company_can_view_candidate` / `blocked_with_candidate` / `candidate_application_ready`; endurecimiento de `are_blocked` y `has_active_subscription` (sin oráculos a terceros) y re-creación de `videos_company_select` (sin la rama de candidatos publicados) y `conv_participants_select`; RPCs `get_my_candidate_profile` y `update_my_candidate_profile`; protección de `video_id` y `avatar_url`.
+24. `0024_avatars_bucket.sql` — Bloque D (T-022): bucket privado `avatars`, policy de lectura `can_read_avatar_object` y cero policies de escritura (todo pasa por la Edge Function `avatar`; §5.4). Restaura además el grant DML de `service_role` sobre `public` (hueco de fundación: `0018` se lo dio solo a `authenticated`; sin él ninguna Edge Function server-side puede leer/escribir).
+25. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos, con estados de onboarding coherentes con la derivación).
 
 Regla: ninguna migración mezcla DDL de tablas con policies; RLS siempre al final del bloque para que los tests pgTAP corran contra el estado completo.

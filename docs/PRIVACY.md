@@ -1,6 +1,6 @@
 # TalentFlash Argentina — Privacidad y Cumplimiento
 
-**Última actualización:** 2026-08-12
+**Última actualización:** 2026-09-02
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 > Este documento define el marco de privacidad y cumplimiento de TalentFlash Argentina. Es una propuesta de trabajo del equipo fundador: **nada de lo escrito acá reemplaza el asesoramiento de un abogado argentino especializado en protección de datos**. Los puntos que requieren validación profesional están marcados explícitamente. Referencias cruzadas: `ROADMAP.md` (gate de privacidad por feature), `ARCHITECTURE.md` (infraestructura y regiones), `DATA_MODEL.md` (esquema de tablas), `SECURITY.md` (medidas técnicas).
@@ -26,6 +26,18 @@
 - **TalentFlash Argentina** es el **responsable de la base de datos / responsable del tratamiento** en los términos de la Ley 25.326: decide fines y medios del tratamiento de los datos de candidatos y empleadores.
 - Nuestros proveedores (Supabase/AWS, Cloudflare, Anthropic, Google, Apple) actúan como **encargados del tratamiento**: procesan datos solo bajo nuestras instrucciones, con DPA firmado (ver §8).
 - **Caso especial — empleadores:** cuando un empleador accede al perfil/video de un candidato, ese acceso ocurre dentro de la plataforma bajo nuestras reglas. Si el empleador **exporta o copia** datos fuera de la plataforma, se convierte en responsable independiente. Los Términos y Condiciones de empleadores deben: (a) prohibir uso de los datos fuera del proceso de selección concreto, (b) prohibir retención una vez cerrada la búsqueda, (c) prohibir cesión a terceros. **Redacción contractual a validar con abogado.**
+
+**Estado de implementación (Bloque D, T-022/T-024).** La exposición del perfil
+de candidato a empresas quedó implementada **por campo**, vía una proyección
+server-side con whitelist (migración `0023`): la empresa recibe el nombre de
+pila (nunca el nombre completo), sin fecha de nacimiento, sin datos de
+contacto y sin expectativa salarial; ante cualquier condición fallida la
+respuesta es indistinguible de "no existe" (fail-closed). La policy que le
+permitía leer la fila cruda del perfil fue eliminada. La foto de perfil vive
+en un bucket **privado**: solo URLs firmadas con vencimiento corto, metadata
+EXIF eliminada server-side por re-encoding (la foto no filtra ubicación ni
+dispositivo), y al quitar la foto se borran de inmediato el avatar y su
+thumbnail.
 
 ---
 

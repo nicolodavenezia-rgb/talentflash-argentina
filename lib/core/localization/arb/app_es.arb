@@ -284,5 +284,233 @@
   },
   "legalTermsFallbackTitle": "Términos y condiciones",
   "legalPrivacyFallbackTitle": "Política de privacidad",
-  "legalLoadError": "No pudimos cargar el documento. Revisá tu conexión y reintentá."
+  "legalLoadError": "No pudimos cargar el documento. Revisá tu conexión y reintentá.",
+  "profileTitle": "Mi perfil",
+  "@profileTitle": {
+    "description": "Titulo de la pantalla del perfil propio y del boton de entrada desde el home"
+  },
+  "profileEditAction": "Editar perfil",
+  "profileLoadError": "No pudimos cargar tu perfil. Revisá tu conexión y reintentá.",
+  "profilePublishedBadge": "Visible para empresas verificadas",
+  "profileNotPublishedBadge": "No visible para empresas",
+  "profileReadyBadge": "Tenés los datos mínimos para postularte",
+  "profileNotReadyBadge": "Te faltan datos mínimos para postularte",
+  "profileSectionIdentity": "Sobre vos",
+  "profileSectionLocation": "Dónde buscás trabajo",
+  "profileSectionPreferences": "Tu búsqueda",
+  "profileSectionSchedule": "Disponibilidad horaria",
+  "profileSectionSalary": "Expectativa salarial",
+  "profileSectionSkills": "Habilidades",
+  "profileSectionLanguages": "Idiomas",
+  "profileSectionExperience": "Experiencia laboral",
+  "profileSectionEducation": "Educación",
+  "profileEmptyValue": "Sin completar",
+  "profileOptionalEmptyValue": "Sin especificar (es opcional)",
+  "profileSalaryRange": "ARS {min} a {max} por mes",
+  "@profileSalaryRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "profileExperiencePeriod": "{from} a {to}",
+  "@profileExperiencePeriod": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "profileExperienceCurrent": "{from} a la actualidad",
+  "@profileExperienceCurrent": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "profileScheduleNextDay": "{day} de {start} a {end} (termina el día siguiente)",
+  "@profileScheduleNextDay": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "profileScheduleSameDay": "{day} de {start} a {end}",
+  "@profileScheduleSameDay": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "profileCompletenessTitle": "Completitud del perfil",
+  "profileCompletenessValue": "{score} % completo",
+  "@profileCompletenessValue": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "profileCompletenessHint": "Es una guía solo para vos: las empresas no la ven y no cambia ningún orden de resultados.",
+  "profileCompletenessPendingTitle": "Si querés, podés sumar:",
+  "profileCompletenessItemBase": "Los datos básicos del onboarding",
+  "profileCompletenessItemHeadline": "Un titular que te presente",
+  "profileCompletenessItemBio": "Una breve biografía",
+  "profileCompletenessItemExperience": "Al menos una experiencia laboral",
+  "profileCompletenessItemSkills": "Tres habilidades o más",
+  "profileCompletenessItemLanguages": "Al menos un idioma",
+  "profileCompletenessItemSchedule": "Tu disponibilidad horaria",
+  "profileCompletenessItemEducation": "Tu educación (opcional)",
+  "profileCompletenessItemAvatar": "Una foto de perfil (opcional)",
+  "profileCompletenessItemPresentation": "Una presentación (opcional)",
+  "profilePresentationNone": "Todavía no tenés una presentación cargada.",
+  "profilePresentationProcessing": "Tu video de presentación se está procesando.",
+  "profilePresentationReady": "Tu presentación en video está lista.",
+  "profilePresentationFailed": "El procesamiento de tu video falló.",
+  "profilePresentationExpired": "Tu video de presentación venció.",
+  "profilePresentationOptionalNote": "La presentación es opcional y nunca es requisito para postularte. La grabación en video, audio o texto —con igual jerarquía— llega en una etapa posterior del desarrollo.",
+  "@profilePresentationOptionalNote": {
+    "description": "Banner informativo sin CTA (T-023): honesto sobre lo que falta, sin botones que no funcionen"
+  },
+  "profileAvatarLabel": "Foto de perfil",
+  "profileAvatarAdd": "Agregar foto",
+  "profileAvatarReplace": "Cambiar foto",
+  "profileAvatarDelete": "Quitar foto",
+  "profileAvatarOptionalNote": "La foto es opcional: no tenerla no te resta en nada.",
+  "profileAvatarUploaded": "Foto de perfil actualizada.",
+  "profileAvatarDeleted": "Foto de perfil eliminada.",
+  "avatarErrorTooLarge": "La imagen supera los 2 MB. Elegí una más liviana.",
+  "avatarErrorInvalid": "El archivo no parece una imagen JPEG o PNG válida.",
+  "avatarErrorUnsupported": "Por ahora aceptamos JPEG o PNG; el soporte de WebP llega más adelante.",
+  "avatarErrorNotAllowed": "No pudimos actualizar tu foto con esta sesión. Volvé a entrar y reintentá.",
+  "avatarErrorNetwork": "No pudimos conectarnos para subir la foto. Revisá tu conexión.",
+  "avatarErrorUnknown": "No pudimos procesar la foto. Reintentá en unos minutos.",
+  "profileEditTitle": "Editar perfil",
+  "profileSaveAction": "Guardar cambios",
+  "profileSavedMessage": "Cambios guardados.",
+  "profileDiscardTitle": "¿Salir sin guardar?",
+  "profileDiscardBody": "Tenés cambios sin guardar. Si salís ahora, se pierden.",
+  "profileDiscardConfirm": "Salir sin guardar",
+  "profileDiscardCancel": "Seguir editando",
+  "headlineLabel": "Titular",
+  "headlineHelp": "Una línea que te presente (hasta 120 caracteres).",
+  "bioLabel": "Biografía",
+  "bioHelp": "Contá tu experiencia y qué buscás (hasta 2000 caracteres).",
+  "experienceLevelLabel": "Nivel de experiencia",
+  "salaryMinLabel": "Mínimo (ARS por mes)",
+  "salaryMaxLabel": "Máximo (ARS por mes)",
+  "salaryOptionalNote": "La expectativa salarial es opcional; podés dejarla vacía.",
+  "skillsAddLabel": "Agregar habilidad",
+  "languagesAddLabel": "Agregar idioma",
+  "chipAddAction": "Agregar",
+  "chipRemoveLabel": "Quitar {value}",
+  "@chipRemoveLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "profileErrorNameRequired": "El nombre necesita entre 2 y 80 caracteres.",
+  "profileErrorHeadlineTooLong": "El titular admite hasta 120 caracteres.",
+  "profileErrorBioTooLong": "La biografía admite hasta 2000 caracteres.",
+  "profileErrorSalaryInvalid": "Revisá el rango: el mínimo no puede superar al máximo.",
+  "profileErrorSalaryFormat": "Ingresá solo números, sin puntos ni comas.",
+  "profileErrorChipEmpty": "Escribí un valor antes de agregar.",
+  "profileErrorChipDuplicate": "Ese valor ya está en la lista.",
+  "profileErrorChipTooLong": "Ese valor es demasiado largo.",
+  "profileErrorTooManyChips": "Llegaste al máximo de esta lista.",
+  "experienceAdd": "Agregar experiencia",
+  "experienceEditAction": "Editar",
+  "experienceDeleteAction": "Eliminar",
+  "experienceMoveUp": "Subir en la lista",
+  "experienceMoveDown": "Bajar en la lista",
+  "experienceCompanyLabel": "Empresa o lugar",
+  "experiencePositionLabel": "Puesto",
+  "experienceFromLabel": "Desde (MM/AAAA)",
+  "experienceToLabel": "Hasta (MM/AAAA)",
+  "experienceCurrentLabel": "Trabajo acá actualmente",
+  "experienceDescriptionLabel": "Descripción (opcional)",
+  "experienceErrorRequired": "Completá empresa, puesto y fecha de inicio.",
+  "experienceErrorDates": "Revisá las fechas: formato MM/AAAA y el fin no puede ser anterior al inicio.",
+  "experienceDialogSave": "Guardar experiencia",
+  "educationAdd": "Agregar educación",
+  "educationLevelLabel": "Nivel",
+  "educationInstitutionLabel": "Institución",
+  "educationDegreeLabel": "Título (opcional)",
+  "educationOptionalNote": "La educación es opcional: no es requisito para postularte.",
+  "educationErrorRequired": "Completá nivel e institución.",
+  "educationDialogSave": "Guardar educación",
+  "educationLevelPrimario": "Primario",
+  "educationLevelSecundario": "Secundario",
+  "educationLevelTerciario": "Terciario",
+  "educationLevelUniversitario": "Universitario",
+  "educationLevelPosgrado": "Posgrado",
+  "educationLevelCurso": "Curso o capacitación",
+  "scheduleAdd": "Agregar franja",
+  "scheduleDayLabel": "Día",
+  "scheduleStartLabel": "Desde (HH:MM)",
+  "scheduleEndLabel": "Hasta (HH:MM)",
+  "scheduleCrossesNote": "Si el fin es menor que el inicio, el turno termina el día siguiente (por ejemplo, 22:00 a 02:00).",
+  "scheduleErrorFormat": "Usá el formato HH:MM, por ejemplo 18:30.",
+  "scheduleErrorOverlap": "Esa franja se superpone con otra que ya cargaste.",
+  "scheduleErrorTooMany": "Podés cargar hasta 21 franjas, con un máximo de 3 por día.",
+  "scheduleErrorZeroLength": "El inicio y el fin no pueden ser iguales.",
+  "scheduleDeleteLabel": "Quitar la franja de {day}",
+  "@scheduleDeleteLabel": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduleDialogSave": "Guardar franja",
+  "dayLun": "Lunes",
+  "dayMar": "Martes",
+  "dayMie": "Miércoles",
+  "dayJue": "Jueves",
+  "dayVie": "Viernes",
+  "daySab": "Sábado",
+  "dayDom": "Domingo",
+  "experienceLevelSinExperiencia": "Sin experiencia",
+  "experienceLevelHasta1Anio": "Hasta 1 año",
+  "experienceLevel1a3": "1 a 3 años",
+  "experienceLevel3a5": "3 a 5 años",
+  "experienceLevelMas5": "Más de 5 años",
+  "companyCandidateTitle": "Perfil de candidato",
+  "companyCandidateBack": "Volver",
+  "companyCandidateNotAvailableTitle": "Candidato no disponible",
+  "companyCandidateNotAvailableBody": "Este perfil no está disponible. Puede haber dejado de estar publicado o el enlace ya no es válido.",
+  "@companyCandidateNotAvailableBody": {
+    "description": "Mensaje fail-closed: identico exista o no el candidato (T-024)"
+  },
+  "companyCandidatePendingTitle": "Tu empresa está en verificación",
+  "companyCandidatePendingBody": "Hasta que se apruebe la verificación de tu empresa no podés ver perfiles de candidatos. Te avisamos apenas esté lista.",
+  "companyCandidateRejectedTitle": "La verificación de tu empresa fue rechazada",
+  "companyCandidateRejectedBody": "Mientras la verificación no esté aprobada no es posible ver candidatos. Corregí los datos y volvé a enviarla.",
+  "companyCandidateLoadError": "No pudimos cargar el perfil. Revisá tu conexión y reintentá.",
+  "companyCandidatePresentationReady": "Tiene una presentación lista para ver (la reproducción llega en una etapa posterior).",
+  "companyCandidateNoPresentation": "Todavía no cargó una presentación (es opcional y no dice nada de su candidatura)."
 }

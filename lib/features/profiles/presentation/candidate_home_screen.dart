@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/gen/app_localizations.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../authentication/presentation/widgets/signed_in_scaffold.dart';
 
 /// Shell del candidato. Ruta privada: solo la alcanza una sesión con rol
@@ -15,6 +17,14 @@ class CandidateHomeScreen extends StatelessWidget {
     return SignedInScaffold(
       title: l10n.candidateHomeTitle,
       placeholder: l10n.candidateHomePlaceholder,
+      children: [
+        // Entrada accesible al perfil (Bloque D, T-021).
+        FilledButton.icon(
+          onPressed: () => context.goNamed(AppRoute.candidateProfile.name),
+          icon: const Icon(Icons.person_outline),
+          label: Text(l10n.profileTitle),
+        ),
+      ],
     );
   }
 }

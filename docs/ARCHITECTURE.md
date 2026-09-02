@@ -1,6 +1,6 @@
 # TalentFlash — Arquitectura Técnica
 
-**Última actualización:** 2026-08-12
+**Última actualización:** 2026-09-02
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 Documentos relacionados: el SPEC (brief de producto compartido, fuente de verdad; §11 estructura de carpetas), `DATA_MODEL.md` (modelo de datos y políticas RLS completas), `PRODUCT.md` (planes B2B y modelo económico), `COST_DECISIONS.md` (decisiones económicas aprobadas y proyección de costos de infraestructura), `SECURITY.md` (controles, límites de upload), `PRIVACY.md` (retención y consentimientos), `ROADMAP.md` (fases de entrega).
@@ -104,7 +104,7 @@ Convenciones por feature (obligatorias, se validan en code review):
   - claim ausente o inválido → `/sesion-invalida`, estado seguro sin rol asumido;
   - **gate de onboarding (Bloque C):** el estado viene de la base (`OnboardingResolution`: sin resolver / listo / no aplica) — mientras se resuelve, pantalla de carga; con onboarding incompleto, el wizard del rol es el único destino; con un consentimiento obligatorio de versión vieja, la pantalla de reconsentimiento; completo, wizard y reconsentimiento redirigen al shell. Las rutas `/legal/*` quedan siempre alcanzables y admin nunca pasa por onboarding.
   El guard es UX, no seguridad: la seguridad real es RLS.
-- El catálogo de rutas vive en `core/routing/app_routes.dart` (`AppRoute`: nombre, path y rol requerido). Se navega siempre por nombre.
+- El catálogo de rutas vive en `core/routing/app_routes.dart` (`AppRoute`: nombre, path y rol requerido). Se navega siempre por nombre. Desde el Bloque D el catálogo admite **rutas con parámetro** (`/empresa/candidatos/:id`, la primera): `AppRoute.forPath` matchea patrones por segmentos, y la política de redirección evalúa esas rutas igual que las estáticas (mismo orden de guards).
 - Cada feature tiene tests de notifier (con repositorio mockeado) y golden tests de sus pantallas principales.
 
 #### Capa de autenticación (Bloque B)
@@ -152,6 +152,27 @@ Los errores de PostgREST/RPC se traducen a `DataFailure`
 (`shared/models/data_failure.dart`, códigos 42501/TF018/TFDAT/TFCNS/23505 →
 enum) y la UI muestra siempre un texto del ARB. `ai_training` no existe en el
 código Dart (test de arquitectura): ninguna superficie puede otorgarlo.
+
+#### Capa de perfiles (Bloque D)
+
+Mismo patrón, en `features/profiles/`:
+
+```
+lib/features/profiles/
+├── domain/       # perfil propio, proyección de empresa, score de completitud
+│                 # (cálculo puro, determinista, clamp 0–100 — T-025)
+├── data/         # ProfilesRepository (interfaz) + implementación Supabase:
+│                 # RPCs get/update_my_candidate_profile,
+│                 # get_candidate_public_profile, Edge Function avatar,
+│                 # URLs firmadas de 300 s renovables (solo acá vive el SDK)
+├── providers/    # AsyncNotifier con bloqueo de doble submit
+└── presentation/ # vista propia (/candidato/perfil), edición (/…/editar),
+                  # vista de empresa (/empresa/candidatos/:id), widgets
+```
+
+El selector de archivo del avatar va detrás de una interfaz inyectable
+(`file_selector`, paquete oficial sin costo; justificado en `pubspec.yaml`)
+con pre-chequeo local de magic bytes y tamaño antes de llamar a la función.
 
 ---
 
@@ -201,6 +222,7 @@ Toda política nueva entra por migración versionada (`supabase/migrations/`) y 
 
 | Función | Trigger | Rol | Qué hace |
 |---|---|---|---|
+| `avatar` | HTTPS (JWT candidato) | user JWT + service role interno | Valida magic bytes, re-encodea sin EXIF, genera thumbnail y escribe el bucket privado (T-022) — **implementada** (local) |
 | `ai-proxy` | HTTPS (JWT usuario) | user JWT | Único punto de acceso a Claude API (§5) |
 | `video-upload-url` | HTTPS (JWT usuario) | user JWT + secret Stream | Pide a Stream una direct creator upload URL de un solo uso (§4) |
 | `stream-webhook` | Webhook Cloudflare | service_role | Recibe eventos de encoding; actualiza estados; dispara captions |
@@ -215,7 +237,8 @@ Toda política nueva entra por migración versionada (`supabase/migrations/`) y 
 
 ### 3.5 Storage
 
-- Buckets: `avatars` (público con transformación de imagen), `company-logos` (público), `documents` (privado: certificados, PDFs de CV exportados; acceso por signed URL con TTL corto).
+- **`avatars` (implementado, T-022 / migración `0024`): bucket PRIVADO** — 2 MiB máx, objetos con paths canónicos `avatars/<candidate_profile_id>/avatar.jpg` y `.../thumb.jpg` (namespace por `candidate_profile_id`, no por auth uid, para que la proyección de T-024 no exponga el id de auth; nombres estables ⇒ reemplazo sin huérfanos). `profiles.avatar_url` guarda SOLO el path, nunca una URL firmada. Lectura únicamente por URLs firmadas de TTL corto (300 s en el cliente, renovables) bajo la policy `can_read_avatar_object`; **cero policies de escritura**: toda alta/reemplazo/borrado pasa por la Edge Function `avatar` (§3.4). *Contradicción resuelta:* este doc decía "avatars (público)"; prevalecen el criterio verificable de T-022 ("URL firmada vencida no sirve el archivo") y la minimización de PRIVACY/SECURITY → bucket privado.
+- `company-logos` (público) y `documents` (privado: certificados, PDFs de CV exportados; acceso por signed URL con TTL corto) siguen **previstos, sin implementar** — llegan con sus bloques.
 - El video NO va a Storage (va a Stream). Los thumbnails de video los sirve Stream directamente.
 - Políticas de Storage también en SQL versionado (son RLS sobre `storage.objects`).
 

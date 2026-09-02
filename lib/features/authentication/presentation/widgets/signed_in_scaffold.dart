@@ -13,11 +13,16 @@ class SignedInScaffold extends ConsumerWidget {
   const SignedInScaffold({
     required this.title,
     required this.placeholder,
+    this.children = const [],
     super.key,
   });
 
   final String title;
   final String placeholder;
+
+  /// Accesos del shell debajo del texto (p. ej. "Mi perfil" en el home del
+  /// candidato) hasta que llegue la navegación real de cada bloque.
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,6 +65,10 @@ class SignedInScaffold extends ConsumerWidget {
                     style: theme.textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
+                  if (children.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    ...children,
+                  ],
                 ],
               ),
             ),
