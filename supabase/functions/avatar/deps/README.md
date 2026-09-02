@@ -70,10 +70,14 @@ remoto.
 No se vendorizan las definiciones de tipos (`.d.ts`) que esm.sh anuncia por
 cabecera HTTP: encadenan `@types/ws` y de ahí `npm:@types/node`, con el mismo
 problema de red. En su lugar, `types/supabase-js.d.ts` (escrito a mano, fuera
-del manifest) declara el contrato mínimo que `index.ts` consume y se enlaza
-con `// @ts-types` sobre el import, de modo que `deno check` funciona sin red
-aunque el cliente quede tipado como `any`. El contrato HTTP de la función no
-cambia.
+del manifest) declara interfaces mínimas y explícitas para lo que `index.ts`
+usa de verdad: `auth.getUser`, `from("candidate_profiles")` /
+`from("profiles")` con `select`, `update`, `eq`, `is` y `maybeSingle`, y
+`storage.from("avatars")` con `upload` y `remove`, con las formas de
+respuesta `{ data, error }` de supabase-js 2.49. Se enlaza con `// @ts-types`
+sobre el import; `deno check` funciona sin red y cualquier tabla, bucket o
+método fuera de ese contrato es un error de tipos que obliga a ampliar la
+declaración a conciencia. El contrato HTTP de la función no cambia.
 
 ## Archivos estáticos: los WASM
 
