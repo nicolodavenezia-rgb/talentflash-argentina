@@ -12,8 +12,14 @@
 //   avatars/<cid>/thumb.jpg   (128×128 cuadrado, recorte centrado)
 // Reemplazar sobreescribe los mismos objetos: sin huérfanos.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
+// Dependencias vendorizadas (deps/README.md): el runtime no descarga módulos,
+// tipos ni WASM al arrancar ni al procesar imágenes. Las versiones son las
+// mismas que antes se resolvían en remoto; los imports internos de los
+// bundles de esm.sh los resuelve el import map de ./deno.json. Los tipos del
+// cliente son la declaración mínima de deps/types (ver ese archivo).
+// @ts-types="./deps/types/supabase-js.d.ts"
+import { createClient } from "./deps/esm.sh/@supabase/supabase-js@2.49.4/es2022/supabase-js.mjs";
+import { decode, Image } from "./deps/deno.land/x/imagescript@1.3.0/mod.ts";
 import { detectImageFormat } from "./lib/magic_bytes.ts";
 import { readJpegOrientation } from "./lib/exif.ts";
 

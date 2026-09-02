@@ -81,6 +81,15 @@ inválido, >2 MiB, escritura directa denegada, permisos de empresa
 verificada/pendiente/otro candidato/anon y DELETE. La CI corre ambos junto al
 resto (con `denoland/setup-deno@v2`).
 
+La Edge Function `avatar` no descarga nada en tiempo de ejecución: sus
+dependencias (`@supabase/supabase-js@2.49.4` con sus transitivas, tal como las
+sirve esm.sh, e ImageScript 1.3.0 con sus binarios WASM) están vendorizadas en
+`functions/avatar/deps/` y `functions/avatar/deno.json` es el import map que
+las resuelve. Esto hace reproducible el arranque del edge runtime y lo
+independiza de cualquier antivirus o proxy que intercepte TLS en la máquina de
+desarrollo. Verificación sin red: `node supabase/functions/avatar/deps/sync.mjs
+--check`; detalles y actualización en `functions/avatar/deps/README.md`.
+
 `env/dev.json` contiene solo la URL y la publishable/anon key del stack local.
 Es información pública de desarrollo; nunca se guarda la `service_role`.
 
