@@ -385,6 +385,15 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Edge Function `avatar` (Bloque D, T-022). El runtime empaqueta cada función
+# con los módulos de su grafo de imports, tanto en `supabase start` como al
+# desplegar; los binarios WASM de ImageScript no son módulos y se leen del
+# disco en tiempo de ejecución, así que hay que declararlos como archivos
+# estáticos. El import map (`functions/avatar/deno.json`) se detecta solo.
+# Ver functions/avatar/deps/README.md.
+[functions.avatar]
+static_files = ["./functions/avatar/deps/deno.land/x/imagescript@1.3.0/utils/wasm/*.wasm"]
+
 [analytics]
 enabled = true
 port = 54327

@@ -1,0 +1,13 @@
+{
+  "imports": {
+    "/@supabase/auth-js@2.69.1/es2022/auth-js.mjs": "./deps/esm.sh/@supabase/auth-js@2.69.1/es2022/auth-js.mjs",
+    "/@supabase/functions-js@2.4.4/es2022/functions-js.mjs": "./deps/esm.sh/@supabase/functions-js@2.4.4/es2022/functions-js.mjs",
+    "/@supabase/node-fetch@2.6.15/es2022/node-fetch.mjs": "./deps/esm.sh/@supabase/node-fetch@2.6.15/es2022/node-fetch.mjs",
+    "/@supabase/node-fetch@^2.6.14?target=es2022": "./deps/esm.sh/@supabase/node-fetch@2.6.15/es2022/node-fetch.mjs",
+    "/@supabase/postgrest-js@1.19.4/es2022/postgrest-js.mjs": "./deps/esm.sh/@supabase/postgrest-js@1.19.4/es2022/postgrest-js.mjs",
+    "/@supabase/realtime-js@2.11.2/es2022/realtime-js.mjs": "./deps/esm.sh/@supabase/realtime-js@2.11.2/es2022/realtime-js.mjs",
+    "/@supabase/storage-js@2.7.1/es2022/storage-js.mjs": "./deps/esm.sh/@supabase/storage-js@2.7.1/es2022/storage-js.mjs",
+    "/node/buffer.mjs": "./deps/esm.sh/node/buffer.mjs",
+    "/ws@^8.18.0?target=es2022": "./deps/esm.sh/ws@8.21.3/es2022/ws.mjs"
+  }
+}

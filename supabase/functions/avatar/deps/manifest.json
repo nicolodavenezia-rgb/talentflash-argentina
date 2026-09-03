@@ -1,0 +1,401 @@
+{
+  "note": "Dependencias vendorizadas de la Edge Function avatar. Cada entrada registra la URL exacta de origen, la ruta local (relativa a este directorio), el paquete, la versión, la licencia y el SHA-256 del archivo. Los bundles de esm.sh son la variante es2022 pedida con User-Agent de navegador (sin imports node:, ver README.md). Se regenera con `node sync.mjs --update` y se verifica con `node sync.mjs --check`.",
+  "files": [
+    {
+      "url": "https://esm.sh/@supabase/supabase-js@2.49.4/es2022/supabase-js.mjs",
+      "path": "esm.sh/@supabase/supabase-js@2.49.4/es2022/supabase-js.mjs",
+      "package": "@supabase/supabase-js",
+      "version": "2.49.4",
+      "license": "MIT",
+      "sha256": "bca70a2651a5e4a090fe91aa1cca74aa16cc4eb5caf769abcc398ca783625f30",
+      "bytes": 6382
+    },
+    {
+      "url": "https://esm.sh/@supabase/auth-js@2.69.1/es2022/auth-js.mjs",
+      "path": "esm.sh/@supabase/auth-js@2.69.1/es2022/auth-js.mjs",
+      "package": "@supabase/auth-js",
+      "version": "2.69.1",
+      "license": "MIT",
+      "sha256": "deebd0cd23ca4f9262c815b870ba58700d9d2a38fc5f300f4a670e139e576f94",
+      "bytes": 51328
+    },
+    {
+      "url": "https://esm.sh/@supabase/functions-js@2.4.4/es2022/functions-js.mjs",
+      "path": "esm.sh/@supabase/functions-js@2.4.4/es2022/functions-js.mjs",
+      "package": "@supabase/functions-js",
+      "version": "2.4.4",
+      "license": "MIT",
+      "sha256": "8ab7eb3ee3de7d7cffbf3aaa4efb11f39a9057e6cb12ab724894d5ad0e7ca2e2",
+      "bytes": 2836
+    },
+    {
+      "url": "https://esm.sh/@supabase/postgrest-js@1.19.4/es2022/postgrest-js.mjs",
+      "path": "esm.sh/@supabase/postgrest-js@1.19.4/es2022/postgrest-js.mjs",
+      "package": "@supabase/postgrest-js",
+      "version": "1.19.4",
+      "license": "MIT",
+      "sha256": "09b8410c48d0a08302949500b7ae0b8b47b1f897b7913331d5927c9e1c624cd5",
+      "bytes": 13741
+    },
+    {
+      "url": "https://esm.sh/@supabase/realtime-js@2.11.2/es2022/realtime-js.mjs",
+      "path": "esm.sh/@supabase/realtime-js@2.11.2/es2022/realtime-js.mjs",
+      "package": "@supabase/realtime-js",
+      "version": "2.11.2",
+      "license": "MIT",
+      "sha256": "dcb0bfe246c08663e349602035a278e8b31cbe58f9adc6019ae0b31a1944a0b4",
+      "bytes": 22938
+    },
+    {
+      "url": "https://esm.sh/@supabase/storage-js@2.7.1/es2022/storage-js.mjs",
+      "path": "esm.sh/@supabase/storage-js@2.7.1/es2022/storage-js.mjs",
+      "package": "@supabase/storage-js",
+      "version": "2.7.1",
+      "license": "MIT",
+      "sha256": "321b98c82efa5a6eb333475c09d794d03c903c3afd18805ed1477b4d7a07a872",
+      "bytes": 11951
+    },
+    {
+      "url": "https://esm.sh/@supabase/node-fetch@2.6.15/es2022/node-fetch.mjs",
+      "path": "esm.sh/@supabase/node-fetch@2.6.15/es2022/node-fetch.mjs",
+      "package": "@supabase/node-fetch",
+      "version": "2.6.15",
+      "license": "MIT",
+      "sha256": "8d663290a76271c31f256dbca3a123fbae50ba754d6f34ecb9a931bfac32087c",
+      "bytes": 403
+    },
+    {
+      "url": "https://esm.sh/ws@8.21.3/es2022/ws.mjs",
+      "path": "esm.sh/ws@8.21.3/es2022/ws.mjs",
+      "package": "ws",
+      "version": "8.21.3",
+      "license": "MIT",
+      "sha256": "69a444e388127fc34d2c9e5f683fc603df56afb710ebfd5800415ae404e6da55",
+      "bytes": 818
+    },
+    {
+      "url": "https://esm.sh/node/buffer.mjs",
+      "path": "esm.sh/node/buffer.mjs",
+      "package": "unenv (polyfill de node:buffer servido por esm.sh)",
+      "version": "esm.sh /node/buffer.mjs (sin versión en la URL; fijado por SHA-256)",
+      "license": "MIT",
+      "sha256": "64fb61aa5f48644d685f9ceabedba60ea6b5d6ce03dac1943e863d00d9e574f3",
+      "bytes": 28845
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/mod.ts",
+      "path": "deno.land/x/imagescript@1.3.0/mod.ts",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "18a6cb83c55e690c873505f6fe867364c678afb64934fe7aef593a6b92f79995",
+      "bytes": 33
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/ImageScript.js",
+      "path": "deno.land/x/imagescript@1.3.0/ImageScript.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "cf90773c966031edd781ed176c598f7ed495e7694cd9b86c986d2d97f783cca0",
+      "bytes": 52736
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/png/src/crc.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/png/src/crc.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "5cf50de181d61dd00e66a240d811018ba5070afa8bba302f393604404604de84",
+      "bytes": 3711
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/png/src/mem.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/png/src/mem.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "4968d400dae069b4bf0ef4767c1802fd2cc7d15d90eda4cfadf5b4cd19b96c6d",
+      "bytes": 854
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/png/src/png.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/png/src/png.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "96ef0ceff1b5a6cd9304749e5f187b4ab238509fb5f9a8be8ee934240271ed8d",
+      "bytes": 8381
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/png/src/zlib.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/png/src/zlib.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "9867dc3fab1d31b664f9344b0d7e977f493d9c912a76c760d012ed2b89f7061c",
+      "bytes": 17710
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/buffer.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/buffer.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "952cb1beb8827e50a493a5d1f29a4845e8c648789406d389dd51f51205ba02d8",
+      "bytes": 339
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/crc32.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/crc32.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "573d6222b3605890714ebc374e687ec2aa3e9a949223ea199483e47ca4864f7d",
+      "bytes": 3828
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/png.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/png.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "fbed9117e0a70602645d70df9c103ff6e79c03e987bd5c1685dcb4200729b6de",
+      "bytes": 7997
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/font.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/font.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "9e75d842608c057045698d6a7cdf5ffd27241b5cdea0391c89a1917b31294524",
+      "bytes": 4157
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/font.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/font.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "c244cd87aa57bd3ea39b55fc5d6c891fa2040dae6c5c41c49d9084b8e43919e8",
+      "bytes": 211325
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/gif.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/gif.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "8b86f7b96486bb8ff50fbc7c7487f86cb5cef85e6acd71e1def78a1aa2f12e4f",
+      "bytes": 3509
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/gif.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/gif.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "533dd675f21eaad1bed72c03359a0775c9966e89a51c6e9c86bc4d439a6413b0",
+      "bytes": 58969
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/jpeg.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/jpeg.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "75295e2fcf96b4f7bb894b3844fdaa8140d63169d28b466b5d5be89d59a7b6e6",
+      "bytes": 1693
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/jpeg.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/jpeg.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "019bcef4d864045e9b2df7e39ef6e7f3227d80b08a33742e1438441f2ddc2368",
+      "bytes": 91769
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/png.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/png.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "0659536a8dd8f892c8346e268b2754b4414fad0ec1e9794dfcde1ba1c804ee02",
+      "bytes": 1142
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/png.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/png.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "3687bebda95af7572626ab02c09c60a79f160385abad979dbb494f6b17cda2cf",
+      "bytes": 103776
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/svg.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/svg.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "f5c8a9d1977b51a7c07549ceb6bbbaca9497321a193f28b3dc229a42d91bcf14",
+      "bytes": 1411
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/svg.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/svg.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "85b663e8c33ead57f5d1c0c3a9d4cf2d87f0e53e62012af5ac9a5a25ef42037d",
+      "bytes": 1069320
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/tiff.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/tiff.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "c2d7bdaef094df25aae1752e75167f485e89275d76a1379e39d8949580b7af4f",
+      "bytes": 1309
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/tiff.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/tiff.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "410db4831b9ddd82f65df299f2fc1d4a2118756a1c649929403fee2716c14f8c",
+      "bytes": 190349
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/zlib.js",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/zlib.js",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "749875f83abffe24d3b977475a0cbd5f9b52bee1fbdbef61ec183cbfc17805f6",
+      "bytes": 2796
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/utils/wasm/zlib.wasm",
+      "path": "deno.land/x/imagescript@1.3.0/utils/wasm/zlib.wasm",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "a9d289c84dad1cbbbc15f3bad6d83b64ea3056598227cca1241e2debc13613c0",
+      "bytes": 46748
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/framebuffer.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/framebuffer.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "add44ff184636659714b3c6d4b896f628545451abffbc30b5bcc2e8d9a73d012",
+      "bytes": 4978
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/blur.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/blur.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "80716f1ffab8a2aeb54a036f583bf51a2b9dd37e005adc000add803df8e8a12f",
+      "bytes": 8629
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/color.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/color.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "5e72cdcbf97dc939a2795223f01e3cb0544c0c56b03ea2aa026050df58348814",
+      "bytes": 9000
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/crop.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/crop.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "69431fa6f687fd9f0c31eff0ec27d7ac925275005e53a37f0c3fab4cc4d9a9ea",
+      "bytes": 1791
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/fill.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/fill.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "cf1b9488314753fbc9ebf03410ac74c2a34ea5a69fb6892cd6e8366cd1930d93",
+      "bytes": 815
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/flip.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/flip.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "825a34a66567dcf15e76a719f1bf2f66fb106503cd69942292b1b0ae05c5718e",
+      "bytes": 833
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/index.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/index.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "423ba687119be2bba8cec72890577d3afa3621b6b8108912242fe937a183f2aa",
+      "bytes": 347
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/iterator.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/iterator.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "c2adf3d90ce00719a02c48c97634574176a3501ff026676259bd71aa8f5d69b9",
+      "bytes": 870
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/overlay.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/overlay.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "7e6e2c2ffd25006d52597ab8babc5f8f503d388a3fdf2fbc0eaea02799a020c9",
+      "bytes": 2023
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/resize.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/resize.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "814e78ebce8eaf8f1f918688db7b52a141405e06a36ed4b25d04413d69e7d17b",
+      "bytes": 6238
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/ops/rotate.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/ops/rotate.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "a1b65616717bd2eed8db406affea3263b4674dada46b56441ef38167a187455d",
+      "bytes": 3283
+    },
+    {
+      "url": "https://deno.land/x/imagescript@1.3.0/v2/util/mem.mjs",
+      "path": "deno.land/x/imagescript@1.3.0/v2/util/mem.mjs",
+      "package": "imagescript",
+      "version": "1.3.0",
+      "license": "MIT",
+      "sha256": "4968d400dae069b4bf0ef4767c1802fd2cc7d15d90eda4cfadf5b4cd19b96c6d",
+      "bytes": 854
+    }
+  ]
+}

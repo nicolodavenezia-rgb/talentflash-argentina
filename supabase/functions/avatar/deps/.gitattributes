@@ -1,0 +1,7 @@
+# Los archivos descargados se guardan byte a byte: manifest.json registra el
+# SHA-256 de cada uno tal como lo sirve su origen, y `sync.mjs --check` lo
+# verifica en cualquier sistema operativo. Sin esto, core.autocrlf=true en
+# Windows reescribiría los finales de línea al hacer checkout y los hashes
+# dejarían de coincidir.
+esm.sh/** -text
+deno.land/** -text

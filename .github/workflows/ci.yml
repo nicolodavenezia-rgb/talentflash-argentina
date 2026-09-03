@@ -47,6 +47,15 @@ jobs:
   secret-scan:
     name: Scan de secretos (gitleaks)
     runs-on: ubuntu-latest
+    # En eventos `pull_request`, gitleaks-action consulta
+    # GET /repos/{owner}/{repo}/pulls/{n}/commits para acotar el rango a escanear.
+    # Con los permisos por defecto del repo (solo `contents: read`) ese llamado
+    # devuelve 403 "Resource not accessible by integration" y la accion aborta
+    # antes de escanear nada. Al declarar permisos a nivel job hay que reponer
+    # `contents: read` para el checkout: lo que no se declara pasa a `none`.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
