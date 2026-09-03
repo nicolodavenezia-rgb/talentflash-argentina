@@ -554,17 +554,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cuitLabel => 'CUIT';
 
   @override
-  String get cuitHint => '30-12345678-9';
+  String get cuitHint => '30-12345678-1';
 
   @override
   String get cuitHelp =>
-      'Once números. La verificación de la empresa se hace después, con revisión humana.';
+      'Once números. Comprobamos el dígito verificador; que la empresa sea tuya lo revisa una persona después.';
 
   @override
   String get cuitErrorRequired => 'Ingresá el CUIT de la empresa.';
 
   @override
   String get cuitErrorLength => 'El CUIT debe tener 11 números.';
+
+  @override
+  String get cuitErrorCharacters =>
+      'El CUIT solo lleva números, guiones y espacios.';
+
+  @override
+  String get cuitErrorCheckDigit =>
+      'Ese CUIT no existe: el último número no se corresponde con los anteriores. Revisalo.';
 
   @override
   String get companySizeLabel => 'Tamaño de la empresa';

@@ -39,7 +39,9 @@ abstract final class OnboardingCopy {
   static String cuitIssue(AppLocalizations l10n, CuitIssue issue) =>
       switch (issue) {
         CuitIssue.empty => l10n.cuitErrorRequired,
+        CuitIssue.invalidCharacters => l10n.cuitErrorCharacters,
         CuitIssue.wrongLength => l10n.cuitErrorLength,
+        CuitIssue.checkDigit => l10n.cuitErrorCheckDigit,
       };
 
   static String availability(

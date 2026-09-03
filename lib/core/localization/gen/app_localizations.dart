@@ -1051,13 +1051,13 @@ abstract class AppLocalizations {
   /// No description provided for @cuitHint.
   ///
   /// In es, this message translates to:
-  /// **'30-12345678-9'**
+  /// **'30-12345678-1'**
   String get cuitHint;
 
   /// No description provided for @cuitHelp.
   ///
   /// In es, this message translates to:
-  /// **'Once números. La verificación de la empresa se hace después, con revisión humana.'**
+  /// **'Once números. Comprobamos el dígito verificador; que la empresa sea tuya lo revisa una persona después.'**
   String get cuitHelp;
 
   /// No description provided for @cuitErrorRequired.
@@ -1071,6 +1071,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El CUIT debe tener 11 números.'**
   String get cuitErrorLength;
+
+  /// No description provided for @cuitErrorCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'El CUIT solo lleva números, guiones y espacios.'**
+  String get cuitErrorCharacters;
+
+  /// No description provided for @cuitErrorCheckDigit.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese CUIT no existe: el último número no se corresponde con los anteriores. Revisalo.'**
+  String get cuitErrorCheckDigit;
 
   /// No description provided for @companySizeLabel.
   ///
