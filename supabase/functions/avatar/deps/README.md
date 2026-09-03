@@ -106,9 +106,43 @@ node supabase/functions/avatar/deps/sync.mjs --check              # sin red: con
 node supabase/functions/avatar/deps/sync.mjs --update             # descarga a un temporal y MUESTRA qué cambiaría; no escribe
 node supabase/functions/avatar/deps/sync.mjs --update --accept    # aplica los cambios mostrados, solo si todas las descargas fueron válidas
 node --test supabase/functions/avatar/deps/sync.spec.mjs          # pruebas del sincronizador, sin red
-deno check --config supabase/functions/avatar/deno.json supabase/functions/avatar/index.ts
-deno info --config supabase/functions/avatar/deno.json supabase/functions/avatar/index.ts   # no debe listar ningún https:// ni node:
+node scripts/edge-offline-guard.mjs                               # guard: el grafo resuelto debe ser 100% local
+node --test scripts/edge-offline-guard.spec.mjs                   # pruebas del guard, sin red
 ```
+
+## El guard del grafo offline
+
+`scripts/edge-offline-guard.mjs` es lo que impide que esta invariante se pierda
+en silencio. Antes, la comprobación era `deno info` y mirar la salida a ojo; el
+runner de CI tiene internet, así que un import remoto reintroducido resolvía
+bien y la corrida quedaba verde.
+
+El guard le pide a Deno el grafo **realmente resuelto** (`deno info --json`) en
+vez de hacer un grep sobre el texto, de modo que también ve los imports
+indirectos, los re-exports y lo que llega vía import map. Rechaza cualquier
+módulo cuyo especificador no sea `file:` — eso cubre `http:`, `https:`, `npm:`,
+`jsr:` y `node:` — y exige que cada archivo resuelto viva dentro del
+repositorio y dentro del directorio de la función. Después type-checkea
+`index.ts` con este import map y corre `sync.mjs --check`.
+
+Cada invocación de Deno usa un `DENO_DIR` temporal y vacío, para que una caché
+previa no pueda hacer pasar una dependencia remota, y se le pasan `--no-remote`
+y `--no-npm`. Si Deno llegara a imprimir una sola línea `Download`, el guard
+falla.
+
+Por qué no alcanza con las banderas de Deno, medido en 2.9.6:
+
+| Import | `--no-remote` lo frena | `deno check --cached-only` falla | Lo ve el grafo |
+| --- | --- | --- | --- |
+| `https:` | sí | sí | sí |
+| `npm:` | **no** (bajaba de registry.npmjs.org) | sí | sí |
+| `jsr:` | sí | sí | sí |
+| `node:` | **no** | **no, sale 0** | sí |
+
+`node:` es justamente el especificador que hace que el edge runtime inyecte
+`npm:@types/node` y lo baje del registro en cada arranque frío. Ninguna bandera
+lo ataja: solo se detecta inspeccionando el grafo. Por eso la inspección es el
+control primario y las banderas son defensa en profundidad.
 
 Qué garantiza `--check`: recorre `esm.sh/` y `deno.land/` sin seguir enlaces
 y exige que el conjunto real de archivos sea exactamente el del manifest.
