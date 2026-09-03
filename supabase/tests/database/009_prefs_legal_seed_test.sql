@@ -63,6 +63,14 @@ select results_eq(
   'NEGATIVO: las preferencias ajenas tampoco se leen');
 
 -- --- Documentos legales: públicos de verdad, inmutables para clientes -------
+-- Limpieza de los claims del authenticate_as previo: un anon real no trae
+-- ningún sub (si quedaran, auth.uid() seguiría devolviendo al usuario).
+do $$
+begin
+  perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.role', 'anon', true);
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+end $$;
 set local role anon;
 
 select results_eq(

@@ -1,6 +1,6 @@
 -- Lockdown de pagos y ausencia de datos privados para anon.
 begin;
-select plan(9);
+select plan(10);
 
 select tests.authenticate_as('user_cand_pub');
 select throws_ok(
@@ -12,10 +12,19 @@ select throws_ok(
   $$ update payments set amount = 0 where payer_profile_id = auth.uid() $$,
   '42501', null, 'NEGATIVO: authenticated no actualiza payments');
 
+-- El pago fixture ('fixture-payment', 000_setup) pertenece a user_cand_pub:
+-- el pagador tiene que verlo exactamente una vez, y otro usuario cero veces.
+-- Un `count(*) >= 0` pasaría siempre, incluso sin fila.
 select results_eq(
-  $$ select count(*)::int >= 0 from payments where payer_profile_id = auth.uid() $$,
-  $$ values (true) $$,
-  'POSITIVO: el pagador puede leer sus propios pagos');
+  $$ select count(*)::int from payments where provider_payment_id = 'fixture-payment' $$,
+  $$ values (1) $$,
+  'POSITIVO: el pagador ve exactamente su pago fixture');
+
+select tests.authenticate_as('user_cand_priv');
+select results_eq(
+  $$ select count(*)::int from payments where provider_payment_id = 'fixture-payment' $$,
+  $$ values (0) $$,
+  'NEGATIVO: otro usuario no ve el pago ajeno');
 
 reset role;
 select set_config('request.jwt.claim.sub', '', true);
