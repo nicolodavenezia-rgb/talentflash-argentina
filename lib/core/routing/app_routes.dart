@@ -34,6 +34,9 @@ enum AppRoute {
   /// (proyección fail-closed), el rol acá es solo UX.
   companyCandidateDetail('/empresa/candidatos/:id', BusinessRole.company),
 
+  /// Verificación de la empresa: constancia de ARCA y estado (T-028).
+  companyVerification('/empresa/verificacion', BusinessRole.company),
+
   /// Wizards de onboarding (Bloque C). Mientras el onboarding no está
   /// completo, el guard 4 (UX_FLOWS.md §1.5) convierte estas rutas en la
   /// única pantalla disponible del shell.
@@ -53,6 +56,11 @@ enum AppRoute {
   /// Panel admin (UX_FLOWS.md §1.4). En este bloque es solo el marcador de
   /// posición: existe para que un `admin` nunca se degrade a otro shell.
   adminHome('/admin', BusinessRole.admin),
+
+  /// Cola de verificaciones de empresa (T-028; avance parcial de T-077).
+  /// El guard de rol es UX y el de AAL2 lo aplica la pantalla; la
+  /// autorización real la hacen las RPCs de la migración 0028.
+  adminVerifications('/admin/verificaciones', BusinessRole.admin),
 
   /// Sesión inconsistente o acceso no permitido.
   sessionIssue('/sesion-invalida', null);

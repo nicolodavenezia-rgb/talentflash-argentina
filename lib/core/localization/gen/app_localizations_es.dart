@@ -1140,6 +1140,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).';
 
   @override
+  String get dataFailureInvalidCuit =>
+      'Ese CUIT no es válido: revisá el dígito verificador.';
+
+  @override
+  String get dataFailureSecondFactor =>
+      'Esta acción necesita que inicies sesión con segundo factor.';
+
+  @override
   String get companyVerifiedBadgeLabel => 'Empresa verificada';
 
   @override
@@ -1149,4 +1157,148 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get companyVerifiedBadgeSemantics =>
       'Empresa verificada: verificamos su CUIT con la constancia de ARCA.';
+
+  @override
+  String get companyVerificationTitle => 'Verificación de la empresa';
+
+  @override
+  String get companyVerificationErrorTitle => 'No pudimos completar la acción';
+
+  @override
+  String get companyVerificationFormTitle => 'Pedir la verificación';
+
+  @override
+  String get companyVerificationFormHelp =>
+      'Confirmá el CUIT con el que registraste la empresa y adjuntá tu constancia de ARCA. La revisa una persona del equipo: no consultamos el padrón automáticamente.';
+
+  @override
+  String get companyVerificationAttach => 'Adjuntar constancia de ARCA';
+
+  @override
+  String companyVerificationAttached(String formato) {
+    return 'Constancia adjuntada ($formato).';
+  }
+
+  @override
+  String get companyVerificationAttachedEarlier =>
+      'Ya hay una constancia adjunta de un envío anterior. Si no adjuntás otra, se usa esa.';
+
+  @override
+  String get companyVerificationSubmit => 'Enviar solicitud';
+
+  @override
+  String get companyVerificationSubmitted =>
+      'Recibimos tu solicitud. Te avisamos apenas la revisemos.';
+
+  @override
+  String get companyVerificationNotOwner =>
+      'Solo quien creó la empresa puede pedir la verificación.';
+
+  @override
+  String get companyVerificationPendingTitle =>
+      'Tu empresa todavía no está verificada';
+
+  @override
+  String get companyVerificationPendingBody =>
+      'Hasta que verifiquemos el CUIT vas a poder preparar todo, pero no publicar búsquedas.';
+
+  @override
+  String get companyVerificationInReviewTitle =>
+      'Estamos revisando tu solicitud';
+
+  @override
+  String get companyVerificationInReviewBody =>
+      'Ya recibimos el CUIT y la constancia. Te avisamos apenas haya respuesta; mientras tanto no hace falta que envíes nada más.';
+
+  @override
+  String get companyVerificationApprovedTitle => 'Tu empresa está verificada';
+
+  @override
+  String get companyVerificationApprovedBody =>
+      'Verificamos el CUIT con tu constancia de ARCA.';
+
+  @override
+  String get companyVerificationRejectedTitle =>
+      'La verificación fue rechazada';
+
+  @override
+  String companyVerificationRejectedBody(String motivo) {
+    return 'Motivo: $motivo Podés corregirlo y volver a enviarla.';
+  }
+
+  @override
+  String get rejectionCuitMismatch =>
+      'el CUIT no coincide con el de la constancia.';
+
+  @override
+  String get rejectionUnreadableDocument => 'la constancia no se lee bien.';
+
+  @override
+  String get rejectionExpiredDocument => 'la constancia está vencida.';
+
+  @override
+  String get rejectionMissingData => 'faltan datos de la empresa.';
+
+  @override
+  String get rejectionCompanyNotOperating =>
+      'la empresa figura como no operativa.';
+
+  @override
+  String get rejectionOther => 'hace falta revisar la documentación.';
+
+  @override
+  String get verificationStatusPending => 'Pendientes';
+
+  @override
+  String get verificationStatusInReview => 'En revisión';
+
+  @override
+  String get verificationStatusApproved => 'Aprobadas';
+
+  @override
+  String get verificationStatusRejected => 'Rechazadas';
+
+  @override
+  String get adminVerificationsTitle => 'Verificaciones de empresa';
+
+  @override
+  String get adminVerificationsMfaTitle => 'Necesitás segundo factor';
+
+  @override
+  String get adminVerificationsMfaBody =>
+      'Para revisar verificaciones hay que iniciar sesión con segundo factor. Cerrá sesión, activá el segundo factor y volvé a entrar.';
+
+  @override
+  String get adminVerificationsEmpty => 'No hay solicitudes en este estado.';
+
+  @override
+  String get adminVerificationsErrorTitle => 'No pudimos completar la acción';
+
+  @override
+  String get adminVerificationsResolved => 'Solicitud resuelta.';
+
+  @override
+  String adminVerificationsCuit(String cuit) {
+    return 'CUIT declarado: $cuit';
+  }
+
+  @override
+  String get adminVerificationsWithDocument => 'Adjuntó constancia de ARCA.';
+
+  @override
+  String get adminVerificationsNoDocument => 'Sin constancia adjunta.';
+
+  @override
+  String adminVerificationsReason(String motivo) {
+    return 'Motivo del rechazo: $motivo';
+  }
+
+  @override
+  String get adminVerificationsReasonTitle => '¿Por qué se rechaza?';
+
+  @override
+  String get adminVerificationsApprove => 'Aprobar';
+
+  @override
+  String get adminVerificationsReject => 'Rechazar';
 }

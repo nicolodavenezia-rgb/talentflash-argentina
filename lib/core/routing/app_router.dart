@@ -11,9 +11,11 @@ import '../../features/authentication/presentation/session_loading_screen.dart';
 import '../../features/authentication/presentation/sign_up_screen.dart';
 import '../../features/authentication/providers/auth_providers.dart';
 import '../../features/companies/presentation/company_home_screen.dart';
+import '../../features/companies/presentation/company_verification_screen.dart';
 import '../../features/legal/domain/legal_document.dart';
 import '../../features/legal/presentation/legal_document_screen.dart';
 import '../../features/moderation/presentation/admin_home_screen.dart';
+import '../../features/moderation/presentation/admin_verifications_screen.dart';
 import '../../features/onboarding/presentation/candidate_onboarding_screen.dart';
 import '../../features/onboarding/presentation/company_onboarding_screen.dart';
 import '../../features/onboarding/presentation/reconsent_screen.dart';
@@ -122,6 +124,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CompanyHomeScreen(),
       ),
       GoRoute(
+        path: AppRoute.companyVerification.path,
+        name: AppRoute.companyVerification.name,
+        builder: (context, state) => const CompanyVerificationScreen(),
+      ),
+      GoRoute(
         path: AppRoute.candidateOnboarding.path,
         name: AppRoute.candidateOnboarding.name,
         builder: (context, state) => const CandidateOnboardingScreen(),
@@ -157,6 +164,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.adminHome.path,
         name: AppRoute.adminHome.name,
         builder: (context, state) => const AdminHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.adminVerifications.path,
+        name: AppRoute.adminVerifications.name,
+        builder: (context, state) => const AdminVerificationsScreen(),
       ),
       GoRoute(
         path: AppRoute.sessionIssue.path,

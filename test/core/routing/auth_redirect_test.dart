@@ -333,11 +333,13 @@ void main() {
         AppRoute.candidateProfile,
         AppRoute.candidateProfileEdit,
         AppRoute.companyCandidateDetail,
+        AppRoute.companyVerification,
         AppRoute.candidateOnboarding,
         AppRoute.companyOnboarding,
         AppRoute.candidateReconsent,
         AppRoute.companyReconsent,
         AppRoute.adminHome,
+        AppRoute.adminVerifications,
       ]);
     });
 

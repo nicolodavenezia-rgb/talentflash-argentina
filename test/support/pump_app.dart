@@ -6,6 +6,7 @@ import 'package:talentflash_argentina/core/config/env_config.dart';
 import 'package:talentflash_argentina/core/routing/app_entry_point.dart';
 import 'package:talentflash_argentina/core/routing/app_router.dart';
 import 'package:talentflash_argentina/features/authentication/providers/auth_providers.dart';
+import 'package:talentflash_argentina/features/companies/providers/company_verification_providers.dart';
 import 'package:talentflash_argentina/features/consents/providers/consents_providers.dart';
 import 'package:talentflash_argentina/features/legal/providers/legal_providers.dart';
 import 'package:talentflash_argentina/features/notifications/providers/notification_prefs_providers.dart';
@@ -13,6 +14,7 @@ import 'package:talentflash_argentina/features/onboarding/providers/onboarding_p
 import 'package:talentflash_argentina/features/profiles/providers/profile_providers.dart';
 
 import 'fake_auth_repository.dart';
+import 'fake_company_verification_repository.dart';
 import 'fake_onboarding_repositories.dart';
 import 'fake_profile_repositories.dart';
 
@@ -38,6 +40,8 @@ class TalentFlashHarness {
     this.profileRepository,
     this.companyAccessRepository,
     this.avatarPicker,
+    this.companyVerificationRepository,
+    this.constanciaPicker,
   );
 
   final ProviderContainer container;
@@ -50,6 +54,8 @@ class TalentFlashHarness {
   final FakeProfileRepository profileRepository;
   final FakeCompanyAccessRepository companyAccessRepository;
   final FakeAvatarImagePicker avatarPicker;
+  final FakeCompanyVerificationRepository companyVerificationRepository;
+  final FakeConstanciaPicker constanciaPicker;
 
   GoRouter get router => container.read(appRouterProvider);
 
@@ -76,6 +82,8 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
   FakeProfileRepository? profileRepository,
   FakeCompanyAccessRepository? companyAccessRepository,
   FakeAvatarImagePicker? avatarPicker,
+  FakeCompanyVerificationRepository? companyVerificationRepository,
+  FakeConstanciaPicker? constanciaPicker,
 }) async {
   addTearDown(authRepository.dispose);
   final onboarding = onboardingRepository ?? FakeOnboardingRepository();
@@ -88,6 +96,9 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
   final companyAccess =
       companyAccessRepository ?? FakeCompanyAccessRepository();
   final picker = avatarPicker ?? FakeAvatarImagePicker();
+  final verification =
+      companyVerificationRepository ?? FakeCompanyVerificationRepository();
+  final constancia = constanciaPicker ?? FakeConstanciaPicker();
   final container = ProviderContainer.test(
     // Riverpod 3 reintenta con backoff los providers que fallan; en tests eso
     // vuelve no determinista cualquier escenario de error (el fake consume el
@@ -105,6 +116,8 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
       profileRepositoryProvider.overrideWithValue(profiles),
       companyAccessRepositoryProvider.overrideWithValue(companyAccess),
       avatarImagePickerProvider.overrideWithValue(picker),
+      companyVerificationRepositoryProvider.overrideWithValue(verification),
+      constanciaPickerProvider.overrideWithValue(constancia),
     ],
   );
   await tester.pumpWidget(
@@ -124,5 +137,7 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
     profiles,
     companyAccess,
     picker,
+    verification,
+    constancia,
   );
 }
