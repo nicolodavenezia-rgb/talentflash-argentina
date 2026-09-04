@@ -2373,6 +2373,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Rechazar'**
   String get adminVerificationsReject;
+
+  /// No description provided for @adminVerificationsOpenDocument.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver la constancia'**
+  String get adminVerificationsOpenDocument;
+
+  /// No description provided for @adminVerificationsDocumentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia de ARCA'**
+  String get adminVerificationsDocumentTitle;
+
+  /// No description provided for @adminVerificationsDocumentHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiá este enlace y abrilo en el navegador. Vence en 5 minutos: si expira, volvé a pedirlo desde acá.'**
+  String get adminVerificationsDocumentHelp;
+
+  /// No description provided for @adminVerificationsDocumentError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos generar el enlace a la constancia. Reintentá en unos minutos.'**
+  String get adminVerificationsDocumentError;
+
+  /// No description provided for @adminVerificationsDocumentClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get adminVerificationsDocumentClose;
 }
 
 class _AppLocalizationsDelegate

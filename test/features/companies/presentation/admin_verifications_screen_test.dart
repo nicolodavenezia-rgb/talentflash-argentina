@@ -173,6 +173,40 @@ void main() {
     );
   });
 
+  testWidgets('ver la constancia pide una URL firmada de vida corta', (
+    tester,
+  ) async {
+    final repository = FakeCompanyVerificationRepository(queue: [solicitud()]);
+    await entrarComoAdmin(tester, repository: repository);
+
+    await ensureAndTap(tester, find.text('Ver la constancia'));
+
+    expect(
+      repository.calls,
+      contains('createConstanciaSignedUrl:c-1/constancia-arca.pdf'),
+      reason: 'el enlace se pide al servidor, no se arma en el cliente',
+    );
+    expect(
+      find.text('https://storage.local/firmada/c-1/constancia-arca.pdf'),
+      findsOneWidget,
+    );
+    expect(textoVisible(tester), contains('Vence en 5 minutos'));
+  });
+
+  testWidgets('sin constancia adjunta no se ofrece verla', (tester) async {
+    final repository = FakeCompanyVerificationRepository(
+      queue: [solicitud(documentPath: null)],
+    );
+    await entrarComoAdmin(tester, repository: repository);
+
+    expect(textoVisible(tester), contains('Sin constancia adjunta'));
+    expect(
+      find.text('Ver la constancia'),
+      findsNothing,
+      reason: 'ningún botón falso: no hay nada que abrir',
+    );
+  });
+
   testWidgets('rechazar exige elegir un motivo de la lista cerrada', (
     tester,
   ) async {

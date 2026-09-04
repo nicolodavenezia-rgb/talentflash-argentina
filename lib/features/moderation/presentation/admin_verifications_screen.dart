@@ -183,6 +183,15 @@ class _RequestCard extends ConsumerWidget {
                   : l10n.adminVerificationsWithDocument,
               style: theme.textTheme.bodySmall,
             ),
+            if (request.documentPath != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    _mostrarConstancia(context, ref, request.documentPath!),
+                icon: const Icon(Icons.description_outlined),
+                label: Text(l10n.adminVerificationsOpenDocument),
+              ),
+            ],
             if (request.rejectionReason != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -217,6 +226,56 @@ class _RequestCard extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// Pide una URL firmada de vida corta para la constancia y la muestra para
+  /// copiar. Sin esto la revisión sería a ciegas: el panel decía que había un
+  /// documento adjunto pero no había forma de mirarlo.
+  ///
+  /// No se abre el navegador desde la app a propósito: `url_launcher` no está
+  /// declarado como dependencia directa (hoy llega solo como transitiva) y
+  /// sumar una es una decisión de proyecto, no de esta pantalla. El enlace vive
+  /// cinco minutos, así que copiarlo y pegarlo es equivalente y no deja un
+  /// enlace vivo dando vueltas por la UI.
+  Future<void> _mostrarConstancia(
+    BuildContext context,
+    WidgetRef ref,
+    String path,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.adminVerificationsDocumentTitle),
+        content: Consumer(
+          builder: (context, ref, _) {
+            final url = ref.watch(constanciaSignedUrlProvider(path));
+            return switch (url) {
+              AsyncData(:final value) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.adminVerificationsDocumentHelp),
+                  const SizedBox(height: 12),
+                  SelectableText(value),
+                ],
+              ),
+              AsyncError() => Text(l10n.adminVerificationsDocumentError),
+              _ => const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            };
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.adminVerificationsDocumentClose),
+          ),
+        ],
       ),
     );
   }

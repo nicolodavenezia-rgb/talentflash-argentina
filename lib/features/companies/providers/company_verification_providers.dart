@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/networking/supabase_client_provider.dart';
 import '../../../shared/models/data_failure.dart';
+import '../../authentication/providers/auth_providers.dart';
 import '../data/company_access_repository.dart';
 import '../data/company_verification_repository.dart';
 import '../data/file_selector_constancia_picker.dart';
@@ -29,6 +30,12 @@ class MyCompanyVerificationController
     extends AsyncNotifier<CompanyVerification> {
   @override
   Future<CompanyVerification> build() {
+    // Depender del estado de sesión NO es decorativo: este provider no es
+    // autoDispose y vive en el único ProviderScope del proceso, así que sin
+    // esta dependencia sobreviviría a un cierre de sesión y la cuenta
+    // siguiente vería el estado de verificación de la anterior — incluido un
+    // "Empresa verificada" que no le corresponde.
+    ref.watch(authStatusProvider);
     return ref
         .watch(companyVerificationRepositoryProvider)
         .fetchMyVerification();

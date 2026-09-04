@@ -1301,4 +1301,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adminVerificationsReject => 'Rechazar';
+
+  @override
+  String get adminVerificationsOpenDocument => 'Ver la constancia';
+
+  @override
+  String get adminVerificationsDocumentTitle => 'Constancia de ARCA';
+
+  @override
+  String get adminVerificationsDocumentHelp =>
+      'Copiá este enlace y abrilo en el navegador. Vence en 5 minutos: si expira, volvé a pedirlo desde acá.';
+
+  @override
+  String get adminVerificationsDocumentError =>
+      'No pudimos generar el enlace a la constancia. Reintentá en unos minutos.';
+
+  @override
+  String get adminVerificationsDocumentClose => 'Cerrar';
 }

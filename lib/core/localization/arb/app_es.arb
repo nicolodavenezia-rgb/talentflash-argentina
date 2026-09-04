@@ -602,5 +602,10 @@
   },
   "adminVerificationsReasonTitle": "¿Por qué se rechaza?",
   "adminVerificationsApprove": "Aprobar",
-  "adminVerificationsReject": "Rechazar"
+  "adminVerificationsReject": "Rechazar",
+  "adminVerificationsOpenDocument": "Ver la constancia",
+  "adminVerificationsDocumentTitle": "Constancia de ARCA",
+  "adminVerificationsDocumentHelp": "Copiá este enlace y abrilo en el navegador. Vence en 5 minutos: si expira, volvé a pedirlo desde acá.",
+  "adminVerificationsDocumentError": "No pudimos generar el enlace a la constancia. Reintentá en unos minutos.",
+  "adminVerificationsDocumentClose": "Cerrar"
 }

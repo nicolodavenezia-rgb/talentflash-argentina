@@ -293,6 +293,52 @@ void main() {
     },
   );
 
+  testWidgets('el estado NO sobrevive a un cambio de sesión', (tester) async {
+    // Regresión: el provider no es autoDispose y vive en el único ProviderScope
+    // del proceso. Sin depender del estado de sesión, la cuenta siguiente veía
+    // el estado de verificación de la anterior — incluido un "Empresa
+    // verificada" que no le correspondía.
+    final repository = FakeCompanyVerificationRepository(
+      verification: verificacion(
+        companyStatus: CompanyVerificationStatus.approved,
+        requestStatus: CompanyVerificationStatus.approved,
+      ),
+    );
+    final auth = FakeAuthRepository(initialStatus: const AuthStatusSignedOut());
+    final harness = await pumpTalentFlashApp(
+      tester,
+      authRepository: auth,
+      companyVerificationRepository: repository,
+    );
+    await tester.pumpAndSettle();
+    auth.emitSignedIn(BusinessRole.company);
+    await tester.pumpAndSettle();
+    harness.router.go('/empresa/verificacion');
+    await tester.pumpAndSettle();
+    expect(find.text('Empresa verificada'), findsOneWidget);
+
+    // Cierra sesión y entra otra empresa, esta vez sin verificar.
+    repository.verification = verificacion();
+    auth.emit(const AuthStatusSignedOut());
+    await tester.pumpAndSettle();
+    auth.emitSignedIn(BusinessRole.company);
+    await tester.pumpAndSettle();
+    harness.router.go('/empresa/verificacion');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Empresa verificada'),
+      findsNothing,
+      reason: 'la cuenta nueva no puede heredar el estado de la anterior',
+    );
+    expect(textoVisible(tester), contains('todavía no está verificada'));
+    expect(
+      repository.calls.where((c) => c == 'fetchMyVerification').length,
+      greaterThan(1),
+      reason: 'el cambio de sesión tiene que forzar una relectura',
+    );
+  });
+
   testWidgets('si falla la carga del estado se explica y no se inventa nada', (
     tester,
   ) async {
