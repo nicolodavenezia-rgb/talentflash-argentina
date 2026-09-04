@@ -154,8 +154,11 @@ npm run storage:test     # integración real contra el bucket avatars (upload, t
 
 La CI (`.github/workflows/ci.yml`) corre formato + analyze + tests Flutter,
 reset/lint/pgTAP de Supabase, `functions:test` y `storage:test` (con
-`denoland/setup-deno@v2`) y scan de secretos (gitleaks) en cada push/PR
-cuando el repo tenga remoto en GitHub.
+`denoland/setup-deno@v2` fijado a la versión exacta **v2.7.14** en los dos jobs
+que instalan Deno: una versión flotante cambia las banderas aceptadas sin aviso),
+el guard del grafo offline de la Edge Function (`scripts/edge-offline-guard.mjs`,
+documentado en `supabase/functions/avatar/deps/README.md`) y scan de secretos
+(gitleaks) en cada push/PR cuando el repo tenga remoto en GitHub.
 
 ## Estructura
 

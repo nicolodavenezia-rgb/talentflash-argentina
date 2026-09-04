@@ -25,21 +25,26 @@
 //   5. Type-checkea index.ts con su configuración.
 //   6. Verifica los archivos vendorizados contra el manifest (sync.mjs --check).
 //
-// Por qué no alcanza con las banderas de Deno (medido en deno 2.9.6):
+// Por qué no alcanza con las banderas de Deno:
 //   - `--no-remote` NO frena `npm:`: `deno info` bajaba de registry.npmjs.org.
-//   - `--cached-only` NO se aplica en `deno check`: con un DENO_DIR vacío bajó
-//     48 archivos de esm.sh y salió 0.
-//   - `node:` no produce error ni con `--no-remote` ni con `--cached-only`, y
-//     `deno check` sale 0. Es justamente el especificador que hace que el edge
-//     runtime inyecte `npm:@types/node` y lo baje del registro en cada arranque
-//     frío (ver supabase/functions/avatar/deps/README.md).
+//   - `node:` no produce error con `--no-remote` y `deno check` sale 0. Es
+//     justamente el especificador que hace que el edge runtime inyecte
+//     `npm:@types/node` y lo baje del registro en cada arranque frío (ver
+//     supabase/functions/avatar/deps/README.md).
 //   Por eso la inspección del grafo es el control primario y las banderas son
 //   defensa en profundidad.
 //
+// Sobre `--cached-only`: NO se usa. En la versión que fija CI (Deno 2.7.14)
+// `deno check` ni siquiera acepta esa bandera —sale 1 con "unexpected argument
+// '--cached-only' found"—, así que pasarla no endurecía nada: convertía el
+// type-check en un fallo de invocación. Y donde sí existe tampoco aportaba: con
+// un DENO_DIR vacío `deno check --cached-only` bajó 48 archivos de esm.sh y
+// salió 0. La invariante offline no depende de ella.
+//
 // Garantía de cero descargas: cada invocación de Deno usa un DENO_DIR temporal
 // y vacío (así una caché previa no puede hacer pasar una dependencia remota) y
-// se le pasan `--no-remote` y `--no-npm`. Además se inspecciona la salida de
-// Deno en busca de líneas `Download`: si hubo una sola, el guard falla.
+// se le pasan `--no-remote`, `--no-npm` y `--no-lock`. Además se inspecciona la
+// salida de Deno en busca de líneas `Download`: si hubo una sola, el guard falla.
 //
 // Pruebas (sin red): node --test scripts/edge-offline-guard.spec.mjs
 import { spawnSync } from "node:child_process";
@@ -208,6 +213,43 @@ export function analyzeGraph(graph, { repoRoot, allowedDirs, entryAbs }) {
 }
 
 /**
+ * Distingue un error REAL de tipos de un fallo de invocación de Deno (bandera
+ * que no existe en esa versión, subcomando mal formado, binario que no arranca).
+ * Confundirlos es lo que hacía que una incompatibilidad de versión —`deno check
+ * --cached-only` en Deno 2.7.14— se reportara como si `index.ts` tuviera errores
+ * de tipos, mandando a arreglar el archivo equivocado.
+ *
+ * Devuelve { kind: "TYPECHECK" | "DENO", detail }.
+ */
+export function classifyCheckFailure(output, status) {
+  const lineas = stripAnsi(output)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  // Firma inequívoca de un type-check que sí llegó a correr: Deno imprime
+  // `TS#### [ERROR]` por diagnóstico y cierra con `error: Type checking failed.`.
+  const lineaTs = lineas.find((l) => /^TS\d+\s*\[ERROR\]/.test(l));
+  if (lineaTs || lineas.some((l) => /Type checking failed/i.test(l))) {
+    const detalle = lineaTs ?? lineas.find((l) => /^error\b/i.test(l)) ?? `status ${status}`;
+    return { kind: "TYPECHECK", detail: detalle.slice(0, 200) };
+  }
+
+  // Firma de un fallo de invocación: el parser de argumentos corta antes de
+  // compilar nada, así que no hay línea `Check <archivo>` ni diagnósticos TS.
+  const lineaInvocacion =
+    lineas.find((l) => /unexpected argument|unrecognized|unknown (option|flag)|invalid value|^Usage:/i.test(l)) ??
+    lineas.find((l) => /^error\b/i.test(l)) ??
+    `sin salida (status ${status})`;
+  return {
+    kind: "DENO",
+    detail:
+      `deno check no llegó a type-checkear (status ${status}): parece un fallo de invocación o de ` +
+      `versión de Deno, no un error de tipos de la función — ${lineaInvocacion.slice(0, 200)}`,
+  };
+}
+
+/**
  * Corre el guard completo. Devuelve { ok, problems, moduleCount, downloads, steps }.
  * No imprime nada: la CLI se encarga de eso.
  */
@@ -275,18 +317,28 @@ export function guard({
   problems.push(...analisis.problems);
 
   // --- 3. Type-check con la configuración de la función ----------------------
-  // `--cached-only` es el mecanismo oficial de Deno para exigir que lo remoto ya
-  // esté cacheado; se usa junto con el DENO_DIR vacío. Medido en 2.9.6 no basta
-  // por sí solo (ver cabecera), de ahí que el control primario sea el grafo.
-  const checkArgs = ["check", "--cached-only", "--no-remote", "--no-npm", "--no-lock", "--config", importMap, entry];
+  // Sin `--cached-only`: Deno 2.7.14 —la versión exacta que fija CI— no acepta
+  // esa bandera en `deno check` y la corrida moría con "unexpected argument"
+  // antes de type-checkear nada. Quitarla no debilita la invariante offline: lo
+  // que la sostiene es el DENO_DIR temporal y vacío, `--no-remote` / `--no-npm`
+  // / `--no-lock`, la inspección del grafo y la detección de líneas `Download`.
+  const checkArgs = ["check", "--no-remote", "--no-npm", "--no-lock", "--config", importMap, entry];
   const check = runDeno(checkArgs, { cwd: repoRoot, denoBin });
   steps.push({ name: "deno check", args: checkArgs, status: check.status });
   downloads.push(...check.downloads);
-  if (check.status !== 0) {
-    const linea = stripAnsi(`${check.stderr}\n${check.stdout}`)
-      .split(/\r?\n/)
-      .find((l) => /error/i.test(l)) ?? `status ${check.status}`;
-    problems.push({ kind: "TYPECHECK", specifier: entry, detail: linea.trim().slice(0, 200) });
+  if (check.spawnError) {
+    problems.push({ kind: "DENO", specifier: denoBin, detail: `no se pudo ejecutar deno check: ${check.spawnError}` });
+  } else if (check.status !== 0) {
+    const clasificacion = classifyCheckFailure(`${check.stderr}\n${check.stdout}`, check.status);
+    if (clasificacion.kind === "TYPECHECK") {
+      problems.push({ kind: "TYPECHECK", specifier: entry, detail: clasificacion.detail });
+    } else {
+      // Un fallo de invocación no dice nada sobre index.ts; lo accionable es la
+      // versión de Deno con la que se corrió, así que se reporta junto con ella.
+      const v = runDeno(["--version"], { cwd: repoRoot, denoBin });
+      const version = stripAnsi(v.stdout).split(/\r?\n/)[0]?.trim() || "versión desconocida";
+      problems.push({ kind: "DENO", specifier: `${denoBin} (${version})`, detail: clasificacion.detail });
+    }
   }
 
   // --- 4. Integridad de lo vendorizado --------------------------------------

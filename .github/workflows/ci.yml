@@ -38,9 +38,12 @@ jobs:
       - run: npm run db:reset
       - run: npm run db:lint
       - run: npm run db:test
+      # Versión exacta, no `v2.x`: una versión flotante cambia el conjunto de
+      # banderas aceptadas sin previo aviso — fue exactamente lo que rompió
+      # `deno check --cached-only`. v2.7.14 es la baseline verificada.
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: v2.7.14
       - run: npm run functions:test
       - run: npm run storage:test
 
@@ -60,14 +63,19 @@ jobs:
           node-version: 22
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: v2.7.14
       - name: Pruebas del sincronizador de dependencias
         run: node --test supabase/functions/avatar/deps/sync.spec.mjs
       - name: Integridad de las dependencias vendorizadas contra el manifest
         run: node supabase/functions/avatar/deps/sync.mjs --check
+      # Sin `--cached-only`: `deno check` no acepta esa bandera en 2.7.14 y la
+      # corrida moría con "unexpected argument" antes de type-checkear nada.
+      # La invariante offline no dependía de ella: la sostienen `--no-remote`,
+      # `--no-npm`, `--no-lock`, el DENO_DIR temporal y vacío del guard y la
+      # inspección del grafo resuelto.
       - name: Type-check de la Edge Function con su import map
         run: >-
-          deno check --cached-only --no-remote --no-npm --no-lock
+          deno check --no-remote --no-npm --no-lock
           --config supabase/functions/avatar/deno.json
           supabase/functions/avatar/index.ts
       - name: Guard del grafo offline

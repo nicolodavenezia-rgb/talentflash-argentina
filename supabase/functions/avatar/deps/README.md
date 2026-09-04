@@ -126,13 +126,13 @@ repositorio y dentro del directorio de la función. Después type-checkea
 `index.ts` con este import map y corre `sync.mjs --check`.
 
 Cada invocación de Deno usa un `DENO_DIR` temporal y vacío, para que una caché
-previa no pueda hacer pasar una dependencia remota, y se le pasan `--no-remote`
-y `--no-npm`. Si Deno llegara a imprimir una sola línea `Download`, el guard
-falla.
+previa no pueda hacer pasar una dependencia remota, y se le pasan `--no-remote`,
+`--no-npm` y `--no-lock`. Si Deno llegara a imprimir una sola línea `Download`,
+el guard falla.
 
-Por qué no alcanza con las banderas de Deno, medido en 2.9.6:
+Por qué no alcanza con las banderas de Deno:
 
-| Import | `--no-remote` lo frena | `deno check --cached-only` falla | Lo ve el grafo |
+| Import | `--no-remote` lo frena | `deno check` falla | Lo ve el grafo |
 | --- | --- | --- | --- |
 | `https:` | sí | sí | sí |
 | `npm:` | **no** (bajaba de registry.npmjs.org) | sí | sí |
@@ -143,6 +143,32 @@ Por qué no alcanza con las banderas de Deno, medido en 2.9.6:
 `npm:@types/node` y lo baje del registro en cada arranque frío. Ninguna bandera
 lo ataja: solo se detecta inspeccionando el grafo. Por eso la inspección es el
 control primario y las banderas son defensa en profundidad.
+
+### Por qué el guard no usa `--cached-only`
+
+CI fija Deno en la versión exacta **2.7.14** (`denoland/setup-deno@v2` con
+`deno-version: v2.7.14`, en los dos jobs que lo instalan). En esa versión
+`deno check` **no acepta** `--cached-only`: sale 1 con `unexpected argument
+'--cached-only' found` sin llegar a type-checkear nada, así que pasarla no
+endurecía la invariante — la convertía en un fallo de invocación disfrazado de
+error de tipos. Y en las versiones donde la bandera sí existe tampoco aportaba:
+con un `DENO_DIR` vacío, `deno check --cached-only` bajó 48 archivos de esm.sh y
+salió 0.
+
+Lo que sostiene la invariante offline es, en este orden: la inspección del grafo
+resuelto (lista blanca `file:`, rechazo de `npmPackages` y `redirects`), el
+`DENO_DIR` temporal y vacío, `--no-remote` / `--no-npm` / `--no-lock`, y la
+detección de líneas `Download`. Ninguna de esas piezas dependía de
+`--cached-only`.
+
+Por eso el guard distingue explícitamente un **error real de tipos** (Deno
+imprime `TS#### [ERROR]` y `error: Type checking failed.`) de un **fallo de
+invocación o de versión de Deno** (bandera inexistente, binario ausente): el
+segundo se reporta como problema `DENO`, con la versión de Deno con la que se
+corrió, y nunca como `TYPECHECK`. Confundirlos manda a arreglar el archivo
+equivocado. La versión de `setup-deno` se fija exacta y no como `v2.x`
+justamente porque una versión flotante cambia el conjunto de banderas aceptadas
+sin previo aviso.
 
 Qué garantiza `--check`: recorre `esm.sh/` y `deno.land/` sin seguir enlaces
 y exige que el conjunto real de archivos sea exactamente el del manifest.

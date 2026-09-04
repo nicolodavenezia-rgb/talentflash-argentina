@@ -18,6 +18,7 @@ import process from "node:process";
 
 import {
   analyzeGraph,
+  classifyCheckFailure,
   classifySpecifier,
   extractDownloads,
   guard,
@@ -115,8 +116,8 @@ describe("especificadores prohibidos", () => {
   }
 
   test("node: se detecta por el grafo aunque deno check lo acepte", () => {
-    // Es el caso que ninguna bandera de Deno ataja: --no-remote no lo toca,
-    // --cached-only tampoco, y `deno check` sale 0. Solo lo ve el grafo.
+    // Es el caso que ninguna bandera de Deno ataja: --no-remote no lo toca y
+    // `deno check` sale 0. Solo lo ve el grafo.
     const raiz = armarRepo({ entry: `import { Buffer } from "node:buffer";\nexport const y = Buffer;\n` });
     const r = correr(raiz);
     assert.equal(r.ok, false);
@@ -343,5 +344,121 @@ describe("unidades auxiliares", () => {
     assert.equal(r.ok, false);
     assert.ok(r.problems.some((p) => p.kind === "NPM"));
     assert.ok(r.problems.some((p) => p.kind === "REDIRECCION"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regresiones del PR #2
+// ---------------------------------------------------------------------------
+
+describe("compatibilidad con la versión de Deno que fija CI", () => {
+  test("el type-check del guard no pasa `--cached-only`", () => {
+    const raiz = armarRepo({ entry: `export const y: number = 1;\n` });
+    const r = correr(raiz);
+    const paso = r.steps.find((s) => s.name === "deno check");
+    assert.ok(paso, `no se ejecutó el paso de type-check:\n${detalles(r)}`);
+    assert.ok(
+      !paso.args.includes("--cached-only"),
+      `deno check no debe recibir --cached-only (Deno 2.7.14 no la acepta): ${paso.args.join(" ")}`,
+    );
+    // Las banderas que sí sostienen la invariante offline siguen ahí.
+    for (const bandera of ["--no-remote", "--no-npm", "--no-lock"]) {
+      assert.ok(paso.args.includes(bandera), `falta ${bandera} en ${paso.args.join(" ")}`);
+    }
+    assert.equal(paso.status, 0, `el type-check debería salir 0 en esta versión de Deno:\n${detalles(r)}`);
+    assert.equal(r.ok, true, detalles(r));
+  });
+
+  test("`deno check --cached-only` real se clasifica como fallo de invocación, no de tipos", () => {
+    // Prueba contra el binario de verdad de la máquina. En Deno 2.7.14 la
+    // bandera no existe y `deno check` sale 1 sin type-checkear nada: el guard
+    // no debe reportar eso como un error de tipos de index.ts.
+    const raiz = armarRepo({ entry: `export const y: number = 1;\n` });
+    const args = [
+      "check",
+      "--cached-only",
+      "--no-remote",
+      "--no-npm",
+      "--no-lock",
+      "--config",
+      "supabase/functions/avatar/deno.json",
+      "supabase/functions/avatar/index.ts",
+    ];
+    const r = runDeno(args, { cwd: raiz });
+    assert.equal(r.spawnError, null, `deno debería poder ejecutarse: ${r.spawnError}`);
+    if (r.status === 0) {
+      // Versión de Deno donde la bandera sí existe: entonces no hay nada que
+      // clasificar, pero sigue valiendo que no descargó nada.
+      assert.deepEqual(r.downloads, [], "ni siquiera con --cached-only debería descargar");
+    } else {
+      const c = classifyCheckFailure(`${r.stderr}\n${r.stdout}`, r.status);
+      assert.equal(c.kind, "DENO", `esperaba un fallo de invocación:\n${r.stderr}`);
+      assert.match(c.detail, /invocación o de versión de Deno/);
+    }
+  });
+
+  test("si el binario de deno no existe, el guard lo dice y no culpa a los tipos", () => {
+    const raiz = armarRepo({ entry: `export const y: number = 1;\n` });
+    const r = correr(raiz, { denoBin: "deno-que-no-existe-en-esta-maquina" });
+    assert.equal(r.ok, false);
+    assert.ok(
+      r.problems.some((p) => p.kind === "DENO"),
+      `esperaba un problema DENO:\n${detalles(r)}`,
+    );
+    assert.ok(
+      !r.problems.some((p) => p.kind === "TYPECHECK"),
+      `un binario ausente no es un error de tipos:\n${detalles(r)}`,
+    );
+  });
+});
+
+describe("clasificación de fallos de `deno check`", () => {
+  const SALIDA_TIPOS = [
+    "Check file:///repo/supabase/functions/avatar/index.ts",
+    "TS2322 [ERROR]: Type 'string' is not assignable to type 'number'.",
+    'const n: number = "no";',
+    "      ^",
+    "    at file:///repo/supabase/functions/avatar/index.ts:1:7",
+    "",
+    "error: Type checking failed.",
+  ].join("\n");
+
+  // Copia literal de lo que imprime Deno 2.7.14 ante la bandera inexistente.
+  const SALIDA_INVOCACION = [
+    "error: unexpected argument '--cached-only' found",
+    "",
+    "  tip: a similar argument exists: '--doc-only'",
+    "",
+    "Usage: deno check --doc-only [file]...",
+  ].join("\n");
+
+  test("un error real de tipos se clasifica como TYPECHECK", () => {
+    const c = classifyCheckFailure(SALIDA_TIPOS, 1);
+    assert.equal(c.kind, "TYPECHECK");
+    assert.match(c.detail, /TS2322/);
+  });
+
+  test("una bandera inexistente se clasifica como fallo de Deno", () => {
+    const c = classifyCheckFailure(SALIDA_INVOCACION, 1);
+    assert.equal(c.kind, "DENO");
+    assert.match(c.detail, /invocación o de versión de Deno/);
+    assert.match(c.detail, /--cached-only/);
+    assert.ok(!/TS\d/.test(c.detail), `no debe insinuar un error de tipos: ${c.detail}`);
+  });
+
+  test("una salida vacía no se hace pasar por un error de tipos", () => {
+    const c = classifyCheckFailure("", 127);
+    assert.equal(c.kind, "DENO");
+    assert.match(c.detail, /status 127/);
+  });
+
+  test("el color ANSI no cambia la clasificación", () => {
+    const conColor =
+      "\u001b[0m\u001b[32mCheck\u001b[0m f/index.ts\n" +
+      "\u001b[0m\u001b[1mTS2322 \u001b[0m[ERROR]: Type 'string' is not assignable to type 'number'.\n" +
+      "\u001b[0m\u001b[1m\u001b[31merror\u001b[0m: Type checking failed.";
+    const c = classifyCheckFailure(conColor, 1);
+    assert.equal(c.kind, "TYPECHECK");
+    assert.match(c.detail, /TS2322/);
   });
 });
