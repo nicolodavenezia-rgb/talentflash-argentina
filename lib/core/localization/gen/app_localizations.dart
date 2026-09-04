@@ -2097,6 +2097,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).'**
   String get companyCandidateNoPresentation;
+
+  /// Texto del distintivo de empresa verificada (T-029)
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa verificada'**
+  String get companyVerifiedBadgeLabel;
+
+  /// No description provided for @companyVerifiedBadgeTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificamos el CUIT de esta empresa con su constancia de ARCA.'**
+  String get companyVerifiedBadgeTooltip;
+
+  /// Etiqueta del distintivo para el lector de pantalla; el ícono es decorativo y no se anuncia aparte
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa verificada: verificamos su CUIT con la constancia de ARCA.'**
+  String get companyVerifiedBadgeSemantics;
 }
 
 class _AppLocalizationsDelegate

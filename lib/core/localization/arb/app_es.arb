@@ -514,5 +514,14 @@
   "companyCandidateRejectedBody": "Mientras la verificación no esté aprobada no es posible ver candidatos. Corregí los datos y volvé a enviarla.",
   "companyCandidateLoadError": "No pudimos cargar el perfil. Revisá tu conexión y reintentá.",
   "companyCandidatePresentationReady": "Tiene una presentación lista para ver (la reproducción llega en una etapa posterior).",
-  "companyCandidateNoPresentation": "Todavía no cargó una presentación (es opcional y no dice nada de su candidatura)."
+  "companyCandidateNoPresentation": "Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).",
+  "companyVerifiedBadgeLabel": "Empresa verificada",
+  "@companyVerifiedBadgeLabel": {
+    "description": "Texto del distintivo de empresa verificada (T-029)"
+  },
+  "companyVerifiedBadgeTooltip": "Verificamos el CUIT de esta empresa con su constancia de ARCA.",
+  "companyVerifiedBadgeSemantics": "Empresa verificada: verificamos su CUIT con la constancia de ARCA.",
+  "@companyVerifiedBadgeSemantics": {
+    "description": "Etiqueta del distintivo para el lector de pantalla; el ícono es decorativo y no se anuncia aparte"
+  }
 }

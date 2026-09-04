@@ -1138,4 +1138,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get companyCandidateNoPresentation =>
       'Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).';
+
+  @override
+  String get companyVerifiedBadgeLabel => 'Empresa verificada';
+
+  @override
+  String get companyVerifiedBadgeTooltip =>
+      'Verificamos el CUIT de esta empresa con su constancia de ARCA.';
+
+  @override
+  String get companyVerifiedBadgeSemantics =>
+      'Empresa verificada: verificamos su CUIT con la constancia de ARCA.';
 }
