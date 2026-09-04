@@ -180,7 +180,8 @@ revoke all on function private.caller_member_role() from public, anon, authentic
 -- no están en la whitelist y además las corta el trigger.
 --
 -- El CUIT NO se edita acá: cambiarlo dispara reverificación y eso vive en
--- `request_company_verification` (T-028, migración 0027).
+-- `request_company_verification` (T-028, migración 0028: 0027 terminó siendo
+-- la de invitaciones).
 --
 -- Idempotente por construcción: es un UPDATE con los mismos valores. El doble
 -- submit no duplica nada.
@@ -329,6 +330,13 @@ grant execute on function public.update_my_company_profile(jsonb) to authenticat
 -- una RPC de admin (T-028) que TIENE que poder escribir una columna protegida,
 -- así que el test debe dejarla pasar. Acá no existe ninguna operación
 -- legítima que necesite saltearse estas reglas.
+--
+-- CORRECCIÓN (0028): el razonamiento del párrafo anterior era equivocado. Esa
+-- RPC de admin es SECURITY DEFINER, así que adentro `current_user` es el dueño
+-- de la función y la guarda de `protect_company_profile_update` no se le
+-- aplica nunca. El escape `and not public.is_admin()` no hacía falta, y sí
+-- habilitaba que una cuenta admin-de-plataforma y owner-de-empresa a la vez se
+-- aprobara sola por PostgREST. 0028 lo quita.
 create or replace function private.protect_company_member_write() returns trigger
 language plpgsql
 security definer
