@@ -514,7 +514,19 @@ describe("rutas con `%` literal", () => {
   });
 
   test("una raíz URL malformada produce un problema RAIZ legible, nunca un URIError", () => {
-    const malas = ["file:///C:/100%local/index.ts", "no-es-una-url", "https://esm.sh/x.ts", "", "file:"];
+    // Todos los casos tienen que ser inválidos en las DOS plataformas donde
+    // corre esto (Windows local, Linux en CI). Quedan afuera a propósito
+    // `file:` y `file:///`, que en Windows fallan pero en POSIX convierten a
+    // "/" —ahí la raíz igual se rechaza, pero por no coincidir con el entry, no
+    // por ser inconvertible—, y `%5C`, que solo Windows rechaza.
+    const malas = [
+      "file:///C:/100%local/index.ts", // escape porcentual inválido -> URIError
+      "file:///a/b%ZZ.ts", // idem, sin depender de la letra de unidad
+      "file:///a/b%2Fc.ts", // barra codificada: Node la rechaza en ambas plataformas
+      "no-es-una-url", // ni siquiera es una URL
+      "https://esm.sh/x.ts", // URL válida, esquema equivocado
+      "", // raíz vacía
+    ];
     for (const mala of malas) {
       const graph = { roots: [mala], modules: [], npmPackages: {}, redirects: {} };
       let r;
