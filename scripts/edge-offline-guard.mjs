@@ -51,7 +51,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import process from "node:process";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -133,6 +133,35 @@ export function classifySpecifier(specifier) {
   return { scheme, allowed: scheme === ALLOWED_SCHEME };
 }
 
+/** ¿El filesystem de esta plataforma ignora la caja al comparar rutas? */
+const CASE_INSENSITIVE_FS = process.platform === "win32" || process.platform === "darwin";
+
+/**
+ * Normaliza una ruta de filesystem para poder compararla con otra: la vuelve
+ * absoluta y, donde el filesystem ignora la caja (Windows, macOS), la baja a
+ * minúsculas. Comparar rutas normalizadas —y no cadenas de URL— es lo que evita
+ * que un `%` literal en la ruta del repositorio rompa la comparación.
+ */
+export function normalizeFsPath(p) {
+  const abs = resolve(p);
+  return CASE_INSENSITIVE_FS ? abs.toLowerCase() : abs;
+}
+
+/**
+ * Convierte la URL de un módulo a una ruta de filesystem con fileURLToPath.
+ * Devuelve null —nunca lanza— si no es una URL `file:` convertible: una URL
+ * malformada, otro esquema, o un escape porcentual inválido como `100%local`
+ * (que hacía estallar al guard con un URIError sin capturar).
+ */
+export function fileUrlToPathOrNull(url) {
+  if (typeof url !== "string" || url === "") return null;
+  try {
+    return fileURLToPath(url);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Verifica que una ruta local caiga dentro del repositorio y dentro de alguno
  * de los directorios esperados. Devuelve null si está bien, o el motivo.
@@ -145,7 +174,14 @@ export function validateLocalPath(localPath, { repoRoot, allowedDirs }) {
     return "la ruta escapa del repositorio";
   }
   const relPosix = rel.split(sep).join("/");
-  const dentro = allowedDirs.some((d) => relPosix === d || relPosix.startsWith(`${d}/`));
+  // La comparación con allowedDirs sigue la semántica del filesystem: en
+  // Windows/macOS `Supabase/...` y `supabase/...` son el mismo directorio.
+  const aplanar = (x) => (CASE_INSENSITIVE_FS ? x.toLowerCase() : x);
+  const relCmp = aplanar(relPosix);
+  const dentro = allowedDirs.some((d) => {
+    const dc = aplanar(d);
+    return relCmp === dc || relCmp.startsWith(`${dc}/`);
+  });
   if (!dentro) {
     return `la ruta queda fuera de las rutas esperadas (${allowedDirs.join(", ")})`;
   }
@@ -169,12 +205,32 @@ export function analyzeGraph(graph, { repoRoot, allowedDirs, entryAbs }) {
     problems.push({ kind: "GRAFO", specifier: "-", detail: "el grafo está vacío" });
   }
 
+  // Raíces: se convierten URL -> ruta con fileURLToPath y se comparan rutas de
+  // filesystem normalizadas. Nunca se comparan cadenas de URL ni se decodifican
+  // a mano: `decodeURIComponent` lanzaba URIError con una ruta que contuviera un
+  // `%` literal (p. ej. .../100%local/...) y tumbaba el guard entero.
   const roots = Array.isArray(graph.roots) ? graph.roots : [];
+  const rootPaths = [];
+  for (const r of roots) {
+    const local = fileUrlToPathOrNull(r);
+    if (local === null) {
+      problems.push({
+        kind: "RAIZ",
+        specifier: typeof r === "string" && r !== "" ? r : "(vacía)",
+        detail: "la raíz del grafo no es una URL `file:` convertible a una ruta local",
+      });
+      continue;
+    }
+    rootPaths.push(normalizeFsPath(local));
+  }
   if (entryAbs) {
-    const esperado = new URL(`file://${entryAbs.split(sep).join("/").replace(/^([A-Za-z]:)/, "/$1")}`).href;
-    const coincide = roots.some((r) => decodeURIComponent(r).toLowerCase() === decodeURIComponent(esperado).toLowerCase());
-    if (!coincide) {
-      problems.push({ kind: "RAIZ", specifier: roots.join(", ") || "(ninguna)", detail: `la raíz del grafo no es el entry esperado (${esperado})` });
+    const esperado = normalizeFsPath(entryAbs);
+    if (!rootPaths.includes(esperado)) {
+      problems.push({
+        kind: "RAIZ",
+        specifier: roots.join(", ") || "(ninguna)",
+        detail: `la raíz del grafo no es el entry esperado (${pathToFileURL(entryAbs).href})`,
+      });
     }
   }
 

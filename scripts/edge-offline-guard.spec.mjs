@@ -13,7 +13,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } fro
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import process from "node:process";
 
 import {
@@ -21,7 +21,9 @@ import {
   classifyCheckFailure,
   classifySpecifier,
   extractDownloads,
+  fileUrlToPathOrNull,
   guard,
+  normalizeFsPath,
   runDeno,
   validateLocalPath,
   REPO_ROOT,
@@ -460,5 +462,95 @@ describe("clasificación de fallos de `deno check`", () => {
     const c = classifyCheckFailure(conColor, 1);
     assert.equal(c.kind, "TYPECHECK");
     assert.match(c.detail, /TS2322/);
+  });
+});
+
+describe("rutas con `%` literal", () => {
+  test("el guard corre limpio desde una raíz que contiene `100%local`", () => {
+    // Regresión: la comparación de raíces usaba decodeURIComponent y una ruta
+    // con un `%` literal la hacía estallar con un URIError sin capturar.
+    const raiz = nuevoTemp("edge-guard-100%local-");
+    assert.ok(raiz.includes("100%local"), `el fixture debe tener un % literal: ${raiz}`);
+    armarRepo({
+      raiz,
+      entry: `import { saludo } from "./lib/saludo.ts";\nexport const x: string = saludo;\n`,
+      extra: { "supabase/functions/avatar/lib/saludo.ts": `export const saludo: string = "hola";\n` },
+    });
+    let r;
+    assert.doesNotThrow(() => {
+      r = correr(raiz);
+    }, "una ruta con % no debe lanzar");
+    assert.equal(r.ok, true, detalles(r));
+    assert.ok(!r.problems.some((p) => p.kind === "RAIZ"), detalles(r));
+    assert.deepEqual(r.downloads, []);
+    assert.ok(r.moduleCount >= 2, `esperaba al menos 2 módulos, hubo ${r.moduleCount}`);
+  });
+
+  test("desde una raíz con `%` el guard sigue rechazando un import remoto", () => {
+    // No alcanza con que no explote: tiene que seguir haciendo su trabajo.
+    const raiz = nuevoTemp("edge-guard-100%local-neg-");
+    armarRepo({
+      raiz,
+      entry: `import { x } from "https://esm.sh/@supabase/supabase-js@2.49.4";\nexport const y = x;\n`,
+    });
+    const r = correr(raiz);
+    assert.equal(r.ok, false);
+    assert.deepEqual(r.downloads, []);
+    assert.ok(r.problems.some((p) => p.specifier.startsWith("https:")), detalles(r));
+    assert.ok(!r.problems.some((p) => p.kind === "RAIZ"), `la raíz sí debería resolver bien:\n${detalles(r)}`);
+  });
+
+  test("analyzeGraph compara rutas, no cadenas de URL", () => {
+    const base = nuevoTemp("edge-guard-cmp-");
+    const entryAbs = resolve(base, "100%local", "supabase", "functions", "avatar", "index.ts");
+    const graph = {
+      roots: [pathToFileURL(entryAbs).href],
+      modules: [],
+      npmPackages: {},
+      redirects: {},
+    };
+    const r = analyzeGraph(graph, { repoRoot: base, allowedDirs: ["supabase/functions/avatar"], entryAbs });
+    assert.ok(!r.problems.some((p) => p.kind === "RAIZ"), detalles(r));
+  });
+
+  test("una raíz URL malformada produce un problema RAIZ legible, nunca un URIError", () => {
+    const malas = ["file:///C:/100%local/index.ts", "no-es-una-url", "https://esm.sh/x.ts", "", "file:"];
+    for (const mala of malas) {
+      const graph = { roots: [mala], modules: [], npmPackages: {}, redirects: {} };
+      let r;
+      assert.doesNotThrow(() => {
+        r = analyzeGraph(graph, { repoRoot: REPO_ROOT, allowedDirs: ["supabase"], entryAbs: null });
+      }, `la raíz ${JSON.stringify(mala)} no debe lanzar`);
+      const problema = r.problems.find((p) => p.kind === "RAIZ");
+      assert.ok(problema, `esperaba un problema RAIZ para ${JSON.stringify(mala)}:\n${detalles(r)}`);
+      assert.match(problema.detail, /URL `file:` convertible a una ruta local/);
+      assert.ok(problema.specifier.length > 0, "el problema debe nombrar la raíz ofensora");
+    }
+  });
+
+  test("fileUrlToPathOrNull y normalizeFsPath: ida, vuelta y entradas inválidas", () => {
+    const real = resolve(REPO_ROOT, "supabase/functions/avatar/index.ts");
+    assert.equal(fileUrlToPathOrNull(pathToFileURL(real).href), real);
+
+    const conPorcentaje = resolve(REPO_ROOT, "100%local", "index.ts");
+    assert.equal(fileUrlToPathOrNull(pathToFileURL(conPorcentaje).href), conPorcentaje);
+
+    for (const mala of ["", "no-es-una-url", "https://a/b.ts", "file:///C:/100%local/x.ts", null, 42, undefined]) {
+      assert.equal(fileUrlToPathOrNull(mala), null, `${String(mala)} no debería convertirse a ruta`);
+    }
+
+    if (process.platform === "win32" || process.platform === "darwin") {
+      assert.equal(
+        normalizeFsPath(join(REPO_ROOT, "Supabase", "Index.TS")),
+        normalizeFsPath(join(REPO_ROOT, "supabase", "index.ts")),
+        "en un filesystem insensible a la caja deben normalizar igual",
+      );
+    } else {
+      assert.notEqual(
+        normalizeFsPath(join(REPO_ROOT, "Supabase", "Index.TS")),
+        normalizeFsPath(join(REPO_ROOT, "supabase", "index.ts")),
+        "en Linux la caja distingue y no debe aplanarse",
+      );
+    }
   });
 });
