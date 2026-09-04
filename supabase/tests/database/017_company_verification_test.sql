@@ -6,7 +6,7 @@
 -- la misma solicitud. Cada negativo de permiso va apareado con el positivo
 -- equivalente, para que "falla" no pueda significar "el fixture estaba mal".
 begin;
-select plan(84);
+select plan(92);
 
 -- --- Fixtures locales -------------------------------------------------------
 -- Cuatro cuentas nuevas: quien revisa (admin de plataforma sin empresa), un
@@ -75,14 +75,51 @@ grant select, insert on solicitudes to authenticated;
 -- A. La tabla no es superficie de API
 -- ===========================================================================
 
+-- Se cuentan TODOS los privilegios menos SELECT, no solo INSERT/UPDATE/DELETE.
+-- La versión anterior de esta aserción pasaba en verde con TRUNCATE y TRIGGER
+-- todavía concedidos, que son justamente los dos que saltean RLS: TRUNCATE no
+-- la evalúa y TRIGGER deja colgar un trigger propio que corre dentro de las RPC
+-- SECURITY DEFINER. 0030 los revoca; esto lo vigila.
 select results_eq(
   $$ select count(*)::int
      from information_schema.role_table_grants
      where table_schema = 'public' and table_name = 'company_verifications'
        and grantee in ('anon', 'authenticated')
-       and privilege_type in ('INSERT', 'UPDATE', 'DELETE') $$,
+       and privilege_type <> 'SELECT' $$,
   $$ values (0) $$,
-  'FIXTURE: company_verifications no conserva INSERT/UPDATE/DELETE para anon ni authenticated');
+  'FIXTURE: a company_verifications no le queda NINGÚN privilegio salvo SELECT');
+
+-- Control positivo apareado: el SELECT sí está, así que el cero de arriba no es
+-- "la tabla no tiene grants porque no existe".
+select results_eq(
+  $$ select count(*)::int
+     from information_schema.role_table_grants
+     where table_schema = 'public' and table_name = 'company_verifications'
+       and grantee = 'authenticated' and privilege_type = 'SELECT' $$,
+  $$ values (1) $$,
+  'POSITIVO: authenticated conserva el SELECT que necesita cv_company_select');
+
+select results_eq(
+  $$ select count(*)::int
+     from information_schema.role_table_grants
+     where grantee in ('anon', 'authenticated')
+       and privilege_type in ('TRUNCATE', 'TRIGGER')
+       and table_schema = 'public' $$,
+  $$ values (0) $$,
+  'NEGATIVO: no queda ni un TRUNCATE ni un TRIGGER en public (los dos saltean RLS)');
+
+-- Límite conocido, fijado a propósito: en `storage` estos privilegios siguen
+-- concedidos porque las tablas son de `supabase_storage_admin` y la migración
+-- corre como `postgres`, que no es superusuario ni miembro de ese rol. Lo que
+-- hoy lo contiene es que PostgREST no expone el esquema `storage`. Si alguna
+-- vez la tabla cambia de dueño, esta aserción se pone roja y ahí sí se revoca.
+select results_eq(
+  $$ select pg_catalog.pg_get_userbyid(c.relowner) = 'supabase_storage_admin'::name
+     from pg_catalog.pg_class c
+     join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'storage' and c.relname = 'objects' $$,
+  $$ values (true) $$,
+  'FIXTURE: storage.objects sigue siendo de supabase_storage_admin (por eso no se le puede revocar nada desde una migración)');
 
 select tests.authenticate_as('user_empresa_ok');
 
@@ -91,6 +128,24 @@ select throws_ok(
      values (tests.get_uuid('company_ok'), '30-70000001-6', tests.get_uuid('user_empresa_ok')) $$,
   '42501', null,
   'NEGATIVO: ni el owner puede insertar una solicitud directo en la tabla');
+
+-- TRUNCATE no evalúa RLS: si el privilegio siguiera concedido, esto vaciaría la
+-- tabla entera sin pasar por ninguna policy. Mismo caso para el registro de
+-- auditoría, que es lo que vuelve real la palabra "append-only".
+select throws_ok(
+  $$ truncate public.company_verifications $$,
+  '42501', null,
+  'NEGATIVO: un cliente no puede TRUNCATE company_verifications');
+
+select throws_ok(
+  $$ truncate public.admin_audit_log $$,
+  '42501', null,
+  'NEGATIVO: append-only de verdad: tampoco se puede TRUNCATE la auditoría');
+
+select throws_ok(
+  $$ truncate public.company_members $$,
+  '42501', null,
+  'NEGATIVO: tampoco las membresías, que son de lo que cuelga todo el aislamiento por empresa');
 
 -- ===========================================================================
 -- B. Solicitar: quién puede (y quién no)
@@ -718,6 +773,34 @@ select results_eq(
               tests.get_uuid('company_ok') || '/sub/constancia-arca.pdf') $$,
   $$ values (false, false, false, false) $$,
   'NEGATIVO: los predicados del bucket fallan cerrados ante cualquier path raro');
+
+-- Una empresa dada de baja: el owner ya no podía REEMPLAZAR la constancia
+-- (is_company_owner filtra deleted_at) pero sus miembros la seguían LEYENDO,
+-- porque is_company_member es un exists pelado sobre company_members. 0030
+-- empareja las dos mitades.
+reset role;
+update public.company_profiles set deleted_at = now()
+where id = tests.get_uuid('company_ok');
+select tests.authenticate_as('user_empresa_ok');
+
+select results_eq(
+  $$ select public.can_read_company_document(
+              tests.get_uuid('company_ok') || '/constancia-arca.pdf'),
+            public.can_write_company_document(
+              tests.get_uuid('company_ok') || '/constancia-arca.pdf') $$,
+  $$ values (false, false) $$,
+  'NEGATIVO: en una empresa dada de baja no se lee NI se escribe la constancia');
+
+reset role;
+update public.company_profiles set deleted_at = null
+where id = tests.get_uuid('company_ok');
+select tests.authenticate_as('user_empresa_ok');
+
+select results_eq(
+  $$ select public.can_read_company_document(
+              tests.get_uuid('company_ok') || '/constancia-arca.pdf') $$,
+  $$ values (true) $$,
+  'POSITIVO: con la empresa activa vuelve a leerse (control del negativo de arriba)');
 
 select * from finish();
 rollback;

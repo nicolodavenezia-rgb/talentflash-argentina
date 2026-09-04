@@ -15,9 +15,19 @@
 --   - El namespace es el `company_id`, y el nombre del archivo es fijo. Las dos
 --     mitades del path las decide el servidor: la carpeta la resuelve
 --     `private.caller_company()` desde `auth.uid()` y el nombre sale de la
---     lista cerrada de extensiones de 0028. El cliente nunca "elige" un path;
---     pide uno con `company_document_upload_path()` y la policy vuelve a
---     comprobar lo mismo por su cuenta.
+--     lista cerrada de extensiones de 0028.
+--
+--     PRECISIÓN, porque la diferencia importa: el path NO es secreto ni difícil
+--     de fabricar. La forma es fija y el `company_id` de una empresa aprobada lo
+--     lee cualquiera por `comp_member_select` (0015). Un atacante arma
+--     `<uuid ajeno>/constancia-arca.pdf` en dos segundos. Lo que sostiene la
+--     seguridad NO es que el path sea difícil de adivinar, sino que la policy
+--     revalida la membresía contra `auth.uid()` en cada acceso: un path
+--     fabricado no sirve para nada. `company_document_upload_path()` es
+--     comodidad para el cliente, no un control. Si alguna vez aparece un camino
+--     que confíe en que el path es impredecible —una URL semipública, un
+--     endpoint que acepte el path del cliente sin revalidar—, ese camino es
+--     inseguro por su cuenta, no por esta migración.
 --
 -- Límites: 5 MiB y una lista cerrada de MIME. Una constancia de ARCA es un PDF
 -- de dos páginas o una foto; 5 MiB es holgado y a la vez acota el daño de un
