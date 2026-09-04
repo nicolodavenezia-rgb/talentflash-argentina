@@ -29,6 +29,16 @@ una proyección con whitelist de campos, fail-closed (la policy que dejaba leer
 la fila cruda fue eliminada, T-024); y score de completitud calculado en el
 cliente, separado del "listo para postularse" server-side (T-025).
 
+Del Bloque E (migraciones `0025`–`0029`): validación de CUIT por dígito
+verificador en cliente y servidor (T-027); CRUD de empresa y equipo por RPC con
+la empresa resuelta server-side, e invitaciones de un solo uso (T-026);
+verificación manual de empresa con constancia de ARCA en un bucket **privado**,
+cola administrativa en `/admin/verificaciones` que exige **segundo factor**
+(AAL2) y registro append-only de cada decisión (T-028); y el distintivo
+"empresa verificada", que se muestra solo con el estado `approved` exacto
+(T-029). Sigue pendiente conectar la verificación al permiso de publicar
+ofertas: eso llega con T-030, junto con la oferta misma.
+
 Todavía **no** están hechos (y no se simulan en la UI): Google y Apple (T-012),
 la pantalla in-app de cambio de contraseña, que depende del enlace profundo
 (T-013), MFA, CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
@@ -167,7 +177,7 @@ lib/
 │                   # legal, notifications, profiles, companies, moderation…
 └── shared/         # widgets/modelos compartidos (fallos tipados, banners)
 supabase/
-├── migrations/     # 0001–0024 — esquema completo + RLS deny-by-default
+├── migrations/     # 0001–0029 — esquema completo + RLS deny-by-default
 ├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents
 │                   # + perfiles, proyección de empresa y storage de avatares)
 ├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)

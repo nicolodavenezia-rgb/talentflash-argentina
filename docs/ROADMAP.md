@@ -77,12 +77,12 @@ Convenciones: cada tarea es chica (≤2–3 días), tiene **criterio verificable
 
 ### Bloque E — Empresas + verificación CUIT
 
-| ID | Tarea | Criterio verificable | Dep. |
-|---|---|---|---|
-| T-026 | CRUD empresa + miembros (owner/staff) con RLS | Test RLS: staff de otra empresa no accede | T-017 |
-| T-027 | Validación de CUIT (formato + dígito verificador) en cliente y servidor | Unit tests con CUITs válidos/inválidos; server rechaza aunque el cliente se saltee | T-026 |
-| T-028 | Verificación CUIT: flujo `pendiente → verificada/rechazada` con revisión manual en panel admin (constancia ARCA adjunta). Verificación automática contra padrón: post-MVP, a evaluar | Empresa `no_verificada` no puede publicar ofertas (test server-side) | T-027, T-077 |
-| T-029 | Badge "empresa verificada" en UI | Golden test del badge en tarjeta de empresa y oferta | T-028 |
+| ID | Tarea | Criterio verificable | Dep. | Estado |
+|---|---|---|---|---|
+| T-026 | CRUD empresa + miembros (owner/staff) con RLS | Test RLS: staff de otra empresa no accede | T-017 | **Hecho en local** (migraciones `0026`/`0027`, tests pgTAP `015`/`016`). Toda la edición pasa por RPC con whitelist de campos y la empresa resuelta desde `auth.uid()`; el equipo se incorpora con un código de un solo uso guardado como SHA-256. |
+| T-027 | Validación de CUIT (formato + dígito verificador) en cliente y servidor | Unit tests con CUITs válidos/inválidos; server rechaza aunque el cliente se saltee | T-026 | **Hecho en local** (migración `0025`, test pgTAP `014`, unit `cuit_test.dart`). El servidor valida por trigger, no solo en las RPC: un CUIT con el verificador alterado no entra por ninguna puerta. |
+| T-028 | Verificación CUIT: flujo `pendiente → verificada/rechazada` con revisión manual en panel admin (constancia ARCA adjunta). Verificación automática contra padrón: post-MVP, a evaluar | Empresa `no_verificada` no puede publicar ofertas (test server-side) | T-027, T-077 | **Hecho en local** (migraciones `0028`/`0029`, test pgTAP `017`). El owner —y solo el owner— pide la verificación con un CUIT que tiene que coincidir con el de su empresa; la constancia va a un bucket privado `company-docs` con el path derivado server-side; la revisión exige rol admin **y sesión AAL2**, no se puede resolver dos veces y queda en `admin_audit_log`. Nadie aprueba una empresa que integra. **Límite deliberado:** el criterio "empresa no verificada no puede publicar ofertas" NO se cierra acá. Se deja la autorización reutilizable `public.company_can_publish(uuid)` —probada contra los cuatro estados— pero sin conectar a `jobs`: la policy `jobs_company_write` (0015) sigue exigiendo solo membresía y cambiarla pertenece a T-030, que es donde nace el CRUD real de oferta con sus estados. **Avance parcial de T-077:** se implementó únicamente la cola de verificaciones (`/admin/verificaciones`); las colas de denuncias y de moderación de video, la asignación de casos y el SLA siguen abiertas. |
+| T-029 | Badge "empresa verificada" en UI | Golden test del badge en tarjeta de empresa y oferta | T-028 | **Hecho en local.** `VerifiedCompanyBadge` recibe el ESTADO (no un booleano) y se dibuja solo con `approved` exacto: `pending`, `in_review`, `rejected`, `null` y cualquier estado futuro no muestran nada. Integrado en la superficie de empresa que ya existe (`/empresa`). **Dos desvíos del criterio, deliberados:** (a) la tarjeta de oferta no existe todavía (`lib/features/jobs/` está vacío) — su integración y su prueba se difieren a T-030 en vez de montar una tarjeta ficticia; (b) no se usa `matchesGoldenFile`: el repositorio no tiene infraestructura de goldens y un PNG generado en Windows no coincide con el render del runner Linux de CI, así que el badge se prueba con widget tests que afirman cuándo aparece, cuándo no y qué anuncia el lector de pantalla. |
 
 ### Bloque F — Ofertas
 
@@ -236,7 +236,7 @@ Los costos "mensual: cero (dentro de Supabase Pro)" refieren a la base de **USD 
 ### F-04 Empresas + verificación CUIT
 - **Objetivo:** solo empresas reales publican — confianza es el activo del marketplace.
 - **Dependencias:** F-02; panel admin (F-15) para la revisión.
-- **Acceptance criteria:** ☐ CUIT validado por dígito verificador en server ☐ estado `pendiente→verificada` operable desde admin ☐ empresa no verificada no publica ☐ badge visible.
+- **Acceptance criteria:** ☑ CUIT validado por dígito verificador en server (T-027, `0025`) ☑ estado `pendiente→verificada` operable desde admin (T-028, `0028`; con AAL2 y auditoría) ☐ empresa no verificada no publica (**difierido a T-030**: el helper `company_can_publish` existe y está probado, falta conectarlo a la policy de `jobs`) ☑ badge visible (T-029, solo con `approved` exacto).
 - **Tests:** unit (algoritmo CUIT), integration (flujo de estados), RLS (miembros de empresa), widget (badge).
 - **Riesgos:** verificación manual no escala (aceptable en MVP: decenas/semana); API de padrón ARCA post-MVP a cotizar.
 - **Costos:** inicial cero · mensual cero · variable cero (MVP manual; tiempo del founder).
