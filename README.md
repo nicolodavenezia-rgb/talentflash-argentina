@@ -177,7 +177,7 @@ lib/
 │                   # legal, notifications, profiles, companies, moderation…
 └── shared/         # widgets/modelos compartidos (fallos tipados, banners)
 supabase/
-├── migrations/     # 0001–0029 — esquema completo + RLS deny-by-default
+├── migrations/     # 0001–0030 — esquema completo + RLS deny-by-default
 ├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents
 │                   # + perfiles, proyección de empresa y storage de avatares)
 ├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)
