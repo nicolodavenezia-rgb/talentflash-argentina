@@ -10,7 +10,7 @@
 -- emails @tests.local para no contaminar los conteos de 009, que filtran por
 -- @dev.talentflash.test).
 begin;
-select plan(48);
+select plan(56);
 
 -- --- Fixtures locales -------------------------------------------------------
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -92,6 +92,12 @@ select throws_ok(
   '42501', null,
   'NEGATIVO: el owner de una empresa no puede sumar miembros a OTRA empresa');
 
+-- El conteo va desde el BACKEND, no con el rol del caller: `cm_select` solo le
+-- deja ver las filas de SU empresa, así que como `user_empresa_ok` el cero
+-- sería cierto aunque la membresía cruzada existiera. La aserción medía la
+-- policy de lectura, no el resultado del INSERT.
+reset role;
+
 select results_eq(
   $$ select count(*)::int from public.company_members
      where company_id = tests.get_uuid('company_pend')
@@ -99,12 +105,64 @@ select results_eq(
   $$ values (0) $$,
   'NEGATIVO: tras el rechazo no quedó ninguna membresía cruzada');
 
--- Control positivo apareado: la misma operación en la empresa propia sí anda,
--- así que el negativo de arriba no pasa porque el INSERT esté roto.
-select lives_ok(
+select tests.authenticate_as('user_empresa_ok');
+
+-- El INSERT directo dejó de ser un camino, ni siquiera en la empresa propia:
+-- 0031 eliminó la policy `cm_manage` y revocó el privilegio. Hasta entonces
+-- este mismo statement era el "control positivo" de este archivo, así que la
+-- suite estaba FIJANDO el bypass que volvía opcional a la invitación de un
+-- solo uso de 0027.
+select throws_ok(
   $$ insert into public.company_members (company_id, profile_id, member_role)
      values (tests.get_uuid('company_ok'), tests.get_uuid('m_segundo_owner'), 'viewer') $$,
-  'POSITIVO: el owner sí puede sumar a alguien a SU empresa');
+  '42501', null,
+  'NEGATIVO: el owner tampoco puede insertar directo en SU PROPIA empresa (0031)');
+
+reset role;
+
+select results_eq(
+  $$ select count(*)::int from public.company_members
+     where profile_id = tests.get_uuid('m_segundo_owner') $$,
+  $$ values (0) $$,
+  'NEGATIVO: tras el rechazo la persona sigue sin ninguna membresía');
+
+select tests.authenticate_as('m_admin');
+
+select throws_ok(
+  $$ insert into public.company_members (company_id, profile_id, member_role)
+     values (tests.get_uuid('company_ok'), tests.get_uuid('m_segundo_owner'), 'viewer') $$,
+  '42501', null,
+  'NEGATIVO: un admin de empresa tampoco puede insertar directo en company_members');
+
+-- Control positivo apareado, por el ÚNICO camino que queda. Sin esto, los
+-- negativos de arriba podrían pasar porque `company_members` quedó inescribible
+-- para todo el mundo; con esto queda demostrado que lo que se cerró es el
+-- atajo, no el alta.
+select tests.authenticate_as('user_empresa_ok');
+
+select lives_ok(
+  $$ do $do$
+     declare codigo text;
+     begin
+       codigo := public.create_company_invitation('equipo-segundo-owner@tests.local', 'viewer');
+       perform set_config('tests.codigo_invitacion', codigo, true);
+     end $do$ $$,
+  'POSITIVO: el owner puede emitir una invitación para SU equipo');
+
+select tests.authenticate_as('m_segundo_owner');
+
+select lives_ok(
+  format($$ select public.accept_company_invitation(%L) $$,
+         current_setting('tests.codigo_invitacion')),
+  'POSITIVO: la invitación legítima sí incorpora a la persona al equipo');
+
+select results_eq(
+  $$ select count(*)::int, max(member_role::text)
+     from public.company_members
+     where company_id = tests.get_uuid('company_ok')
+       and profile_id = tests.get_uuid('m_segundo_owner') $$,
+  $$ values (1, 'viewer') $$,
+  'POSITIVO: quedó EXACTAMENTE una membresía, con el rol que decía la invitación');
 
 -- ===========================================================================
 -- B. Quién puede administrar el equipo
@@ -254,19 +312,66 @@ select throws_ok(
   'TFEMP', null,
   'NEGATIVO: un candidato no integra ninguna empresa y no puede editar ninguna');
 
-select tests.authenticate_as('m_segundo_owner');
+-- "Solo una cuenta de empresa integra un equipo" la impone el trigger
+-- `private.protect_company_member_write` (0026), NO una policy: vale para
+-- cualquier escritura, también las del backend y las de las RPC SECURITY
+-- DEFINER. Desde el cliente ya no se llega al trigger —0031 revocó el INSERT y
+-- corta antes—, así que se prueba donde sigue siendo alcanzable y donde
+-- realmente importa: una RPC futura que olvidara la comprobación previa
+-- escribiría con estos mismos privilegios y chocaría acá igual.
+reset role;
 
 select throws_ok(
   $$ insert into public.company_members (company_id, profile_id, member_role)
      values (tests.get_uuid('company_ok'), tests.get_uuid('m_candidato'), 'viewer') $$,
   'TFMEM', null,
-  'NEGATIVO: un candidato no puede entrar a un equipo de empresa');
+  'NEGATIVO: ni el backend puede meter a un candidato en un equipo de empresa');
 
 select throws_ok(
   $$ insert into public.company_members (company_id, profile_id, member_role)
      values (tests.get_uuid('company_ok'), tests.get_uuid('m_admin_global'), 'viewer') $$,
   'TFMEM', null,
-  'NEGATIVO: un admin global tampoco entra a un equipo por una llamada del cliente');
+  'NEGATIVO: ni el backend puede meter a un admin global en un equipo de empresa');
+
+-- Y por el camino legítimo el candidato tampoco entra: la invitación existe,
+-- está dirigida a su email y está vigente, así que el rechazo es por su rol y
+-- no por un fixture ausente.
+--
+-- Invita `m_segundo_owner` y no `user_empresa_ok`: en la sección C de más
+-- arriba el owner original se dio de baja de company_ok (ya había un segundo
+-- owner que la sostenía), así que a esta altura del archivo ya no integra
+-- ninguna empresa y `private.caller_company()` lo rechaza con TFEMP.
+select tests.authenticate_as('m_segundo_owner');
+
+select lives_ok(
+  $$ do $do$
+     declare codigo text;
+     begin
+       codigo := public.create_company_invitation('equipo-candidato@tests.local', 'viewer');
+       perform set_config('tests.codigo_candidato', codigo, true);
+     end $do$ $$,
+  'FIXTURE: se emite una invitación vigente dirigida al candidato');
+
+select tests.authenticate_as('m_candidato');
+
+select throws_ok(
+  format($$ select public.accept_company_invitation(%L) $$,
+         current_setting('tests.codigo_candidato')),
+  '42501', null,
+  'NEGATIVO: un candidato no puede canjear una invitación de equipo');
+
+-- El conteo se hace desde el backend a propósito: como candidato, `cm_select`
+-- no le deja ver ninguna fila y el cero sería cierto aunque la membresía
+-- existiera.
+reset role;
+
+select results_eq(
+  $$ select count(*)::int from public.company_members
+     where profile_id = tests.get_uuid('m_candidato') $$,
+  $$ values (0) $$,
+  'NEGATIVO: tras el rechazo el candidato sigue sin ninguna membresía');
+
+select tests.authenticate_as('m_segundo_owner');
 
 -- Columnas de la relación que no se editan.
 select throws_ok(
@@ -426,12 +531,17 @@ select results_eq(
   $$ values (false) $$,
   'POSITIVO: repetir la baja devuelve false y no rompe (idempotente)');
 
+-- La unicidad (company_id, profile_id) es la última red: si una RPC llegara a
+-- intentar un alta repetida, choca con el índice. Se prueba desde el backend
+-- porque desde el cliente el INSERT ya no existe (0031) y el 42501 taparía al
+-- 23505 sin decir nada sobre la restricción.
+reset role;
+
 select throws_ok(
   $$ insert into public.company_members (company_id, profile_id, member_role)
      values (tests.get_uuid('company_ok'), tests.get_uuid('m_admin'), 'viewer') $$,
   '23505', null,
-  'NEGATIVO: sumar dos veces a la misma persona no duplica la membresía');
+  'NEGATIVO: la unicidad sigue impidiendo duplicar una membresía existente');
 
-reset role;
 select * from finish();
 rollback;
