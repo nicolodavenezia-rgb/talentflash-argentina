@@ -37,6 +37,23 @@ de avatares WebP: la Edge Function los rechaza con `unsupported_format`
 (la librería de imágenes no los decodifica), así que el whitelist efectivo hoy
 es JPEG/PNG.
 
+## Cómo continuar con ChatGPT y Claude
+
+El trabajo se reparte entre el fundador (decide), ChatGPT/Codex (analiza y
+prepara el próximo prompt) y Claude (ejecuta en una branch separada). El método,
+sus límites de autorización y los pasos para retomar desde otra computadora o
+una conversación nueva están versionados en el repositorio:
+
+- [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) — el método y sus límites (reglas
+  permanentes), incluido el procedimiento para retomar desde otra computadora.
+- [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) — fotografía **fechada** del
+  estado: qué está en `main`, qué existe solo en un PR, con SHA y evidencia.
+- [docs/prompts/START_CHATGPT.md](docs/prompts/START_CHATGPT.md) — prompt para
+  arrancar o retomar el análisis con ChatGPT.
+- [docs/prompts/EXECUTE_CLAUDE.md](docs/prompts/EXECUTE_CLAUDE.md) — plantilla
+  para pedirle una tarea a Claude.
+- [AGENTS.md](AGENTS.md) y [CLAUDE.md](CLAUDE.md) — instrucciones breves por rol.
+
 ## Requisitos
 
 | Herramienta | Versión usada | Nota |
@@ -172,7 +189,8 @@ supabase/
 │                   # + perfiles, proyección de empresa y storage de avatares)
 ├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)
 └── functions/      # Edge Functions (avatar — T-022; el resto llega con sus bloques)
-docs/               # los 8 documentos técnicos (fuente de verdad)
+docs/               # los 8 documentos técnicos (fuente de verdad) + método de
+                    # trabajo con IA (AI_WORKFLOW, PROJECT_STATUS, prompts/)
 env/                # flavors dev/staging/prod (sin secretos)
 ```
 
