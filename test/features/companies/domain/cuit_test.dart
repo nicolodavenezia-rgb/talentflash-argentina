@@ -3,9 +3,12 @@ import 'package:talentflash_argentina/features/companies/domain/cuit.dart';
 
 /// T-027 — value object de CUIT.
 ///
-/// Todos los CUIT de este archivo son sintéticos: se construyeron a partir de
-/// prefijos y cuerpos arbitrarios calculando el dígito verificador con el
-/// propio algoritmo. Ninguno pertenece a una empresa ni a una persona real.
+/// Los CUIT de este archivo son de dos clases. Los SINTÉTICOS se construyeron
+/// con prefijos y cuerpos arbitrarios calculando el verificador, y prueban el
+/// álgebra caso por caso. Los trece REALES son de personas jurídicas y
+/// organismos publicados en fuentes oficiales (Boletín Oficial, resoluciones en
+/// argentina.gob.ar, sitios institucionales) y prueban que el álgebra es la que
+/// ARCA usa de verdad. No hay ningún CUIT de persona humana.
 void main() {
   // Válidos "normales": el verificador sale del camino 11 - (suma % 11).
   const validos = <String>[
@@ -57,6 +60,50 @@ void main() {
       expect(Cuit.isValid('20-00000001-9'), isTrue);
       // Y el 0 que produciría confundir 10 con 0 se rechaza.
       expect(Cuit.isValid('20-00000001-0'), isFalse);
+    });
+
+    // Apareado con `supabase/tests/database/014_cuit_validation_test.sql`: la
+    // misma lista, la misma expectativa. Si Dart y SQL se separan, uno de los
+    // dos archivos se pone rojo.
+    test('los 13 CUIT reales de fuente oficial pasan el verificador', () {
+      const reales = <String>[
+        '30-63945373-8',
+        '30-52278060-6',
+        '30-51688824-1',
+        '33-56324011-9',
+        '30-71511877-3',
+        '30-64140555-4',
+        '30-70956507-5',
+        '30-54666656-1',
+        '30-54668997-9',
+        '30-50001091-2',
+        '33-99924210-9',
+        '30-52655265-9',
+        '33-69345023-9',
+      ];
+      for (final cuit in reales) {
+        expect(Cuit.isValid(cuit), isTrue, reason: '$cuit debería ser válido');
+      }
+      expect(reales.length, 13);
+    });
+
+    test('un CUIT real mal transcripto se rechaza (da 9, no 3)', () {
+      // Negativo REAL: circula atribuido a una empresa conocida y no cierra.
+      expect(Cuit.isValid('30-50113750-3'), isFalse);
+      expect(Cuit.checkDigitOf('3050113750'), 9);
+    });
+
+    // DECISIÓN, no descuido: ver el encabezado de `cuit.dart`. No hay fuente
+    // oficial del algoritmo y las dos librerías de referencia se contradicen
+    // sobre qué hacer cuando el candidato da 10. Acá se fija la regla
+    // permisiva, que es la que también implementa la base. Para el cuerpo
+    // 10000005 el CUIT emitible de verdad es el de prefijo 23; el de prefijo
+    // 20 lo acepta solo la permisiva. Este test es el que se pondría rojo si
+    // el fundador decidiera endurecerla.
+    test('caso 10: la regla permisiva acepta el par 20/23', () {
+      expect(Cuit.checkDigitOf('2010000005'), 9);
+      expect(Cuit.isValid('20-10000005-9'), isTrue);
+      expect(Cuit.isValid('23-10000005-9'), isTrue);
     });
 
     test('checkDigitOf exige exactamente 10 dígitos', () {

@@ -8,6 +8,51 @@
 ///
 /// No consulta ARCA, no infiere titularidad y no deduce si el CUIT existe de
 /// verdad: eso es revisión humana (T-028).
+///
+/// ---------------------------------------------------------------------------
+/// ADVERTENCIA PARA QUIEN VENGA A "ARREGLAR" ESTE ALGORITMO
+/// ---------------------------------------------------------------------------
+///
+/// **No existe documentación oficial de ARCA/AFIP del dígito verificador.** Se
+/// buscó en afip.gob.ar, arca.gob.ar, argentina.gob.ar, el Boletín Oficial e
+/// InfoLEG. Lo único oficial que se encontró dice que la validez depende del
+/// prefijo Y del dígito verificador, sin publicar el cálculo. Todo lo que
+/// sostiene este validador es (a) aritmética verificada contra CUIT reales de
+/// fuente oficial, (b) código de terceros que **se contradice entre sí**.
+///
+/// Lo que SÍ tiene consenso, y no hay que tocar:
+///   * pesos `5,4,3,2,7,6,5,4,3,2` sobre los primeros 10 dígitos;
+///   * `candidato = 11 - (suma mod 11)`;
+///   * `candidato == 11` ⇒ dígito `0`.
+///
+/// Lo que NO tiene consenso: qué hacer con `candidato == 10`.
+///   * Este código informa `9` (regla PERMISIVA). Es lo que hace `python-stdnum`,
+///     cuya única fuente citada es Wikipedia en español, que a su vez no tiene
+///     referencia bibliográfica en esa sección.
+///   * `lalloni/afip` (Go) implementa la regla ESTRICTA y documenta que un
+///     candidato `10` significa que ese CUIT no puede existir.
+///
+/// Por qué se mantiene la permisiva, como DECISIÓN EXPLÍCITA y no por descuido:
+/// la tabla de "cambio de prefijo" (20→23, 27→23, 30→33…) es una regla de
+/// EMISIÓN, no de validación — el CUIT que ARCA efectivamente emite satisface
+/// siempre el algoritmo plano. Endurecer a la regla estricta rechazaría un
+/// ~9,09% adicional de números (1 de cada 11 cuerpos por prefijo) que casi con
+/// seguridad no existen, pero cuyo fundamento último es una inferencia y no una
+/// norma. Ejemplo concreto: `20-10000005-9` lo acepta la regla permisiva y no
+/// la estricta; el emitible de verdad para ese cuerpo es `23-10000005-9`.
+/// Cambiar esto es una decisión del fundador sobre tolerancia al falso
+/// negativo en el signup, no una corrección de bug. El test
+/// `test/features/companies/domain/cuit_test.dart` fija el comportamiento
+/// actual en ese caso, apareado con `supabase/tests/database/014_…`.
+///
+/// LO QUE ESTE VALIDADOR **NO** DECIDE, y es también decisión del fundador:
+/// qué prefijos acepta la plataforma como "empresa empleadora". Hoy acepta
+/// TODOS. Restringir a `30/33/34` excluiría por diseño a empleadores legalmente
+/// válidos (monotributistas y autónomos emplean con su CUIT personal 20/23/24/27,
+/// asignado de forma aleatoria y no binaria desde la RG Conjunta AFIP-ANSES
+/// 5007/2021). Aceptar todo deja entrar los CUIT genéricos de país (50/51/55),
+/// que no identifican una entidad. Cualquiera de las dos puede ser correcta;
+/// ninguna se hereda de una suposición del código.
 library;
 
 /// Motivo por el que un CUIT no se acepta. Se informa el primero que aparece,

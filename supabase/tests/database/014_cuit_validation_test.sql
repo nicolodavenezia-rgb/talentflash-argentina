@@ -6,10 +6,14 @@
 -- (dueño de las tablas, sin RLS de por medio), que es el escenario más
 -- permisivo posible, y aun así el CUIT inválido no entra.
 --
--- Todos los CUIT de este archivo son sintéticos, con el dígito verificador
--- calculado; ninguno corresponde a una empresa real.
+-- Los CUIT de este archivo son de dos clases, y las dos hacen falta: los
+-- SINTÉTICOS (con el verificador calculado a mano) prueban el álgebra caso por
+-- caso, y trece REALES de personas jurídicas y organismos —publicados en el
+-- Boletín Oficial, en resoluciones de argentina.gob.ar y en sitios
+-- institucionales— prueban que el álgebra es la que ARCA usa de verdad. No hay
+-- ningún CUIT de persona humana.
 begin;
-select plan(17);
+select plan(20);
 
 -- --- El algoritmo -----------------------------------------------------------
 
@@ -63,6 +67,47 @@ select results_eq(
   $$ select private.cuit_is_valid('20-00000001-0') $$,
   $$ values (false) $$,
   'NEGATIVO: confundir el 10 con 0 en el caso especial se rechaza');
+
+-- --- Control con datos REALES, no sintéticos --------------------------------
+--
+-- Trece CUIT de personas jurídicas y organismos publicados en fuentes
+-- oficiales (Boletín Oficial, resoluciones en argentina.gob.ar, sitios
+-- institucionales). Los sintéticos de arriba prueban el álgebra; estos prueban
+-- que el álgebra es la que ARCA usa de verdad. Solo personas jurídicas: ningún
+-- CUIT de persona humana entra al repositorio.
+select results_eq(
+  $$ select count(*) filter (where private.cuit_is_valid(c))::int,
+            count(*)::int
+     from unnest(array[
+       '30-63945373-8', '30-52278060-6', '30-51688824-1', '33-56324011-9',
+       '30-71511877-3', '30-64140555-4', '30-70956507-5', '30-54666656-1',
+       '30-54668997-9', '30-50001091-2', '33-99924210-9', '30-52655265-9',
+       '33-69345023-9']) c $$,
+  $$ values (13, 13) $$,
+  'POSITIVO: los 13 CUIT reales de fuente oficial pasan el verificador');
+
+-- Negativo REAL, no un dígito alterado a mano: este número circula atribuido a
+-- una empresa conocida y su verificador no cierra (el algoritmo da 9, no 3).
+select results_eq(
+  $$ select private.cuit_is_valid('30-50113750-3') $$,
+  $$ values (false) $$,
+  'NEGATIVO: un CUIT real mal transcripto se rechaza (da 9, no 3)');
+
+-- --- El caso 10, fijado como DECISIÓN, no como descuido ---------------------
+--
+-- No hay documentación oficial del algoritmo, y las dos librerías de
+-- referencia se contradicen: `python-stdnum` informa 9 (permisiva, que es lo
+-- que hace esta base) y `lalloni/afip` lo trata como inexistente (estricta).
+-- El par de abajo es el ejemplo concreto de la diferencia: para el cuerpo
+-- 10000005 el CUIT que ARCA puede emitir de verdad es el de prefijo 23; el de
+-- prefijo 20 lo acepta solo la regla permisiva. Endurecerlo es una decisión
+-- del fundador (ver el encabezado de lib/features/companies/domain/cuit.dart),
+-- y este test es el que se pondría rojo el día que se tome.
+select results_eq(
+  $$ select private.cuit_is_valid('20-10000005-9'),
+            private.cuit_is_valid('23-10000005-9') $$,
+  $$ values (true, true) $$,
+  'DECISIÓN: la regla permisiva acepta el par 20/23; la estricta rechazaría el 20');
 
 select results_eq(
   $$ select private.cuit_format('30712345671'),
