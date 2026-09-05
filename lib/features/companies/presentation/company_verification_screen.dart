@@ -312,6 +312,7 @@ String _failureMessage(AppLocalizations l10n, Object? error) {
     DataFailureCode.notAllowed => l10n.companyVerificationNotOwner,
     DataFailureCode.invalidCuit => l10n.dataFailureInvalidCuit,
     DataFailureCode.secondFactorRequired => l10n.dataFailureSecondFactor,
+    DataFailureCode.ambiguousCompany => l10n.dataFailureAmbiguousCompany,
     DataFailureCode.invalidData ||
     DataFailureCode.underage => l10n.dataFailureInvalidData,
     DataFailureCode.staleConsent => l10n.dataFailureStaleConsent,

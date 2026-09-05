@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// el contrato de errores de las migraciones:
 /// `42501` → [notAllowed] · `TF018` → [underage] · `TFDAT` → [invalidData] ·
 /// `TFCNS` → [staleConsent] · `23505` → [duplicate] · `TFCUI` → [invalidCuit] ·
-/// `TFMFA` → [secondFactorRequired].
+/// `TFMFA` → [secondFactorRequired] · `TFMUL` → [ambiguousCompany].
 enum DataFailureCode {
   /// Sin permiso: rol equivocado, sesión ausente o columna protegida.
   notAllowed,
@@ -28,6 +28,10 @@ enum DataFailureCode {
   /// caía en [unknown] y la pantalla mostraba un error genérico para el caso
   /// más frecuente del formulario de empresa.
   invalidCuit,
+
+  /// La cuenta integra más de una empresa (`TFMUL`, migración 0031). No se
+  /// resuelve eligiendo una: la lectura falla cerrada y la UI lo explica.
+  ambiguousCompany,
 
   /// La acción exige una sesión con segundo factor (`TFMFA`, migración 0028).
   /// Es distinto de [notAllowed]: la cuenta tiene el permiso, le falta el
@@ -60,6 +64,7 @@ class DataFailure implements Exception {
         'TFCNS' => DataFailureCode.staleConsent,
         'TFCUI' => DataFailureCode.invalidCuit,
         'TFMFA' => DataFailureCode.secondFactorRequired,
+        'TFMUL' => DataFailureCode.ambiguousCompany,
         '23505' => DataFailureCode.duplicate,
         // FKs y checks violados equivalen a datos inválidos del cliente.
         '23503' || '23514' || '23502' => DataFailureCode.invalidData,

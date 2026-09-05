@@ -517,6 +517,10 @@
   "companyCandidateNoPresentation": "Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).",
   "dataFailureInvalidCuit": "Ese CUIT no es válido: revisá el dígito verificador.",
   "dataFailureSecondFactor": "Esta acción necesita que inicies sesión con segundo factor.",
+  "dataFailureAmbiguousCompany": "Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.",
+  "@dataFailureAmbiguousCompany": {
+    "description": "TFMUL (0031): la cuenta integra más de una empresa y la lectura falla cerrada en vez de elegir una"
+  },
   "companyVerifiedBadgeLabel": "Empresa verificada",
   "@companyVerifiedBadgeLabel": {
     "description": "Texto del distintivo de empresa verificada (T-029)"

@@ -2110,6 +2110,12 @@ abstract class AppLocalizations {
   /// **'Esta acción necesita que inicies sesión con segundo factor.'**
   String get dataFailureSecondFactor;
 
+  /// TFMUL (0031): la cuenta integra más de una empresa y la lectura falla cerrada en vez de elegir una
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.'**
+  String get dataFailureAmbiguousCompany;
+
   /// Texto del distintivo de empresa verificada (T-029)
   ///
   /// In es, this message translates to:

@@ -1148,6 +1148,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Esta acción necesita que inicies sesión con segundo factor.';
 
   @override
+  String get dataFailureAmbiguousCompany =>
+      'Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.';
+
+  @override
   String get companyVerifiedBadgeLabel => 'Empresa verificada';
 
   @override

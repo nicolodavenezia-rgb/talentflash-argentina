@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/networking/supabase_client_provider.dart';
+import '../../authentication/providers/auth_providers.dart';
 import '../../companies/data/company_access_repository.dart';
 import '../../companies/data/supabase_company_access_repository.dart';
 import '../data/file_selector_avatar_picker.dart';
@@ -70,6 +71,10 @@ final candidatePublicProfileProvider = FutureProvider.autoDispose
 /// "pendiente" con datos PROPIOS, nunca del candidato).
 final ownCompanyVerificationProvider =
     FutureProvider.autoDispose<CompanyVerificationStatus?>((ref) {
+      // Misma razón que en `myCompanyVerificationProvider` (0031): sin esta
+      // dependencia el valor cacheado sobrevive a un cierre de sesión y la
+      // cuenta siguiente ve el estado de verificación de la anterior.
+      ref.watch(authStatusProvider);
       return ref
           .watch(companyAccessRepositoryProvider)
           .fetchOwnVerificationStatus();

@@ -335,6 +335,7 @@ String _failureMessage(AppLocalizations l10n, Object? error) {
       : DataFailure(DataFailureCode.unknown, debugDetail: '$error');
   return switch (failure.code) {
     DataFailureCode.secondFactorRequired => l10n.dataFailureSecondFactor,
+    DataFailureCode.ambiguousCompany => l10n.dataFailureAmbiguousCompany,
     DataFailureCode.notAllowed => l10n.dataFailureNotAllowed,
     DataFailureCode.invalidCuit => l10n.dataFailureInvalidCuit,
     DataFailureCode.invalidData ||

@@ -25,7 +25,14 @@ enum CompanyVerificationStatus {
 /// disponible" usando SOLO datos propios de la empresa (nunca del candidato).
 /// El CRUD completo de empresa es T-026 (Bloque E).
 abstract interface class CompanyAccessRepository {
-  /// Estado de verificación de la primera empresa de la que el caller es
-  /// miembro, o null si todavía no integra ninguna.
+  /// Estado de verificación de LA empresa del caller.
+  ///
+  /// - Sin ninguna empresa: `null`.
+  /// - Con una: su estado exacto (o `null` si la base informa un valor que este
+  ///   enum no conoce — un estado desconocido NO se muestra como verificado).
+  /// - Con más de una: lanza `DataFailure(DataFailureCode.ambiguousCompany)`.
+  ///   NO elige una. La versión anterior devolvía "la primera", que era la que
+  ///   el planner tuviera a mano, y podía informar el estado de la empresa
+  ///   equivocada.
   Future<CompanyVerificationStatus?> fetchOwnVerificationStatus();
 }
