@@ -38,6 +38,10 @@ jobs:
       - run: npm run db:reset
       - run: npm run db:lint
       - run: npm run db:test
+      # Carreras reales de las tres puertas que crean una membresía (0031).
+      # No va en pgTAP: cada archivo de ahí corre dentro de UNA transacción y
+      # una carrera entre dos transacciones no se puede simular ahí adentro.
+      - run: npm run db:concurrency
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
