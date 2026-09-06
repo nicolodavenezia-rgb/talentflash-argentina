@@ -62,10 +62,11 @@ Del segundo factor hay una mitad y falta la otra, y conviene no confundirlas. La
 el claim `aal = aal2` del JWT además del rol admin, con comparación exacta y
 fallo cerrado si el claim falta o trae otro nivel, y `config.toml` habilita el
 enrolamiento TOTP para que ese nivel sea alcanzable. Lo que no existe es la
-**experiencia**: no hay pantalla de alta, gestión ni recuperación del segundo
-factor, así que hoy quien revisa lo activa por fuera de la app y vuelve a
-entrar. El guard que se ve en `/admin/verificaciones` es visual: esconde la
-cola, no autoriza nada. Del Bloque D queda pendiente el soporte
+**experiencia**: la app solo **lee** el nivel de la sesión; no da de alta un
+factor, no emite el desafío y no lo verifica, así que su sesión se queda en
+`aal1` y la cola de `/admin/verificaciones` no se puede trabajar desde la app
+hasta que ese flujo exista. El guard que se ve ahí es visual: esconde la cola y
+explica por qué, pero no autoriza nada — la autorización la aplica el servidor. Del Bloque D queda pendiente el soporte
 de avatares WebP: la Edge Function los rechaza con `unsupported_format`
 (la librería de imágenes no los decodifica), así que el whitelist efectivo hoy
 es JPEG/PNG.
