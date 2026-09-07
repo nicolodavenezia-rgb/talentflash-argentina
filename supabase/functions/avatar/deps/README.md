@@ -106,9 +106,69 @@ node supabase/functions/avatar/deps/sync.mjs --check              # sin red: con
 node supabase/functions/avatar/deps/sync.mjs --update             # descarga a un temporal y MUESTRA qué cambiaría; no escribe
 node supabase/functions/avatar/deps/sync.mjs --update --accept    # aplica los cambios mostrados, solo si todas las descargas fueron válidas
 node --test supabase/functions/avatar/deps/sync.spec.mjs          # pruebas del sincronizador, sin red
-deno check --config supabase/functions/avatar/deno.json supabase/functions/avatar/index.ts
-deno info --config supabase/functions/avatar/deno.json supabase/functions/avatar/index.ts   # no debe listar ningún https:// ni node:
+node scripts/edge-offline-guard.mjs                               # guard: el grafo resuelto debe ser 100% local
+node --test scripts/edge-offline-guard.spec.mjs                   # pruebas del guard, sin red
 ```
+
+## El guard del grafo offline
+
+`scripts/edge-offline-guard.mjs` es lo que impide que esta invariante se pierda
+en silencio. Antes, la comprobación era `deno info` y mirar la salida a ojo; el
+runner de CI tiene internet, así que un import remoto reintroducido resolvía
+bien y la corrida quedaba verde.
+
+El guard le pide a Deno el grafo **realmente resuelto** (`deno info --json`) en
+vez de hacer un grep sobre el texto, de modo que también ve los imports
+indirectos, los re-exports y lo que llega vía import map. Rechaza cualquier
+módulo cuyo especificador no sea `file:` — eso cubre `http:`, `https:`, `npm:`,
+`jsr:` y `node:` — y exige que cada archivo resuelto viva dentro del
+repositorio y dentro del directorio de la función. Después type-checkea
+`index.ts` con este import map y corre `sync.mjs --check`.
+
+Cada invocación de Deno usa un `DENO_DIR` temporal y vacío, para que una caché
+previa no pueda hacer pasar una dependencia remota, y se le pasan `--no-remote`,
+`--no-npm` y `--no-lock`. Si Deno llegara a imprimir una sola línea `Download`,
+el guard falla.
+
+Por qué no alcanza con las banderas de Deno:
+
+| Import | `--no-remote` lo frena | `deno check` falla | Lo ve el grafo |
+| --- | --- | --- | --- |
+| `https:` | sí | sí | sí |
+| `npm:` | **no** (bajaba de registry.npmjs.org) | sí | sí |
+| `jsr:` | sí | sí | sí |
+| `node:` | **no** | **no, sale 0** | sí |
+
+`node:` es justamente el especificador que hace que el edge runtime inyecte
+`npm:@types/node` y lo baje del registro en cada arranque frío. Ninguna bandera
+lo ataja: solo se detecta inspeccionando el grafo. Por eso la inspección es el
+control primario y las banderas son defensa en profundidad.
+
+### Por qué el guard no usa `--cached-only`
+
+CI fija Deno en la versión exacta **2.7.14** (`denoland/setup-deno@v2` con
+`deno-version: v2.7.14`, en los dos jobs que lo instalan). En esa versión
+`deno check` **no acepta** `--cached-only`: sale 1 con `unexpected argument
+'--cached-only' found` sin llegar a type-checkear nada, así que pasarla no
+endurecía la invariante — la convertía en un fallo de invocación disfrazado de
+error de tipos. Y en las versiones donde la bandera sí existe tampoco aportaba:
+con un `DENO_DIR` vacío, `deno check --cached-only` bajó 48 archivos de esm.sh y
+salió 0.
+
+Lo que sostiene la invariante offline es, en este orden: la inspección del grafo
+resuelto (lista blanca `file:`, rechazo de `npmPackages` y `redirects`), el
+`DENO_DIR` temporal y vacío, `--no-remote` / `--no-npm` / `--no-lock`, y la
+detección de líneas `Download`. Ninguna de esas piezas dependía de
+`--cached-only`.
+
+Por eso el guard distingue explícitamente un **error real de tipos** (Deno
+imprime `TS#### [ERROR]` y `error: Type checking failed.`) de un **fallo de
+invocación o de versión de Deno** (bandera inexistente, binario ausente): el
+segundo se reporta como problema `DENO`, con la versión de Deno con la que se
+corrió, y nunca como `TYPECHECK`. Confundirlos manda a arreglar el archivo
+equivocado. La versión de `setup-deno` se fija exacta y no como `v2.x`
+justamente porque una versión flotante cambia el conjunto de banderas aceptadas
+sin previo aviso.
 
 Qué garantiza `--check`: recorre `esm.sh/` y `deno.land/` sin seguir enlaces
 y exige que el conjunto real de archivos sea exactamente el del manifest.

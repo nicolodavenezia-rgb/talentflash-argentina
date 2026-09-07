@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Códigos de fallo de la capa de datos (PostgREST/RPC), alineados con el
-/// contrato de errores de las migraciones del Bloque C (`0022`):
+/// Códigos de fallo de la capa de datos (PostgREST/RPC/Storage), alineados con
+/// el contrato de errores de las migraciones:
 /// `42501` → [notAllowed] · `TF018` → [underage] · `TFDAT` → [invalidData] ·
-/// `TFCNS` → [staleConsent] · `23505` → [duplicate].
+/// `TFCNS` → [staleConsent] · `23505` → [duplicate] · `TFCUI` → [invalidCuit] ·
+/// `TFMFA` → [secondFactorRequired] · `TFMUL` → [ambiguousCompany].
 enum DataFailureCode {
   /// Sin permiso: rol equivocado, sesión ausente o columna protegida.
   notAllowed,
@@ -22,6 +23,20 @@ enum DataFailureCode {
 
   /// Violación de unicidad (p. ej. CUIT ya registrado).
   duplicate,
+
+  /// El CUIT no pasa el dígito verificador (`TFCUI`, migración 0025). Antes
+  /// caía en [unknown] y la pantalla mostraba un error genérico para el caso
+  /// más frecuente del formulario de empresa.
+  invalidCuit,
+
+  /// La cuenta integra más de una empresa (`TFMUL`, migración 0031). No se
+  /// resuelve eligiendo una: la lectura falla cerrada y la UI lo explica.
+  ambiguousCompany,
+
+  /// La acción exige una sesión con segundo factor (`TFMFA`, migración 0028).
+  /// Es distinto de [notAllowed]: la cuenta tiene el permiso, le falta el
+  /// nivel de autenticación.
+  secondFactorRequired,
 
   /// Problema de red o timeout.
   network,
@@ -47,12 +62,27 @@ class DataFailure implements Exception {
         'TF018' => DataFailureCode.underage,
         'TFDAT' => DataFailureCode.invalidData,
         'TFCNS' => DataFailureCode.staleConsent,
+        'TFCUI' => DataFailureCode.invalidCuit,
+        'TFMFA' => DataFailureCode.secondFactorRequired,
+        'TFMUL' => DataFailureCode.ambiguousCompany,
         '23505' => DataFailureCode.duplicate,
         // FKs y checks violados equivalen a datos inválidos del cliente.
         '23503' || '23514' || '23502' => DataFailureCode.invalidData,
         _ => DataFailureCode.unknown,
       };
       return DataFailure(code, debugDetail: 'postgrest:${error.code}');
+    }
+    // Las policies del bucket privado rechazan con 4xx de Storage, no con un
+    // SQLSTATE: sin esto, "no podés tocar esa carpeta" llegaba como `unknown`.
+    if (error is StorageException) {
+      final status = int.tryParse('${error.statusCode}');
+      final code = switch (status) {
+        400 || 401 || 403 => DataFailureCode.notAllowed,
+        413 || 415 || 422 => DataFailureCode.invalidData,
+        408 || 429 || 502 || 503 || 504 => DataFailureCode.network,
+        _ => DataFailureCode.unknown,
+      };
+      return DataFailure(code, debugDetail: 'storage:${error.statusCode}');
     }
     if (error is AuthException) {
       return DataFailure(

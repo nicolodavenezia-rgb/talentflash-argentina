@@ -116,6 +116,45 @@ void main() {
     );
   });
 
+  testWidgets(
+    'cuenta en más de una empresa: se explica, no se esconde en el genérico',
+    (tester) async {
+      // `TFMUL` (0031): el servidor se niega a elegir una empresa. Es un
+      // estado sin salida por la app, así que la pantalla tiene que decir cuál
+      // es el problema en vez de mostrar el "no disponible" de siempre, que
+      // invitaría a reintentar para siempre.
+      await pumpCompanyView(
+        tester,
+        companyAccessRepository: FakeCompanyAccessRepository()
+          ..nextFailure = const DataFailure(DataFailureCode.ambiguousCompany),
+      );
+
+      expect(
+        find.textContaining('figura en más de una empresa'),
+        findsOneWidget,
+      );
+      // Y no se filtra ningún dato del candidato ni el detalle de Postgres.
+      expect(find.textContaining('postgrest'), findsNothing);
+    },
+  );
+
+  testWidgets('cualquier otro fallo sigue cayendo en el mensaje genérico', (
+    tester,
+  ) async {
+    await pumpCompanyView(
+      tester,
+      companyAccessRepository: FakeCompanyAccessRepository()
+        ..nextFailure = const DataFailure(DataFailureCode.network),
+    );
+
+    expect(find.textContaining('figura en más de una empresa'), findsNothing);
+    expect(find.text('Candidato no disponible'), findsWidgets);
+    expect(
+      find.textContaining('Puede haber dejado de estar publicado'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('un id malformado ni siquiera llega al servidor', (tester) async {
     final repository = FakeProfileRepository()
       ..publicProfile = testPublicProfile();

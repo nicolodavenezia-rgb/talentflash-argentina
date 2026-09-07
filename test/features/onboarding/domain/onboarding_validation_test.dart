@@ -77,27 +77,38 @@ void main() {
   group('CUIT: normalización y formato aprobado', () {
     test('se normaliza a XX-XXXXXXXX-X', () {
       expect(
-        OnboardingValidation.normalizeCuit('30 71234567 8'),
-        '30-71234567-8',
+        OnboardingValidation.normalizeCuit('30 71234567 1'),
+        '30-71234567-1',
       );
       expect(
-        OnboardingValidation.normalizeCuit('30712345678'),
-        '30-71234567-8',
+        OnboardingValidation.normalizeCuit('30712345671'),
+        '30-71234567-1',
       );
       expect(
-        OnboardingValidation.normalizeCuit('30-71234567-8'),
-        '30-71234567-8',
+        OnboardingValidation.normalizeCuit('30-71234567-1'),
+        '30-71234567-1',
       );
     });
 
-    test('largo incorrecto se rechaza (el dígito verificador es T-027)', () {
+    test('largo incorrecto se rechaza', () {
       expect(OnboardingValidation.validateCuit(''), CuitIssue.empty);
       expect(OnboardingValidation.validateCuit('123'), CuitIssue.wrongLength);
       expect(
-        OnboardingValidation.validateCuit('30-71234567-89'),
+        OnboardingValidation.validateCuit('30-71234567-19'),
         CuitIssue.wrongLength,
       );
-      expect(OnboardingValidation.validateCuit('30-71234567-8'), isNull);
+      expect(OnboardingValidation.validateCuit('30-71234567-1'), isNull);
+    });
+
+    // T-027: el wizard delega en `Cuit`, así que el dígito verificador se
+    // valida ya en el formulario. La cobertura exhaustiva del algoritmo vive
+    // en test/features/companies/domain/cuit_test.dart.
+    test('el dígito verificador se valida desde el wizard', () {
+      expect(
+        OnboardingValidation.validateCuit('30-71234567-8'),
+        CuitIssue.checkDigit,
+      );
+      expect(OnboardingValidation.validateCuit('30-71234567-1'), isNull);
     });
   });
 

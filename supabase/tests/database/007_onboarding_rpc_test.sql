@@ -138,7 +138,7 @@ select throws_ok(
 
 select throws_ok(
   $$ select complete_company_onboarding(
-       'Razón Social SA', 'Fantasía', '30-71234567-8',
+       'Razón Social SA', 'Fantasía', '30-71234567-1',
        'a0000000-0000-4000-8000-000000000001', '1-10',
        'b0000000-0000-4000-8000-000000000001',
        'b1000000-0000-4000-8000-000000000001',
@@ -168,12 +168,12 @@ select throws_ok(
        'b0000000-0000-4000-8000-000000000001',
        'b1000000-0000-4000-8000-000000000001',
        null, 'Nombre Solicitante', 'Dueño', 'owner') $$,
-  'TFDAT', null,
+  'TFCUI', null,
   'NEGATIVO: un CUIT que no tiene 11 números se rechaza');
 
 select throws_ok(
   $$ select complete_company_onboarding(
-       'Razón Social SA', 'Fantasía', '30-70000001-1',
+       'Razón Social SA', 'Fantasía', '30-70000001-6',
        'a0000000-0000-4000-8000-000000000001', '1-10',
        'b0000000-0000-4000-8000-000000000001',
        'b1000000-0000-4000-8000-000000000001',
@@ -183,7 +183,7 @@ select throws_ok(
 
 select throws_ok(
   $$ select complete_company_onboarding(
-       'Razón Social SA', 'Fantasía', '30-71234567-8',
+       'Razón Social SA', 'Fantasía', '30-71234567-1',
        'a0000000-0000-4000-8000-000000000001', 'gigante',
        'b0000000-0000-4000-8000-000000000001',
        'b1000000-0000-4000-8000-000000000001',
@@ -193,7 +193,7 @@ select throws_ok(
 
 select throws_ok(
   $$ select complete_company_onboarding(
-       'Razón Social SA', 'Fantasía', '30-71234567-8',
+       'Razón Social SA', 'Fantasía', '30-71234567-1',
        'a0000000-0000-4000-8000-000000000001', '1-10',
        'b0000000-0000-4000-8000-000000000001',
        'b1000000-0000-4000-8000-000000000002',
@@ -204,7 +204,7 @@ select throws_ok(
 -- El CUIT llega con espacios: la RPC lo normaliza a XX-XXXXXXXX-X.
 select lives_ok(
   $$ select complete_company_onboarding(
-       'Razón Social SA', 'Fantasía Gastro', '30 71234567 8',
+       'Razón Social SA', 'Fantasía Gastro', '30 71234567 1',
        'a0000000-0000-4000-8000-000000000001', '11-50',
        'b0000000-0000-4000-8000-000000000001',
        'b1000000-0000-4000-8000-000000000001',
@@ -217,7 +217,7 @@ select results_eq(
      from company_profiles cp
      join company_members cm on cm.company_id = cp.id
      where cm.profile_id = auth.uid() $$,
-  $$ values ('30-71234567-8'::text, 'pending'::text, 'owner'::text,
+  $$ values ('30-71234567-1'::text, 'pending'::text, 'owner'::text,
              'Dueño'::text, 'owner'::text) $$,
   'POSITIVO: CUIT normalizado, estado pending y owner con cargo/relación');
 

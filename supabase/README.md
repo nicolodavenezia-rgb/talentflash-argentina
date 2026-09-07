@@ -2,7 +2,7 @@
 
 Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
 
-- `migrations/` — 24 migraciones SQL versionadas (0001–0024), generadas desde
+- `migrations/` — 31 migraciones SQL versionadas (0001–0031), generadas desde
   `docs/DATA_MODEL.md` (fuente de verdad). Regla: ningún cambio de esquema por
   dashboard; siempre migración versionada (T-005). La `0019` (Bloque B, T-015)
   sincroniza `profiles.role` con el claim `app_metadata.role` del JWT. Las del
@@ -25,6 +25,22 @@ Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
   `conv_participants_select`, RPCs `get_my_candidate_profile` y
   `update_my_candidate_profile`) y `0024` (bucket `avatars` **privado**:
   lectura por `can_read_avatar_object`, escritura solo vía la Edge Function).
+  Las del Bloque E: `0025` (dígito verificador del CUIT, con triggers que lo
+  imponen por cualquier puerta y no solo por las RPC), `0026` (arreglo de
+  `cm_manage`, resolución server-side de la empresa del caller con
+  `private.caller_company` y RPC de edición de perfil y de equipo), `0027`
+  (`company_invitations` con el código de un solo uso guardado como SHA-256),
+  `0028` (circuito de verificación de empresa: guarda de segundo factor
+  `private.caller_is_aal2`, revisión con rol admin leído de `profiles`, motivo
+  de lista cerrada y escritura en `admin_audit_log`), `0029` (bucket privado
+  `company-docs` para la constancia de ARCA, con el path derivado server-side),
+  `0030` (endurecimiento salido de la auditoría: revoca `TRUNCATE`, `TRIGGER` y
+  `REFERENCES` a `anon`/`authenticated` en `public`, y pone `for update` sobre
+  la empresa en las dos RPC que la escriben) y `0031` (el alta de miembros solo
+  por invitación, bootstrap u onboarding —sin policy y sin privilegio de
+  `INSERT`—, las tres puertas serializadas sobre `profiles` con
+  `private.lock_membership_slot`, y `company_can_publish` conectada a las
+  policies de `jobs` y a la rama de video de `videos_company_select`).
 - `functions/` — Edge Functions (catálogo en ARCHITECTURE.md §3.4). Existe
   `avatar/` (Bloque D, T-022): valida JWT + rol candidato y magic bytes,
   re-encodea la imagen sin EXIF, genera el thumbnail 128×128 y escribe el
@@ -33,7 +49,11 @@ Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
   ledger de consentimientos y reconsentimiento (`008`), preferencias/legales y
   coherencia del seed con la derivación (`009`), perfil de candidato y
   disponibilidad horaria (`010`), proyección para empresas con whitelist
-  exacta de claves (`011`) y lectura del bucket de avatares (`012`). Ojo:
+  exacta de claves (`011`), lectura del bucket de avatares (`012`),
+  endurecimiento de los helpers RLS del Bloque D (`013`), dígito verificador
+  del CUIT con casos reales (`014`), empresa y equipo (`015`), invitaciones de
+  un solo uso (`016`), verificación manual con su guarda de segundo factor
+  (`017`) y puerta de publicación de ofertas (`018`). Ojo:
   `001_rls_test.sql` fue endurecido en el Bloque D — el test "empresa
   verificada ve perfil publicado" se **invirtió** deliberadamente a "la
   empresa ya no lee la fila cruda" (T-024).
@@ -65,13 +85,22 @@ npm run db:start
 npm run db:reset
 npm run db:lint
 npm run db:test
+npm run db:concurrency   # Bloque E: carreras con dos sesiones psql reales (0031)
 npm run functions:test   # Bloque D: deno test de la Edge Function avatar (requiere Deno 2)
 npm run storage:test     # Bloque D: integración real contra el stack local
 ```
 
 `db:test` ejecuta los mismos archivos pgTAP directamente dentro del contenedor
-PostgreSQL y falla ante errores SQL o líneas TAP `not ok`. El runner alternativo
+PostgreSQL y falla ante errores SQL, ante líneas TAP `not ok` y ante un
+`plan(N)` que no coincida con las aserciones corridas. El runner alternativo
 del CLI queda disponible como `npm run db:test:supabase`.
+
+`db:concurrency` (`scripts/db-concurrency-test.mjs`) cubre lo que pgTAP no
+puede: cada archivo de `tests/database/` corre dentro de **una** transacción, y
+una carrera entre dos transacciones no se puede simular ahí adentro porque dos
+llamadas seguidas comparten snapshot y locks. El script abre procesos `psql`
+separados y los cruza de verdad, comprobando en `pg_stat_activity` que la
+segunda sesión esté esperando un lock y no infiriéndolo del reloj.
 
 `functions:test` corre los tests unitarios de la Edge Function `avatar` (magic
 bytes + parser EXIF) con Deno. `storage:test` (`scripts/storage-test.mjs`)
@@ -89,6 +118,14 @@ las resuelve. Esto hace reproducible el arranque del edge runtime y lo
 independiza de cualquier antivirus o proxy que intercepte TLS en la máquina de
 desarrollo. Verificación sin red: `node supabase/functions/avatar/deps/sync.mjs
 --check`; detalles y actualización en `functions/avatar/deps/README.md`.
+
+Esa invariante la protege `scripts/edge-offline-guard.mjs`, que CI corre en el
+job `edge-guard`: le pide a Deno el grafo realmente resuelto de `index.ts` y
+falla si aparece cualquier especificador `http:`, `https:`, `npm:`, `jsr:` o
+`node:`, si algún módulo resuelve fuera del directorio de la función, si el
+type-check se rompe o si los archivos vendorizados dejan de coincidir con el
+manifest. Usa un `DENO_DIR` temporal y vacío para que una caché previa no
+pueda ocultar una dependencia remota.
 
 `env/dev.json` contiene solo la URL y la publishable/anon key del stack local.
 Es información pública de desarrollo; nunca se guarda la `service_role`.

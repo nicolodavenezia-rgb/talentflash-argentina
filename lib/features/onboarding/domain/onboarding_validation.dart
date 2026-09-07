@@ -2,11 +2,13 @@
 /// también server-side (migración 0022): esto es UX temprana, no seguridad.
 library;
 
+import '../../companies/domain/cuit.dart';
+
+export '../../companies/domain/cuit.dart' show CuitIssue;
+
 enum FullNameIssue { empty, tooShort }
 
 enum BirthDateIssue { empty, invalidFormat, inFuture, underage }
-
-enum CuitIssue { empty, wrongLength }
 
 enum WebsiteIssue { invalid }
 
@@ -74,26 +76,13 @@ abstract final class OnboardingValidation {
   }
 
   /// Deja solo dígitos y, si son 11, aplica el formato `XX-XXXXXXXX-X` que
-  /// exige la base. La validación del dígito verificador es T-027 (Bloque E).
-  static String normalizeCuit(String raw) {
-    final digits = raw.replaceAll(RegExp('[^0-9]'), '');
-    if (digits.length != 11) {
-      return digits;
-    }
-    return '${digits.substring(0, 2)}-${digits.substring(2, 10)}'
-        '-${digits.substring(10)}';
-  }
+  /// exige la base. Delega en [Cuit] para que el wizard y el resto de la app
+  /// compartan una única implementación (T-027).
+  static String normalizeCuit(String raw) => Cuit.formatPartial(raw);
 
-  static CuitIssue? validateCuit(String raw) {
-    final digits = raw.replaceAll(RegExp('[^0-9]'), '');
-    if (digits.isEmpty) {
-      return CuitIssue.empty;
-    }
-    if (digits.length != 11) {
-      return CuitIssue.wrongLength;
-    }
-    return null;
-  }
+  /// Formato **y** dígito verificador, la misma regla que aplica el trigger
+  /// `normalize_company_cuit` de la migración `0025`.
+  static CuitIssue? validateCuit(String raw) => Cuit.validate(raw);
 
   /// El sitio web es opcional; si está, se completa el esquema y se valida.
   static String? normalizeWebsite(String raw) {

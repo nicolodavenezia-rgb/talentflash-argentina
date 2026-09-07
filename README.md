@@ -11,7 +11,8 @@ hotelería, CABA + GBA). App Flutter multiplataforma + Supabase.
 ## Estado
 
 **Bloque A — Fundaciones**, **Bloque B — Auth (primera parte)**, **Bloque C —
-Onboarding + consentimientos** y **Bloque D — Perfiles** completos en local
+Onboarding + consentimientos**, **Bloque D — Perfiles** y **Bloque E — Empresas
++ verificación de CUIT** completos en local
 (ver [docs/ROADMAP.md](docs/ROADMAP.md)): esquema SQL con RLS, tooling, CI,
 autenticación con correo y contraseña, y el onboarding completo de candidato y
 empresa — wizards con reanudación, verificación de mayoría de 18 server-side,
@@ -29,10 +30,43 @@ una proyección con whitelist de campos, fail-closed (la policy que dejaba leer
 la fila cruda fue eliminada, T-024); y score de completitud calculado en el
 cliente, separado del "listo para postularse" server-side (T-025).
 
+Del Bloque E (migraciones `0025`–`0031`): validación de CUIT por dígito
+verificador en cliente y servidor (T-027); CRUD de empresa y equipo por RPC con
+la empresa resuelta server-side, e invitaciones de un solo uso (T-026);
+verificación manual de empresa con constancia de ARCA en un bucket **privado**,
+cola administrativa en `/admin/verificaciones` que exige **segundo factor**
+(AAL2) y registro append-only de cada decisión (T-028); y el distintivo
+"empresa verificada", que se muestra solo con el estado `approved` exacto
+(T-029).
+
+El criterio de publicación quedó **cerrado en `0031`**, no diferido:
+`public.company_can_publish` —una lista blanca de `verification_status =
+'approved'` exacto y `deleted_at is null`— gobierna las policies
+`jobs_company_write`, `jobs_company_update`, `jobs_public_select` y la rama de
+video de `videos_company_select`. Una empresa sin verificar puede tener
+borradores pero no ofertas `active`, y una oferta activa deja de ser pública en
+el mismo momento en que su empresa pierde la aprobación (evidencia: test pgTAP
+`018`). La misma migración deja el alta de miembros **solo** por invitación de
+un solo uso, bootstrap u onboarding, y serializa las tres puertas sobre la fila
+de `profiles` de la cuenta. Sigue siendo de T-030 la oferta en sí: el CRUD
+completo, las transiciones `paused`/`expired`/`closed`, el formulario y las
+reglas salariales.
+
 Todavía **no** están hechos (y no se simulan en la UI): Google y Apple (T-012),
 la pantalla in-app de cambio de contraseña, que depende del enlace profundo
-(T-013), MFA, CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
-FCM/APNs y cualquier proyecto remoto. Del Bloque D queda pendiente el soporte
+(T-013), CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
+FCM/APNs y cualquier proyecto remoto.
+
+Del segundo factor hay una mitad y falta la otra, y conviene no confundirlas. La
+**exigencia** existe y es server-side: revisar una verificación de empresa pide
+el claim `aal = aal2` del JWT además del rol admin, con comparación exacta y
+fallo cerrado si el claim falta o trae otro nivel, y `config.toml` habilita el
+enrolamiento TOTP para que ese nivel sea alcanzable. Lo que no existe es la
+**experiencia**: la app solo **lee** el nivel de la sesión; no da de alta un
+factor, no emite el desafío y no lo verifica, así que su sesión se queda en
+`aal1` y la cola de `/admin/verificaciones` no se puede trabajar desde la app
+hasta que ese flujo exista. El guard que se ve ahí es visual: esconde la cola y
+explica por qué, pero no autoriza nada — la autorización la aplica el servidor. Del Bloque D queda pendiente el soporte
 de avatares WebP: la Edge Function los rechaza con `unsupported_format`
 (la librería de imágenes no los decodifica), así que el whitelist efectivo hoy
 es JPEG/PNG.
@@ -167,12 +201,21 @@ flutter test
 npm run functions:test   # deno test de la Edge Function avatar (magic bytes + parser EXIF)
 npm run storage:test     # integración real contra el bucket avatars (upload, thumbnail,
                          # URL firmada vigente y vencida, permisos, DELETE)
+
+# Bloque E — requiere el stack local levantado (db:start), sin Deno:
+npm run db:concurrency   # carreras reales entre las tres puertas que crean una membresía
+                         # (0031), con dos sesiones psql simultáneas: dos códigos para la
+                         # misma cuenta, onboarding y bootstrap concurrentes, canje cruzado
 ```
 
 La CI (`.github/workflows/ci.yml`) corre formato + analyze + tests Flutter,
-reset/lint/pgTAP de Supabase, `functions:test` y `storage:test` (con
-`denoland/setup-deno@v2`) y scan de secretos (gitleaks) en cada push/PR
-cuando el repo tenga remoto en GitHub.
+reset/lint/pgTAP de Supabase, `db:concurrency`, `functions:test` y
+`storage:test` (con `denoland/setup-deno@v2` fijado a la versión exacta
+**v2.7.14** en los dos jobs que instalan Deno: una versión flotante cambia las
+banderas aceptadas sin aviso), el guard del grafo offline de la Edge Function
+(`scripts/edge-offline-guard.mjs`, documentado en
+`supabase/functions/avatar/deps/README.md`) y scan de secretos (gitleaks) en
+cada push/PR cuando el repo tenga remoto en GitHub.
 
 ## Estructura
 
@@ -184,9 +227,11 @@ lib/
 │                   # legal, notifications, profiles, companies, moderation…
 └── shared/         # widgets/modelos compartidos (fallos tipados, banners)
 supabase/
-├── migrations/     # 0001–0024 — esquema completo + RLS deny-by-default
+├── migrations/     # 0001–0031 — esquema completo + RLS deny-by-default
 ├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents
-│                   # + perfiles, proyección de empresa y storage de avatares)
+│                   # + perfiles, proyección para empresas y storage de avatares
+│                   # + CUIT, empresa y equipo, invitaciones, verificación
+│                   # manual y puerta de publicación de ofertas)
 ├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)
 └── functions/      # Edge Functions (avatar — T-022; el resto llega con sus bloques)
 docs/               # los 8 documentos técnicos (fuente de verdad) + método de

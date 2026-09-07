@@ -249,10 +249,12 @@
   "tradeNameLabel": "Nombre de fantasía",
   "tradeNameError": "Ingresá el nombre de fantasía.",
   "cuitLabel": "CUIT",
-  "cuitHint": "30-12345678-9",
-  "cuitHelp": "Once números. La verificación de la empresa se hace después, con revisión humana.",
+  "cuitHint": "30-12345678-1",
+  "cuitHelp": "Once números. Comprobamos el dígito verificador; que la empresa sea tuya lo revisa una persona después.",
   "cuitErrorRequired": "Ingresá el CUIT de la empresa.",
   "cuitErrorLength": "El CUIT debe tener 11 números.",
+  "cuitErrorCharacters": "El CUIT solo lleva números, guiones y espacios.",
+  "cuitErrorCheckDigit": "Ese CUIT no existe: el último número no se corresponde con los anteriores. Revisalo.",
   "companySizeLabel": "Tamaño de la empresa",
   "companySize1to10": "1 a 10 personas",
   "companySize11to50": "11 a 50 personas",
@@ -512,5 +514,102 @@
   "companyCandidateRejectedBody": "Mientras la verificación no esté aprobada no es posible ver candidatos. Corregí los datos y volvé a enviarla.",
   "companyCandidateLoadError": "No pudimos cargar el perfil. Revisá tu conexión y reintentá.",
   "companyCandidatePresentationReady": "Tiene una presentación lista para ver (la reproducción llega en una etapa posterior).",
-  "companyCandidateNoPresentation": "Todavía no cargó una presentación (es opcional y no dice nada de su candidatura)."
+  "companyCandidateNoPresentation": "Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).",
+  "dataFailureInvalidCuit": "Ese CUIT no es válido: revisá el dígito verificador.",
+  "dataFailureSecondFactor": "Esta acción necesita que inicies sesión con segundo factor.",
+  "dataFailureAmbiguousCompany": "Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.",
+  "@dataFailureAmbiguousCompany": {
+    "description": "TFMUL (0031): la cuenta integra más de una empresa y la lectura falla cerrada en vez de elegir una"
+  },
+  "companyVerifiedBadgeLabel": "Empresa verificada",
+  "@companyVerifiedBadgeLabel": {
+    "description": "Texto del distintivo de empresa verificada (T-029)"
+  },
+  "companyVerifiedBadgeTooltip": "Verificamos el CUIT de esta empresa con su constancia de ARCA.",
+  "companyVerifiedBadgeSemantics": "Empresa verificada: verificamos su CUIT con la constancia de ARCA.",
+  "@companyVerifiedBadgeSemantics": {
+    "description": "Etiqueta del distintivo para el lector de pantalla; el ícono es decorativo y no se anuncia aparte"
+  },
+  "companyVerificationTitle": "Verificación de la empresa",
+  "companyVerificationErrorTitle": "No pudimos completar la acción",
+  "companyVerificationFormTitle": "Pedir la verificación",
+  "companyVerificationFormHelp": "Confirmá el CUIT con el que registraste la empresa y adjuntá tu constancia de ARCA. La revisa una persona del equipo: no consultamos el padrón automáticamente.",
+  "companyVerificationAttach": "Adjuntar constancia de ARCA",
+  "companyVerificationAttached": "Constancia adjuntada ({formato}).",
+  "@companyVerificationAttached": {
+    "description": "Confirmación de que la constancia se subió al bucket privado",
+    "placeholders": {
+      "formato": {
+        "type": "String",
+        "example": "pdf"
+      }
+    }
+  },
+  "companyVerificationAttachedEarlier": "Ya hay una constancia adjunta de un envío anterior. Si no adjuntás otra, se usa esa.",
+  "companyVerificationSubmit": "Enviar solicitud",
+  "companyVerificationSubmitted": "Recibimos tu solicitud. Te avisamos apenas la revisemos.",
+  "companyVerificationNotOwner": "Solo quien creó la empresa puede pedir la verificación.",
+  "companyVerificationPendingTitle": "Tu empresa todavía no está verificada",
+  "companyVerificationPendingBody": "Hasta que verifiquemos el CUIT vas a poder preparar todo, pero no publicar búsquedas.",
+  "companyVerificationInReviewTitle": "Estamos revisando tu solicitud",
+  "companyVerificationInReviewBody": "Ya recibimos el CUIT y la constancia. Te avisamos apenas haya respuesta; mientras tanto no hace falta que envíes nada más.",
+  "companyVerificationApprovedTitle": "Tu empresa está verificada",
+  "companyVerificationApprovedBody": "Verificamos el CUIT con tu constancia de ARCA.",
+  "companyVerificationRejectedTitle": "La verificación fue rechazada",
+  "companyVerificationRejectedBody": "Motivo: {motivo} Podés corregirlo y volver a enviarla.",
+  "@companyVerificationRejectedBody": {
+    "description": "Explicación del rechazo con el motivo de la lista cerrada",
+    "placeholders": {
+      "motivo": {
+        "type": "String",
+        "example": "La constancia no se lee bien."
+      }
+    }
+  },
+  "rejectionCuitMismatch": "el CUIT no coincide con el de la constancia.",
+  "rejectionUnreadableDocument": "la constancia no se lee bien.",
+  "rejectionExpiredDocument": "la constancia está vencida.",
+  "rejectionMissingData": "faltan datos de la empresa.",
+  "rejectionCompanyNotOperating": "la empresa figura como no operativa.",
+  "rejectionOther": "hace falta revisar la documentación.",
+  "verificationStatusPending": "Pendientes",
+  "verificationStatusInReview": "En revisión",
+  "verificationStatusApproved": "Aprobadas",
+  "verificationStatusRejected": "Rechazadas",
+  "adminVerificationsTitle": "Verificaciones de empresa",
+  "adminVerificationsMfaTitle": "Necesitás segundo factor",
+  "adminVerificationsMfaBody": "Para revisar verificaciones hay que iniciar sesión con segundo factor. Cerrá sesión, activá el segundo factor y volvé a entrar.",
+  "adminVerificationsEmpty": "No hay solicitudes en este estado.",
+  "adminVerificationsErrorTitle": "No pudimos completar la acción",
+  "adminVerificationsResolved": "Solicitud resuelta.",
+  "adminVerificationsCuit": "CUIT declarado: {cuit}",
+  "@adminVerificationsCuit": {
+    "description": "CUIT que envió la empresa en la solicitud",
+    "placeholders": {
+      "cuit": {
+        "type": "String",
+        "example": "30-70000001-6"
+      }
+    }
+  },
+  "adminVerificationsWithDocument": "Adjuntó constancia de ARCA.",
+  "adminVerificationsNoDocument": "Sin constancia adjunta.",
+  "adminVerificationsReason": "Motivo del rechazo: {motivo}",
+  "@adminVerificationsReason": {
+    "description": "Motivo con el que se rechazó una solicitud ya resuelta",
+    "placeholders": {
+      "motivo": {
+        "type": "String",
+        "example": "la constancia no se lee bien."
+      }
+    }
+  },
+  "adminVerificationsReasonTitle": "¿Por qué se rechaza?",
+  "adminVerificationsApprove": "Aprobar",
+  "adminVerificationsReject": "Rechazar",
+  "adminVerificationsOpenDocument": "Ver la constancia",
+  "adminVerificationsDocumentTitle": "Constancia de ARCA",
+  "adminVerificationsDocumentHelp": "Copiá este enlace y abrilo en el navegador. Vence en 5 minutos: si expira, volvé a pedirlo desde acá.",
+  "adminVerificationsDocumentError": "No pudimos generar el enlace a la constancia. Reintentá en unos minutos.",
+  "adminVerificationsDocumentClose": "Cerrar"
 }

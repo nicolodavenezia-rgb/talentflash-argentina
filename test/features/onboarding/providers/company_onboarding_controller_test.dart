@@ -41,7 +41,7 @@ void main() {
     controller.submitCompanyData(
       legalName: 'Gastro SA',
       tradeName: 'La Fantasía',
-      cuit: '30-71234567-8',
+      cuit: '30-71234567-1',
       sectorId: FakeCatalogRepository.gastronomiaSectorId,
       sizeRange: CompanySizeRange.from11To50,
     );
@@ -109,7 +109,7 @@ void main() {
       await Future.wait([first, second]);
 
       expect(setup.onboarding.completeCompanyCalls, 1);
-      expect(setup.onboarding.lastCompanyData?.cuit, '30-71234567-8');
+      expect(setup.onboarding.lastCompanyData?.cuit, '30-71234567-1');
       expect(
         setup.onboarding.lastCompanyData?.applicantRelationship,
         CompanyRelationship.owner,

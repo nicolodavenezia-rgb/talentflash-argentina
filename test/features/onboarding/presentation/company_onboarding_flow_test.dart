@@ -55,7 +55,7 @@ void main() {
     expect(find.text('El CUIT debe tener 11 números.'), findsOneWidget);
     expect(find.text('Paso 2 de 6'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextFormField).at(2), '30 71234567 8');
+    await tester.enterText(find.byType(TextFormField).at(2), '30 71234567 1');
     await ensureAndTap(tester, find.text('Continuar'));
 
     // Paso 3 — ubicación + web opcional.
@@ -106,7 +106,7 @@ void main() {
     final data = setup.onboarding.lastCompanyData!;
     expect(data.legalName, 'Gastro SA');
     expect(data.tradeName, 'La Fantasía');
-    expect(data.cuit, '30-71234567-8');
+    expect(data.cuit, '30-71234567-1');
     expect(data.sizeRange, CompanySizeRange.from11To50);
     expect(data.applicantRelationship, CompanyRelationship.owner);
     expect(data.website, 'https://lafantasia.com.ar');
@@ -120,7 +120,7 @@ void main() {
 
       await tester.enterText(find.byType(TextFormField).at(0), 'Gastro SA');
       await tester.enterText(find.byType(TextFormField).at(1), 'La Fantasía');
-      await tester.enterText(find.byType(TextFormField).at(2), '30-70000001-1');
+      await tester.enterText(find.byType(TextFormField).at(2), '30-70000001-6');
       await selectDropdownOption(
         tester,
         find.text('Sector o rubro'),

@@ -121,7 +121,7 @@ void main() {
           const CompanyOnboardingData(
             legalName: 'Gastro SA',
             tradeName: 'La Fantasía',
-            cuit: '30 71234567 8',
+            cuit: '30 71234567 1',
             sectorId: 'sector-1',
             sizeRange: CompanySizeRange.from11To50,
             provinceId: 'prov-1',
@@ -136,7 +136,7 @@ void main() {
         expect(companyId, 'c0000000-0000-4000-8000-000000000099');
         final body =
             jsonDecode(restRequests.single.body) as Map<String, dynamic>;
-        expect(body['p_cuit'], '30-71234567-8');
+        expect(body['p_cuit'], '30-71234567-1');
         expect(body['p_size_range'], '11-50');
         expect(body['p_website'], 'https://lafantasia.com.ar');
         expect(body['p_applicant_relationship'], 'owner');

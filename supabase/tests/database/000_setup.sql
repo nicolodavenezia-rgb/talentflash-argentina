@@ -40,10 +40,41 @@ begin
 end;
 $$;
 
+-- Variante con nivel de autenticacion explicito (T-028). `authenticate_as` deja
+-- los claims sin `aal` a proposito: es el caso de una sesion normal, y es lo
+-- que tiene que rechazar cualquier guarda de AAL2. Con `p_aal` se puede armar
+-- tambien el claim ausente (null), el correcto ('aal2'), uno con la caja
+-- equivocada ('AAL2') o uno desconocido ('aal3').
+create or replace function tests.authenticate_as_aal(p_identifier text, p_aal text)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+declare
+  user_id uuid;
+  claims jsonb;
+begin
+  select i.id into strict user_id
+  from tests.identifiers i
+  where i.identifier = p_identifier;
+
+  claims := jsonb_build_object('sub', user_id, 'role', 'authenticated');
+  if p_aal is not null then
+    claims := claims || jsonb_build_object('aal', p_aal);
+  end if;
+
+  perform set_config('request.jwt.claim.sub', user_id::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config('request.jwt.claims', claims::text, true);
+  execute 'set local role authenticated';
+end;
+$$;
+
 grant usage on schema tests to anon, authenticated;
 grant select on tests.identifiers to anon, authenticated;
 grant execute on function tests.get_uuid(text) to anon, authenticated;
 grant execute on function tests.authenticate_as(text) to anon, authenticated;
+grant execute on function tests.authenticate_as_aal(text, text) to anon, authenticated;
 
 insert into tests.identifiers (identifier, id)
 select 'user_cand_pub', id from auth.users where email = 'candidato1@dev.talentflash.test'
