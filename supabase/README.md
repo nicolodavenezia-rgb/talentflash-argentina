@@ -119,6 +119,14 @@ independiza de cualquier antivirus o proxy que intercepte TLS en la máquina de
 desarrollo. Verificación sin red: `node supabase/functions/avatar/deps/sync.mjs
 --check`; detalles y actualización en `functions/avatar/deps/README.md`.
 
+Esa invariante la protege `scripts/edge-offline-guard.mjs`, que CI corre en el
+job `edge-guard`: le pide a Deno el grafo realmente resuelto de `index.ts` y
+falla si aparece cualquier especificador `http:`, `https:`, `npm:`, `jsr:` o
+`node:`, si algún módulo resuelve fuera del directorio de la función, si el
+type-check se rompe o si los archivos vendorizados dejan de coincidir con el
+manifest. Usa un `DENO_DIR` temporal y vacío para que una caché previa no
+pueda ocultar una dependencia remota.
+
 `env/dev.json` contiene solo la URL y la publishable/anon key del stack local.
 Es información pública de desarrollo; nunca se guarda la `service_role`.
 
