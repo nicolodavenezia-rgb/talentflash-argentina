@@ -214,8 +214,11 @@ reset/lint/pgTAP de Supabase, `db:concurrency`, `functions:test` y
 **v2.7.14** en los dos jobs que instalan Deno: una versión flotante cambia las
 banderas aceptadas sin aviso), el guard del grafo offline de la Edge Function
 (`scripts/edge-offline-guard.mjs`, documentado en
-`supabase/functions/avatar/deps/README.md`) y scan de secretos (gitleaks) en
-cada push/PR cuando el repo tenga remoto en GitHub.
+`supabase/functions/avatar/deps/README.md`) y scan de secretos (gitleaks).
+
+Los disparadores son `push` a `main`/`develop` y `pull_request`. En la práctica:
+una rama **sin PR abierto** no dispara ninguna corrida, y una rama **con el PR ya
+abierto** dispara una corrida nueva en cada push.
 
 ## Estructura
 
