@@ -74,7 +74,11 @@ for (const fileName of testFiles) {
     sql,
   );
 
-  if (/^not ok\b/m.test(output)) {
+  // `not ok` no alcanza: cuando el plan() no coincide con las aserciones
+  // ejecutadas, pgTAP NO emite ninguna línea `not ok`, solo el resumen
+  // "# Looks like you planned N but ran M". Un archivo al que se le agregan
+  // aserciones sin tocar el plan quedaba verde con la mitad sin correr.
+  if (/^not ok\b/m.test(output) || /^#\s*Looks like you/m.test(output)) {
     failed = true;
   }
 }

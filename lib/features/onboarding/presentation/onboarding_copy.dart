@@ -17,6 +17,9 @@ abstract final class OnboardingCopy {
         DataFailureCode.invalidData => l10n.dataFailureInvalidData,
         DataFailureCode.staleConsent => l10n.dataFailureStaleConsent,
         DataFailureCode.duplicate => l10n.dataFailureDuplicate,
+        DataFailureCode.invalidCuit => l10n.dataFailureInvalidCuit,
+        DataFailureCode.secondFactorRequired => l10n.dataFailureSecondFactor,
+        DataFailureCode.ambiguousCompany => l10n.dataFailureAmbiguousCompany,
         DataFailureCode.network => l10n.dataFailureNetwork,
         DataFailureCode.unknown => l10n.dataFailureUnknown,
       };
@@ -39,7 +42,9 @@ abstract final class OnboardingCopy {
   static String cuitIssue(AppLocalizations l10n, CuitIssue issue) =>
       switch (issue) {
         CuitIssue.empty => l10n.cuitErrorRequired,
+        CuitIssue.invalidCharacters => l10n.cuitErrorCharacters,
         CuitIssue.wrongLength => l10n.cuitErrorLength,
+        CuitIssue.checkDigit => l10n.cuitErrorCheckDigit,
       };
 
   static String availability(

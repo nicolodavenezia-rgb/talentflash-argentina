@@ -142,7 +142,11 @@ select
   (array['Parrilla Don Julio Dev','Hotel Palermo Suites Dev','Café Martínez Dev',
          'Bodegón San Telmo Dev','Hostel Recoleta Dev'])[i],
   'Empresa de prueba ' || i || ' S.A.S.',
-  '30-7000000' || i || '-' || (i % 10),
+  -- CUIT sintéticos con dígito verificador REAL (T-027): el trigger
+  -- `normalize_company_cuit` de 0025 rechaza cualquier otro. No son de
+  -- empresas reales; el prefijo 30 + 7000000x no está asignado por ARCA.
+  (array['30-70000001-6','30-70000002-4','30-70000003-2',
+         '30-70000004-0','30-70000005-9'])[i],
   'approved',
   'Gastronomía y hotelería',
   'a0000000-0000-4000-8000-000000000001',
@@ -252,7 +256,7 @@ insert into company_profiles (id, name, legal_name, cuit, verification_status,
 values ('c0000000-0000-4000-8000-000000000007',
         'Cantina Puerto Madero Dev',
         'Empresa de prueba 7 S.A.S.',
-        '30-70000007-7',
+        '30-70000007-5',   -- dígito verificador real (T-027)
         'pending',
         'Gastronomía y hotelería',
         'a0000000-0000-4000-8000-000000000001',

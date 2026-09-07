@@ -86,7 +86,17 @@ class _UnavailableOrPendingView extends ConsumerWidget {
     final verification = ref.watch(ownCompanyVerificationProvider);
     return verification.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, _) => const _NotAvailableView(),
+      // La cuenta figura en más de una empresa (`TFMUL`, 0031). Es un estado
+      // sin salida por la app —el servidor se niega a elegir una, y hace
+      // bien— así que se dice cuál es el problema en vez de esconderlo detrás
+      // del "no disponible" genérico, que invitaría a reintentar para siempre.
+      error: (error, _) =>
+          error is DataFailure && error.code == DataFailureCode.ambiguousCompany
+          ? _CenteredMessage(
+              title: l10n.companyCandidateNotAvailableTitle,
+              body: l10n.dataFailureAmbiguousCompany,
+            )
+          : const _NotAvailableView(),
       data: (status) => switch (status) {
         CompanyVerificationStatus.pending ||
         CompanyVerificationStatus.inReview => _CenteredMessage(

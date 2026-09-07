@@ -1051,13 +1051,13 @@ abstract class AppLocalizations {
   /// No description provided for @cuitHint.
   ///
   /// In es, this message translates to:
-  /// **'30-12345678-9'**
+  /// **'30-12345678-1'**
   String get cuitHint;
 
   /// No description provided for @cuitHelp.
   ///
   /// In es, this message translates to:
-  /// **'Once números. La verificación de la empresa se hace después, con revisión humana.'**
+  /// **'Once números. Comprobamos el dígito verificador; que la empresa sea tuya lo revisa una persona después.'**
   String get cuitHelp;
 
   /// No description provided for @cuitErrorRequired.
@@ -1071,6 +1071,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'El CUIT debe tener 11 números.'**
   String get cuitErrorLength;
+
+  /// No description provided for @cuitErrorCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'El CUIT solo lleva números, guiones y espacios.'**
+  String get cuitErrorCharacters;
+
+  /// No description provided for @cuitErrorCheckDigit.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese CUIT no existe: el último número no se corresponde con los anteriores. Revisalo.'**
+  String get cuitErrorCheckDigit;
 
   /// No description provided for @companySizeLabel.
   ///
@@ -2085,6 +2097,318 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Todavía no cargó una presentación (es opcional y no dice nada de su candidatura).'**
   String get companyCandidateNoPresentation;
+
+  /// No description provided for @dataFailureInvalidCuit.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese CUIT no es válido: revisá el dígito verificador.'**
+  String get dataFailureInvalidCuit;
+
+  /// No description provided for @dataFailureSecondFactor.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta acción necesita que inicies sesión con segundo factor.'**
+  String get dataFailureSecondFactor;
+
+  /// TFMUL (0031): la cuenta integra más de una empresa y la lectura falla cerrada en vez de elegir una
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.'**
+  String get dataFailureAmbiguousCompany;
+
+  /// Texto del distintivo de empresa verificada (T-029)
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa verificada'**
+  String get companyVerifiedBadgeLabel;
+
+  /// No description provided for @companyVerifiedBadgeTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificamos el CUIT de esta empresa con su constancia de ARCA.'**
+  String get companyVerifiedBadgeTooltip;
+
+  /// Etiqueta del distintivo para el lector de pantalla; el ícono es decorativo y no se anuncia aparte
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa verificada: verificamos su CUIT con la constancia de ARCA.'**
+  String get companyVerifiedBadgeSemantics;
+
+  /// No description provided for @companyVerificationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificación de la empresa'**
+  String get companyVerificationTitle;
+
+  /// No description provided for @companyVerificationErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos completar la acción'**
+  String get companyVerificationErrorTitle;
+
+  /// No description provided for @companyVerificationFormTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Pedir la verificación'**
+  String get companyVerificationFormTitle;
+
+  /// No description provided for @companyVerificationFormHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmá el CUIT con el que registraste la empresa y adjuntá tu constancia de ARCA. La revisa una persona del equipo: no consultamos el padrón automáticamente.'**
+  String get companyVerificationFormHelp;
+
+  /// No description provided for @companyVerificationAttach.
+  ///
+  /// In es, this message translates to:
+  /// **'Adjuntar constancia de ARCA'**
+  String get companyVerificationAttach;
+
+  /// Confirmación de que la constancia se subió al bucket privado
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia adjuntada ({formato}).'**
+  String companyVerificationAttached(String formato);
+
+  /// No description provided for @companyVerificationAttachedEarlier.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay una constancia adjunta de un envío anterior. Si no adjuntás otra, se usa esa.'**
+  String get companyVerificationAttachedEarlier;
+
+  /// No description provided for @companyVerificationSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar solicitud'**
+  String get companyVerificationSubmit;
+
+  /// No description provided for @companyVerificationSubmitted.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibimos tu solicitud. Te avisamos apenas la revisemos.'**
+  String get companyVerificationSubmitted;
+
+  /// No description provided for @companyVerificationNotOwner.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo quien creó la empresa puede pedir la verificación.'**
+  String get companyVerificationNotOwner;
+
+  /// No description provided for @companyVerificationPendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu empresa todavía no está verificada'**
+  String get companyVerificationPendingTitle;
+
+  /// No description provided for @companyVerificationPendingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta que verifiquemos el CUIT vas a poder preparar todo, pero no publicar búsquedas.'**
+  String get companyVerificationPendingBody;
+
+  /// No description provided for @companyVerificationInReviewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Estamos revisando tu solicitud'**
+  String get companyVerificationInReviewTitle;
+
+  /// No description provided for @companyVerificationInReviewBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya recibimos el CUIT y la constancia. Te avisamos apenas haya respuesta; mientras tanto no hace falta que envíes nada más.'**
+  String get companyVerificationInReviewBody;
+
+  /// No description provided for @companyVerificationApprovedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu empresa está verificada'**
+  String get companyVerificationApprovedTitle;
+
+  /// No description provided for @companyVerificationApprovedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificamos el CUIT con tu constancia de ARCA.'**
+  String get companyVerificationApprovedBody;
+
+  /// No description provided for @companyVerificationRejectedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación fue rechazada'**
+  String get companyVerificationRejectedTitle;
+
+  /// Explicación del rechazo con el motivo de la lista cerrada
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo: {motivo} Podés corregirlo y volver a enviarla.'**
+  String companyVerificationRejectedBody(String motivo);
+
+  /// No description provided for @rejectionCuitMismatch.
+  ///
+  /// In es, this message translates to:
+  /// **'el CUIT no coincide con el de la constancia.'**
+  String get rejectionCuitMismatch;
+
+  /// No description provided for @rejectionUnreadableDocument.
+  ///
+  /// In es, this message translates to:
+  /// **'la constancia no se lee bien.'**
+  String get rejectionUnreadableDocument;
+
+  /// No description provided for @rejectionExpiredDocument.
+  ///
+  /// In es, this message translates to:
+  /// **'la constancia está vencida.'**
+  String get rejectionExpiredDocument;
+
+  /// No description provided for @rejectionMissingData.
+  ///
+  /// In es, this message translates to:
+  /// **'faltan datos de la empresa.'**
+  String get rejectionMissingData;
+
+  /// No description provided for @rejectionCompanyNotOperating.
+  ///
+  /// In es, this message translates to:
+  /// **'la empresa figura como no operativa.'**
+  String get rejectionCompanyNotOperating;
+
+  /// No description provided for @rejectionOther.
+  ///
+  /// In es, this message translates to:
+  /// **'hace falta revisar la documentación.'**
+  String get rejectionOther;
+
+  /// No description provided for @verificationStatusPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendientes'**
+  String get verificationStatusPending;
+
+  /// No description provided for @verificationStatusInReview.
+  ///
+  /// In es, this message translates to:
+  /// **'En revisión'**
+  String get verificationStatusInReview;
+
+  /// No description provided for @verificationStatusApproved.
+  ///
+  /// In es, this message translates to:
+  /// **'Aprobadas'**
+  String get verificationStatusApproved;
+
+  /// No description provided for @verificationStatusRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'Rechazadas'**
+  String get verificationStatusRejected;
+
+  /// No description provided for @adminVerificationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificaciones de empresa'**
+  String get adminVerificationsTitle;
+
+  /// No description provided for @adminVerificationsMfaTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitás segundo factor'**
+  String get adminVerificationsMfaTitle;
+
+  /// No description provided for @adminVerificationsMfaBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Para revisar verificaciones hay que iniciar sesión con segundo factor. Cerrá sesión, activá el segundo factor y volvé a entrar.'**
+  String get adminVerificationsMfaBody;
+
+  /// No description provided for @adminVerificationsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay solicitudes en este estado.'**
+  String get adminVerificationsEmpty;
+
+  /// No description provided for @adminVerificationsErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos completar la acción'**
+  String get adminVerificationsErrorTitle;
+
+  /// No description provided for @adminVerificationsResolved.
+  ///
+  /// In es, this message translates to:
+  /// **'Solicitud resuelta.'**
+  String get adminVerificationsResolved;
+
+  /// CUIT que envió la empresa en la solicitud
+  ///
+  /// In es, this message translates to:
+  /// **'CUIT declarado: {cuit}'**
+  String adminVerificationsCuit(String cuit);
+
+  /// No description provided for @adminVerificationsWithDocument.
+  ///
+  /// In es, this message translates to:
+  /// **'Adjuntó constancia de ARCA.'**
+  String get adminVerificationsWithDocument;
+
+  /// No description provided for @adminVerificationsNoDocument.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin constancia adjunta.'**
+  String get adminVerificationsNoDocument;
+
+  /// Motivo con el que se rechazó una solicitud ya resuelta
+  ///
+  /// In es, this message translates to:
+  /// **'Motivo del rechazo: {motivo}'**
+  String adminVerificationsReason(String motivo);
+
+  /// No description provided for @adminVerificationsReasonTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Por qué se rechaza?'**
+  String get adminVerificationsReasonTitle;
+
+  /// No description provided for @adminVerificationsApprove.
+  ///
+  /// In es, this message translates to:
+  /// **'Aprobar'**
+  String get adminVerificationsApprove;
+
+  /// No description provided for @adminVerificationsReject.
+  ///
+  /// In es, this message translates to:
+  /// **'Rechazar'**
+  String get adminVerificationsReject;
+
+  /// No description provided for @adminVerificationsOpenDocument.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver la constancia'**
+  String get adminVerificationsOpenDocument;
+
+  /// No description provided for @adminVerificationsDocumentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia de ARCA'**
+  String get adminVerificationsDocumentTitle;
+
+  /// No description provided for @adminVerificationsDocumentHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiá este enlace y abrilo en el navegador. Vence en 5 minutos: si expira, volvé a pedirlo desde acá.'**
+  String get adminVerificationsDocumentHelp;
+
+  /// No description provided for @adminVerificationsDocumentError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos generar el enlace a la constancia. Reintentá en unos minutos.'**
+  String get adminVerificationsDocumentError;
+
+  /// No description provided for @adminVerificationsDocumentClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get adminVerificationsDocumentClose;
 }
 
 class _AppLocalizationsDelegate
