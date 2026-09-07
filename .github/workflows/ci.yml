@@ -38,12 +38,50 @@ jobs:
       - run: npm run db:reset
       - run: npm run db:lint
       - run: npm run db:test
+      # Versión exacta, no `v2.x`: una versión flotante cambia el conjunto de
+      # banderas aceptadas sin previo aviso — fue exactamente lo que rompió
+      # `deno check --cached-only`. v2.7.14 es la baseline verificada.
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: v2.7.14
       - run: npm run functions:test
       - run: npm run storage:test
 
+  # Guard de la invariante que fijó el PR #1: la Edge Function `avatar` no
+  # descarga nada al arrancar. Corre sin Docker ni Supabase, así que da señal
+  # propia y rápida, en paralelo con el job de base de datos. No reemplaza a
+  # `functions:test`: aquél ejercita lib/, éste mira el grafo de index.ts.
+  edge-guard:
+    name: Grafo offline de la Edge Function
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.7.14
+      - name: Pruebas del sincronizador de dependencias
+        run: node --test supabase/functions/avatar/deps/sync.spec.mjs
+      - name: Integridad de las dependencias vendorizadas contra el manifest
+        run: node supabase/functions/avatar/deps/sync.mjs --check
+      # Sin `--cached-only`: `deno check` no acepta esa bandera en 2.7.14 y la
+      # corrida moría con "unexpected argument" antes de type-checkear nada.
+      # La invariante offline no dependía de ella: la sostienen `--no-remote`,
+      # `--no-npm`, `--no-lock`, el DENO_DIR temporal y vacío del guard y la
+      # inspección del grafo resuelto.
+      - name: Type-check de la Edge Function con su import map
+        run: >-
+          deno check --no-remote --no-npm --no-lock
+          --config supabase/functions/avatar/deno.json
+          supabase/functions/avatar/index.ts
+      - name: Guard del grafo offline
+        run: node scripts/edge-offline-guard.mjs
+      - name: Pruebas del guard
+        run: node --test scripts/edge-offline-guard.spec.mjs
   secret-scan:
     name: Scan de secretos (gitleaks)
     runs-on: ubuntu-latest
