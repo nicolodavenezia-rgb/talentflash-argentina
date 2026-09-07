@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — Estado del proyecto
 
-> **Fecha de esta fotografía: 2026-09-05.**
-> `origin/main` estaba en **`41b809e`**.
+> **Fecha de esta fotografía: 2026-09-06.**
+> `origin/main` estaba en **`327883c`**.
 >
 > Este documento **caduca solo**. Todo lo que dice acá era cierto en esa fecha y
 > sobre esos commits. Antes de usarlo como base de una decisión, volvé a
@@ -13,100 +13,118 @@
 
 ## 1. Qué está integrado en `main`
 
-`main` = **`41b809e`** (merge del PR #1, fusionado el 2026-09-03).
+`main` = **`327883c`**, merge del PR #3. En esa fecha `main` acumulaba tres
+fusiones, todas con merge commit normal y en este orden:
 
-Contenido, según [ROADMAP.md](ROADMAP.md) y el [README](../README.md) de ese
-commit: **Bloques A, C y D** completos en local y **Bloque B (Auth) en su
+| PR | Título | Cabeza fusionada | Merge commit | Fecha |
+|---|---|---|---|---|
+| [#1](https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/1) | `fix(edge): make avatar dependencies available offline` | `0443f92` | `41b809e` | 2026-09-03 |
+| [#2](https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/2) | `ci(edge): enforce offline dependency graph` | `d9e2a40` | `73d1f29` | 2026-09-06 |
+| [#3](https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/3) | `Bloque E — T-028 verificación manual de empresa + T-029 badge verificado` | `bbc4de8` | `327883c` | 2026-09-06 |
+
+Contenido: **Bloques A, C, D y E** completos en local y **Bloque B (Auth) en su
 primera parte** — fundaciones, autenticación por correo y contraseña con
-sesiones y roles, onboarding con consentimientos versionados y perfiles de
-candidato. Del Bloque B siguen pendientes T-012 (Google y Apple) y la pantalla
-in-app de nueva contraseña de T-013 (ver §5). El esquema llega hasta la
-**migración `0024`**, con RLS deny-by-default y pruebas pgTAP por policy.
+sesiones y roles, onboarding con consentimientos versionados, perfiles de
+candidato, gestión de empresa y equipo, invitaciones de un solo uso,
+verificación manual de empresa con constancia adjunta, distintivo de empresa
+verificada y la puerta de publicación de ofertas. Del Bloque B siguen
+pendientes T-012 (Google y Apple) y la pantalla in-app de nueva contraseña de
+T-013 (ver [§5](#5-pendientes-conocidos)).
 
-La Edge Function `avatar` forma parte de ese Bloque D (T-022). Lo que entró por
-el PR #1 (`fix(edge): make avatar dependencies available offline`) fue la
-**vendorización de sus dependencias** —`deps/`, el import map `deno.json`, los
-`static_files` en `config.toml`— para que arranque sin red.
+El esquema llega hasta la **migración `0031`** (árbol `0001`–`0031`, 31
+archivos) y la suite pgTAP tiene **19 archivos** (`000`–`018`), con RLS
+deny-by-default y pruebas por policy.
 
-**CI sobre `41b809e`** — corrida
-[33798598690](https://github.com/nicolodavenezia-rgb/talentflash-argentina/actions/runs/33798598690),
-evento `push`, **verde** en sus 3 jobs (`Formato, análisis y tests`,
-`Migraciones, lint y RLS`, `Scan de secretos (gitleaks)`):
-
-| Suite | Resultado en esa corrida |
-|---|---|
-| Flutter | 321 pruebas |
-| pgTAP | 184 aserciones en 14 archivos |
-| Deno (Edge Function `avatar`) | 19 pruebas |
-| Storage (integración real contra el bucket) | 27 aserciones |
-
-Esos números son de **esa** corrida y de **ese** SHA. No son una garantía
-permanente ni se pueden reutilizar para otro commit.
+La CI de `main` sobre `327883c` corre los **cuatro** jobs: `Formato, análisis y
+tests`, `Migraciones, lint y RLS`, `Grafo offline de la Edge Function` y `Scan
+de secretos (gitleaks)`.
 
 ---
 
 ## 2. Qué existe solo en un PR abierto
 
-Lo que sigue **no está en `main`**. Está publicado en una rama y esperando
-decisión del fundador. Ninguno de los dos PR tiene autorización de merge.
+### PR #4 — `docs: versionar el método de trabajo con ChatGPT y Claude`
 
-### PR #2 — `ci(edge): enforce offline dependency graph`
+- Enlace: <https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/4>
+- Rama: `codex/documentar-flujo-chatgpt-claude` · base `main`
+- Qué agrega: este documento y el resto del método —`docs/AI_WORKFLOW.md`,
+  `docs/prompts/START_CHATGPT.md`, `docs/prompts/EXECUTE_CLAUDE.md`,
+  `AGENTS.md`, `CLAUDE.md`— más el enlace desde el README y las correcciones
+  documentales de `docs/ARCHITECTURE.md` y `docs/DATA_MODEL.md` descritas en la
+  [§3](#3-lo-que-ya-está-resuelto-y-conviene-no-volver-a-anotar-como-pendiente).
+- **Es solo documentación**: no toca código de producto, migraciones ni CI.
+- **Está abierto al momento de esta foto.** Que este archivo viva en su rama no
+  significa que el PR esté fusionado; si querés saber si ya lo está, corré los
+  comandos de la [§6](#6-cómo-comprobar-este-documento).
 
-- Enlace: <https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/2>
-- Rama: `ci/edge-offline-dependency-guard` · cabeza **`d9e2a40`** · base `main`
-- Qué agrega: `scripts/edge-offline-guard.mjs`, su suite de pruebas sin red, y
-  un job de CI nuevo (`Grafo offline de la Edge Function`) que exige que todo
-  especificador del grafo de la Edge Function sea `file:`. Toca además el
-  README, `supabase/README.md` y el README de las dependencias vendorizadas.
-- **CI sobre `d9e2a40`** — corrida
-  [33822315863](https://github.com/nicolodavenezia-rgb/talentflash-argentina/actions/runs/33822315863),
-  **verde** en sus 4 jobs: 321 Flutter · 184 pgTAP (14 archivos) · 19 Deno · 27
-  Storage · 37 pruebas del guard · 23 pruebas del sincronizador de dependencias.
-
-### PR #3 — `Bloque E — T-028 verificación manual de empresa + T-029 badge verificado`
-
-- Enlace: <https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/3>
-- Rama: `feat/company-management-and-verification` · cabeza **`47bdbaf`** · base `main`
-- Qué agrega: migraciones **`0025` a `0031`** (validación de CUIT, gestión de
-  empresa y equipo, invitaciones de un solo uso, verificación manual de empresa,
-  bucket privado para la constancia, endurecimiento y, en `0031`, el cierre del
-  alta directa de miembros más la conexión de la publicación), la pantalla de
-  verificación de empresa, la cola administrativa `/admin/verificaciones`, el
-  distintivo de empresa verificada y el script de pruebas de concurrencia.
-- **CI sobre `47bdbaf`** — corrida
-  [33932322509](https://github.com/nicolodavenezia-rgb/talentflash-argentina/actions/runs/33932322509),
-  **verde** en sus 3 jobs: 439 Flutter · 437 pgTAP (19 archivos) · 20
-  comprobaciones de concurrencia · 19 Deno · 27 Storage.
-- **Ojo con esos 3 jobs:** el job `Grafo offline de la Edge Function` **no corre
-  acá**, porque lo agrega el PR #2 y esta rama no lo tiene. Los dos PR corrieron
-  con definiciones de CI distintas.
-
-### Lo que NO está validado
-
-**La combinación de los PR #2 y #3 no está validada.** Cada corrida probó su
-rama contra `main`, nunca una contra la otra. Los dos verdes por separado no
-autorizan a afirmar que juntos funcionan; eso necesita su propia validación, y
-esa validación es una tarea aparte que todavía no se pidió.
+No hay ningún otro PR abierto.
 
 ---
 
 ## 3. Lo que ya está resuelto y conviene no volver a anotar como pendiente
 
-**`0031` conecta la aprobación de la empresa con el permiso de publicar.**
-Verificado el 2026-09-05 leyendo
-`supabase/migrations/0031_membership_gate_and_publication.sql` en la cabeza del
-PR #3: `public.company_can_publish(uuid)` —que exige el estado `approved`
-exacto— quedó cableada a las policies `jobs_company_write`,
-`jobs_company_update`, `jobs_public_select` y a la rama de video de
-`videos_company_select`. La evidencia está en el test pgTAP
-`018_publication_gate_test.sql`, y el ROADMAP del PR ya lo registra como
-criterio cerrado.
+**La combinación de los PR #2 y #3 quedó validada y fusionada.** Era el punto
+que este documento marcaba como no validado el 2026-09-05, y dejó de serlo. El
+commit `bbc4de8` —merge de `origin/main` (que ya traía el PR #2) dentro de la
+rama del PR #3— corrió por primera vez las dos mitades juntas y con la
+definición de CI completa, en la corrida
+[34070725731](https://github.com/nicolodavenezia-rgb/talentflash-argentina/actions/runs/34070725731),
+**verde en sus 4 jobs**:
 
-Antes de `0031` esto no era una funcionalidad diferida sino un criterio
-**incumplido**: `public.jobs` existía desde `0007` y `authenticated` tenía DML
-por PostgREST, así que una empresa sin verificar podía insertar una oferta
-activa. Conviene recordar la diferencia, porque explica por qué no alcanzaba con
-dejarlo para T-030.
+| Suite | Resultado en esa corrida |
+|---|---|
+| Flutter | 439 pruebas |
+| pgTAP | 437 aserciones en 19 archivos |
+| Concurrencia (`db:concurrency`) | 20 comprobaciones |
+| Deno (Edge Function `avatar`) | 19 pruebas |
+| Storage (integración real contra el bucket) | 27 aserciones |
+| Guard del grafo offline | 37 pruebas |
+| Sincronizador de dependencias | 23 pruebas · 44 archivos contra el manifest |
+
+Esos números son de **esa** corrida y de **ese** SHA. No son una garantía
+permanente ni se pueden reutilizar para otro commit.
+
+**El único conflicto de la integración fue documental y de CI, y se resolvió
+conservando las dos versiones.** `.github/workflows/ci.yml` recibía un paso
+nuevo de cada PR después de `npm run db:test`; quedaron los dos, primero
+`npm run db:concurrency` (PR #3) y después el `denoland/setup-deno@v2` fijado a
+`v2.7.14` (PR #2). El párrafo del README que describe la CI recibía datos
+distintos de cada PR y quedó con los dos: nombra `db:concurrency`, la versión
+fija de Deno en los dos jobs que lo instalan, y el guard del grafo offline. No
+se descartó ninguna de las dos versiones.
+
+**`0031` conecta la aprobación de la empresa con el permiso de publicar.**
+`public.company_can_publish(uuid)` —que exige el estado `approved` exacto— está
+cableada a las policies `jobs_company_write`, `jobs_company_update`,
+`jobs_public_select` y a la rama de video de `videos_company_select`. La
+evidencia está en el test pgTAP `018_publication_gate_test.sql`. Antes de `0031`
+esto no era una funcionalidad diferida sino un criterio **incumplido**:
+`public.jobs` existía desde `0007` y `authenticated` tenía DML por PostgREST,
+así que una empresa sin verificar podía insertar una oferta activa.
+
+**El README ya no está desfasado.** El desfase que este documento registraba el
+2026-09-05 (Bloque E descrito como `0025`–`0029`, árbol `0001`–`0030`, y la
+publicación anotada como pendiente de T-030) lo cerraron los commits `207de67`
+y `7fee1a8` dentro del propio PR #3, junto con `supabase/README.md`,
+`docs/ROADMAP.md` y `docs/DATA_MODEL.md`.
+
+**Correcciones documentales hechas en el PR #4**, contrastadas contra el
+repositorio ya integrado:
+
+- `docs/ARCHITECTURE.md` §9 describía un pipeline de CI de cinco puntos que
+  nunca existió como tal (build de Android, build de iOS y deploy de Edge
+  Functions no están en ningún workflow). Sigue siendo una **propuesta**, y como
+  tal se conserva, pero ahora lleva al lado una nota fechada con los cuatro jobs
+  que la CI corre de verdad y con los comandos reales.
+- `docs/DATA_MODEL.md` §6 mostraba un árbol de pruebas inventado
+  (`010-profiles.test.sql` y compañía, con guiones y sufijo `.test.sql`) que no
+  coincide con ningún archivo del repositorio. Se conserva como propuesta
+  original y se agrega la lista real de los 19 archivos
+  `NNN_nombre_test.sql` de `supabase/tests/database/`, con el comando que los
+  corre de verdad. Además, la «Nota (Bloque D)» enumeraba tres suites nuevas
+  del bloque y eran cuatro: faltaba `013_privacy_hardening_test.sql`.
+- La regla sobre cuándo corre la CI estaba mal enunciada en este documento y en
+  `AI_WORKFLOW.md`; ver la [§4](#4-desfases-y-matices-que-hay-que-tener-presentes).
 
 **Sigue siendo de T-030** (y no está hecho): el CRUD completo de la oferta, las
 transiciones `paused`/`expired`/`closed`, el formulario y las reglas salariales.
@@ -115,42 +133,53 @@ transiciones `paused`/`expired`/`closed`, el formulario y las reglas salariales.
 
 ## 4. Desfases y matices que hay que tener presentes
 
-### El README del PR #3 quedó atrasado respecto de su propia rama
+### Cuándo corre la CI (corregido)
 
-El commit `47bdbaf` —cabeza de la rama, asunto literal
-«docs: cerrar el criterio de publicacion de T-028 y registrar 0031»— actualizó
-`docs/ROADMAP.md` y `docs/DATA_MODEL.md`, pero **no** el README. Por eso el
-README de esa rama todavía dice tres cosas que su propio código desmiente:
+Hasta esta foto, este documento y `AI_WORKFLOW.md` decían que «pushear una rama
+no corre CI: la corrida arranca recién cuando se abre el PR». **La segunda mitad
+es falsa.** `.github/workflows/ci.yml` declara:
 
-1. que el Bloque E son las migraciones «`0025`–`0029`» (hay hasta `0031`);
-2. que «sigue pendiente conectar la verificación al permiso de publicar ofertas:
-   eso llega con T-030» (lo cerró `0031`);
-3. que el árbol de `supabase/migrations/` va de `0001` a `0030`.
+```yaml
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+```
 
-Es un desfase **de la rama del PR #3**, no de `main`. El README de `main` no
-menciona el Bloque E en absoluto, y está bien que no lo mencione: nada del
-Bloque E está integrado. Corregir ese README es trabajo del PR #3 o de una tarea
-posterior; **no** hay que adelantar a `main` afirmaciones sobre funcionalidades
-que todavía no se fusionaron.
+`pull_request` sin `types:` toma el valor por defecto
+`opened`/`synchronize`/`reopened`. O sea:
+
+- pushear una rama **que todavía no tiene PR abierto** no dispara nada, porque
+  el disparador `push` solo cubre `main` y `develop`;
+- pero con el PR **ya abierto**, cada push dispara una corrida nueva por
+  `synchronize`.
+
+La evidencia está en el propio PR #3: se abrió el 2026-09-04T17:57:20Z y sobre
+su rama hay seis corridas `pull_request`, cinco de ellas posteriores a la
+apertura, cada una de un push distinto (`d45f67a`, `c23de38`, `62a0907`,
+`47bdbaf`, `7fee1a8`, `bbc4de8`). La consecuencia práctica que sí vale es la
+otra, y no cambia: **el resultado de CI que se reporta es el del último commit
+publicado**, nunca el verde de un SHA anterior.
 
 ### AAL2 server-side no es «MFA implementado»
 
-En el PR #3, la revisión de verificaciones **exige segundo factor del lado del
-servidor**: `private.caller_is_aal2()` (migración `0028`) compara el claim `aal`
-del JWT contra `aal2` de forma exacta y falla cerrado si no está. La app suma un
-guard visual en `/admin/verificaciones`, que es UX y no autorización.
+La revisión de verificaciones **exige segundo factor del lado del servidor**:
+`private.caller_is_aal2()` (migración `0028`) compara el claim `aal` del JWT
+contra `aal2` de forma exacta y falla cerrado si no está. La app suma un guard
+visual en `/admin/verificaciones`, que es UX y no autorización.
 
-Lo que **no** existe es una experiencia de MFA: no hay pantalla de alta del
-segundo factor, ni de gestión, ni de recuperación. El propio mensaje de la app
-lo admite — le pide al admin que cierre sesión, active el segundo factor por
-fuera y vuelva a entrar. Dicho de otro modo: **la exigencia está; la experiencia
-de configuración y uso, no.** El README de `main` sigue listando MFA entre lo no
-hecho, y eso continúa siendo correcto.
+Lo que **no** existe es una experiencia de MFA. En todo `lib/` el único uso de
+`auth.mfa` es `getAuthenticatorAssuranceLevel()`, que es una **lectura**: no hay
+alta (`enroll`), ni desafío (`challenge`), ni verificación (`verify`), ni
+pantalla de gestión o recuperación. Consecuencia concreta y medida: la sesión de
+la app nunca llega a `aal2`, así que **`/admin/verificaciones` no se puede
+operar desde la app**, aunque la guarda server-side sea correcta. Por eso es la
+siguiente prioridad (ver [§5](#5-pendientes-conocidos)).
 
 ### Las decisiones de CUIT siguen abiertas y son del fundador
 
-El ROADMAP del PR #3 (T-027) documenta **dos decisiones sin resolver**, ambas
-explicadas en el encabezado de `lib/features/companies/domain/cuit.dart`:
+El ROADMAP (T-027) documenta **dos decisiones sin resolver**, ambas explicadas
+en el encabezado de `lib/features/companies/domain/cuit.dart`:
 
 1. **El «caso 10».** No hay documentación oficial de ARCA/AFIP del algoritmo y
    las librerías de referencia se contradicen. Hoy rige la regla **permisiva**
@@ -170,9 +199,7 @@ hay que «resolverlas» por iniciativa de un asistente.
   interferencia del antivirus con TLS dentro de los contenedores; eso es un
   problema del entorno, no del repositorio, y **no se arregla tocando el
   proyecto**.
-- **CI:** corre en `ubuntu-latest`. Los disparadores son `push` a `main`/`develop`
-  y `pull_request`. Consecuencia práctica: **pushear una rama no corre CI** — la
-  corrida arranca recién cuando se abre el PR.
+- **CI:** corre en `ubuntu-latest`, con los disparadores de arriba.
 - **Despliegue remoto:** **no existe.** `env/staging.json` y `env/prod.json`
   están en `POR_CONFIGURAR`; no hay proyecto Supabase remoto ni entorno
   desplegado. Nada de lo verificado hasta hoy dice nada sobre producción.
@@ -181,22 +208,34 @@ hay que «resolverlas» por iniciativa de un asistente.
 
 ## 5. Pendientes conocidos
 
-De [ROADMAP.md](ROADMAP.md) y del README, sin integrar en `main`:
+De [ROADMAP.md](ROADMAP.md) y del README:
 
-- **Decisión de fusión de los PR #2 y #3**, y validación previa de su
-  combinación.
+- **Siguiente prioridad — segundo factor para el administrador.** Sin alta y
+  verificación de MFA en la app, la cola de empresas
+  (`/admin/verificaciones`) queda inoperable: la guarda `aal2` es correcta y
+  nadie puede satisfacerla desde la app. Es la tarea que desbloquea el Bloque E
+  ya integrado. El nivel `aal2` **es alcanzable**: `supabase/config.toml` ya
+  habilita el enrolamiento TOTP, así que falta la superficie de la app (alta,
+  desafío, verificación y recuperación), no la configuración del servidor.
 - **T-012** — Google y Apple: sin botones ni puntos de entrada en la UI.
 - **T-013** — pantalla in-app de cambio de contraseña: depende de definir el
   esquema de enlace profundo.
-- **MFA y CAPTCHA** como experiencia de usuario (ver
-  [§4](#4-desfases-y-matices-que-hay-que-tener-presentes)).
+- **CAPTCHA** como experiencia de usuario.
 - **Verificación automática de CUIT contra el padrón de ARCA**: la del Bloque E
   es manual, con constancia adjunta y revisión administrativa.
-- **T-030** — CRUD de oferta y sus transiciones.
+- **T-030** — CRUD de oferta y sus transiciones. La expiración automática de
+  ofertas sigue sin `pg_cron` (T-033): una oferta `active` con `expires_at`
+  vencido se sigue publicando.
+- **T-034** — compartir oferta con preview web pública. De ahí cuelga la
+  visibilidad deslogueada del video pitch: hoy, para `anon`, la lectura de
+  `public.videos` muere con 42501 en vez de devolver lista vacía, porque la
+  primera rama de `videos_company_select` mira `job_applications`. Es
+  preexistente (pasa igual con las policies de `0015` y `0023`) y está
+  documentado en el cuerpo de `0031`.
 - **Avatares WebP**: la Edge Function los rechaza con `unsupported_format`; el
   whitelist efectivo es JPEG/PNG.
-- **Identificadores de aplicación provisorios** (`com.talentflash…`): confirmarlos
-  antes de publicar en los stores es decisión del fundador.
+- **Identificadores de aplicación provisorios** (`com.talentflash…`):
+  confirmarlos antes de publicar en los stores es decisión del fundador.
 - **Proyectos remotos de Supabase y Sentry**: requieren aprobación por costo
   recurrente.
 
@@ -208,6 +247,7 @@ De [ROADMAP.md](ROADMAP.md) y del README, sin integrar en `main`:
 git fetch --all --prune
 git log --oneline -1 origin/main
 gh pr list --state open --json number,title,headRefName,headRefOid
+gh pr list --state merged --json number,title,mergeCommit
 gh run list --commit <headRefOid-completo-de-la-cabeza-del-PR>
 ```
 
@@ -228,11 +268,13 @@ elegir la rama, verificar herramientas, contrastar el estado y abrir la
 conversación nueva) es permanente y está en
 [AI_WORKFLOW.md §10](AI_WORKFLOW.md#10-continuidad-entre-computadoras-y-entre-conversaciones).
 Lo único que cambia con el tiempo es **qué rama corresponde retomar**, y eso al
-2026-09-05 era:
+2026-09-06 era:
 
 | Si querés… | Rama |
 |---|---|
-| seguir el trabajo del PR #2 | `ci/edge-offline-dependency-guard` |
-| seguir el trabajo del PR #3 | `feat/company-management-and-verification` |
 | revisar o ajustar el método de trabajo | `codex/documentar-flujo-chatgpt-claude` (mientras su PR siga abierto) |
-| empezar una tarea nueva | una rama nueva desde `origin/main` actualizado |
+| empezar una tarea nueva — incluido el segundo factor de la §5 | una rama nueva desde `origin/main` actualizado |
+
+Las ramas de los PR #2 y #3 (`ci/edge-offline-dependency-guard` y
+`feat/company-management-and-verification`) ya están fusionadas: sirven para
+leer historia, no para seguir trabajando encima.

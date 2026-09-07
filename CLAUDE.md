@@ -66,7 +66,8 @@ decisión hace falta. Lo que sí terminaste se entrega igual.
 Seguí la sección «Entrega final» de
 [docs/prompts/EXECUTE_CLAUDE.md](docs/prompts/EXECUTE_CLAUDE.md). El resultado
 de CI que reportás es el del **último commit publicado**; no reutilices el
-verde de otro SHA. Recordá que la CI corre con el PR, no con el push de la rama.
+verde de otro SHA. La CI arranca con el PR: una rama sin PR abierto no dispara
+ninguna corrida, pero con el PR ya abierto **cada push dispara una nueva**.
 
 ## Reglas técnicas
 

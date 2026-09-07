@@ -72,8 +72,8 @@ autorizado.
 > está dado. Ejemplo de forma: «Autorizo: commit en la rama, push de ESA rama y
 > apertura de un PR contra `main`. NO autorizo: merge, cambios en otras ramas,
 > publicar ramas locales de integración, force push». Recordá que la CI de este
-> repositorio corre con el PR, no con el push de la rama: si no autorizás el PR,
-> no va a haber corrida de CI que reportar._
+> repositorio arranca con el PR: si no autorizás el PR no va a haber corrida de
+> CI que reportar, y una vez abierto cada push dispara una corrida nueva._
 
 ## Entrega final
 

@@ -455,6 +455,17 @@ create table payment_events (
 4. **Build iOS** (`macos-latest`, solo en release tags para no quemar minutos 10×): IPA + TestFlight. Si el consumo macOS se vuelve limitante, migrar builds iOS a Codemagic (500 min gratis en M-series) — evaluación en `COST_DECISIONS.md`.
 5. Deploy de Edge Functions (`supabase functions deploy`) por entorno con secrets de GitHub Environments.
 
+> **Lo que la CI corre hoy (verificado 2026-09-06 sobre `main` = `327883c`).** La lista de arriba es la propuesta original de 2026-09-02 y se conserva como tal; no describe el pipeline implementado. El repositorio tiene **un solo workflow**, `.github/workflows/ci.yml`, con **cuatro jobs**, todos en `ubuntu-latest`:
+>
+> | Job | `name:` | Qué corre |
+> |---|---|---|
+> | `quality` | Formato, análisis y tests | `flutter pub get`, `flutter gen-l10n`, `dart format --output=none --set-exit-if-changed .`, `flutter analyze`, `flutter test` |
+> | `database` | Migraciones, lint y RLS | `npm ci` y los scripts `db:start`, `db:reset`, `db:lint`, `db:test`, `db:concurrency`, `functions:test`, `storage:test` |
+> | `edge-guard` | Grafo offline de la Edge Function | pruebas del sincronizador, `sync.mjs --check`, `deno check --no-remote --no-npm --no-lock` y `scripts/edge-offline-guard.mjs` con sus pruebas |
+> | `secret-scan` | Scan de secretos (gitleaks) | `gitleaks/gitleaks-action@v2` |
+>
+> Diferencias que conviene tener presentes respecto de la propuesta: el job de base de datos **no** usa `supabase db start` ni `supabase test db` sino los scripts de `package.json` (`db:test` es `node scripts/run-db-tests.mjs`; `supabase test db` existe aparte como `db:test:supabase`); los puntos **3, 4 y 5 —build de Android, build de iOS y deploy de Edge Functions— no existen en ningún workflow**, y tampoco existe la aplicación automática de migraciones a staging o a prod que describe la línea de «Migraciones» de más arriba; y la propuesta no menciona los dos jobs que sí existen, `edge-guard` y `secret-scan`. Los disparadores reales son `push` a `main`/`develop` y `pull_request`.
+
 ---
 
 ## 10. Observabilidad

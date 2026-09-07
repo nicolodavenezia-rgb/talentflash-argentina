@@ -270,9 +270,20 @@ De ahí salen tres reglas prácticas:
 Y una distinción que se pierde fácil: **prueba local**, **CI** y **despliegue
 remoto** no son lo mismo. Que algo pase en la máquina del fundador no dice que
 pase en el runner de CI; que pase en CI no dice nada sobre un entorno remoto,
-que en este proyecto **todavía no existe**. Y la CI de este repositorio corre
-con `push` a `main`/`develop` y con `pull_request`: **pushear una rama no
-dispara CI**; la corrida arranca cuando se abre el PR.
+que en este proyecto **todavía no existe**.
+
+Sobre cuándo corre la CI conviene ser exacto, porque la versión corta de esta
+regla circuló mal. `.github/workflows/ci.yml` declara `push` limitado a
+`main`/`develop` y un `pull_request` sin `types:`, que por defecto vale
+`opened`, `synchronize` y `reopened`. De ahí salen dos casos distintos:
+
+- una rama **sin PR abierto** no dispara nada al pushear, porque el disparador
+  `push` no la cubre;
+- una rama **con el PR ya abierto** dispara una corrida nueva en **cada** push,
+  por `synchronize`.
+
+Lo que no cambia en ninguno de los dos casos: el resultado de CI que se reporta
+es el del **último commit publicado**, nunca el verde de un SHA anterior.
 
 ---
 
