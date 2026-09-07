@@ -1201,6 +1201,30 @@ supabase/tests/
 
 Convención: cada policy tiene al menos **un test positivo (puede) y uno negativo (no puede)**. Se ejecutan con `supabase test db`.
 
+> **La suite real (verificado 2026-09-06 sobre `main` = `327883c`).** El árbol de arriba es la estructura *propuesta* y se conserva como tal: ninguno de esos nombres existe en el repositorio. Las pruebas viven en **`supabase/tests/database/`**, son **19 archivos** y usan la convención `NNN_nombre_test.sql` (guion bajo, sufijo `_test.sql`), no `NNN-nombre.test.sql`:
+>
+> - `000_setup.sql`
+> - `001_rls_test.sql`
+> - `002_rls_test.sql`
+> - `003_rls_test.sql`
+> - `004_company_bootstrap_test.sql`
+> - `005_message_mutations_test.sql`
+> - `006_auth_role_claim_test.sql`
+> - `007_onboarding_rpc_test.sql`
+> - `008_consents_ledger_test.sql`
+> - `009_prefs_legal_seed_test.sql`
+> - `010_candidate_profile_test.sql`
+> - `011_company_projection_test.sql`
+> - `012_avatar_storage_test.sql`
+> - `013_privacy_hardening_test.sql`
+> - `014_cuit_validation_test.sql`
+> - `015_company_management_test.sql`
+> - `016_company_invitations_test.sql`
+> - `017_company_verification_test.sql`
+> - `018_publication_gate_test.sql`
+>
+> Y el comando que las corre en local y en CI es **`npm run db:test`** (`node scripts/run-db-tests.mjs`), no `supabase test db`. Ese último existe en `package.json` como `db:test:supabase`, pero no es el que usa el job `database` del workflow. Las carreras entre transacciones no van en pgTAP —cada archivo corre dentro de UNA transacción— sino en `npm run db:concurrency` (`scripts/db-concurrency-test.mjs`).
+
 > **Nota (Bloque D):** los ejemplos de abajo son anteriores a la migración
 > `0023`. En la suite real (`supabase/tests/database/`), el test "empresa
 > verificada ve perfil publicado" de `001_rls_test.sql` se **invirtió
@@ -1208,8 +1232,11 @@ Convención: cada policy tiene al menos **un test positivo (puede) y uno negativ
 > `candidate_profiles` (T-024); su acceso se testea contra la proyección en
 > `011_company_projection_test.sql`. Las suites nuevas del bloque son
 > `010_candidate_profile_test.sql` (contenido y disponibilidad),
-> `011_company_projection_test.sql` (whitelist exacta y fail-closed) y
-> `012_avatar_storage_test.sql` (lectura del bucket).
+> `011_company_projection_test.sql` (whitelist exacta y fail-closed),
+> `012_avatar_storage_test.sql` (lectura del bucket) y
+> `013_privacy_hardening_test.sql` (endurecimiento de los helpers RLS
+> preexistentes: `are_blocked` y `has_active_subscription`). Son cuatro, no
+> tres: la enumeración original se olvidaba de `013`.
 
 ```sql
 -- 020-candidate-visibility.test.sql
