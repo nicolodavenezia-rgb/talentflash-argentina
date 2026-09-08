@@ -40,6 +40,16 @@ abstract final class AuthCopy {
         AuthFailureCode.emailNotConfirmed => l10n.authFailureEmailNotConfirmed,
         AuthFailureCode.rateLimited => l10n.authFailureRateLimited,
         AuthFailureCode.network => l10n.authFailureNetwork,
+        AuthFailureCode.sessionMissing => l10n.authFailureSessionMissing,
+        AuthFailureCode.mfaInvalidCode => l10n.mfaFailureInvalidCode,
+        AuthFailureCode.mfaChallengeExpired => l10n.mfaFailureChallengeExpired,
+        AuthFailureCode.mfaFactorNotFound => l10n.mfaFailureFactorNotFound,
+        AuthFailureCode.mfaFactorNameConflict => l10n.mfaFailureNameConflict,
+        AuthFailureCode.mfaTooManyFactors => l10n.mfaFailureTooManyFactors,
+        AuthFailureCode.mfaInsufficientAssurance =>
+          l10n.mfaFailureInsufficientAssurance,
+        AuthFailureCode.mfaNotEnabled => l10n.mfaFailureNotEnabled,
+        AuthFailureCode.mfaRejected => l10n.mfaFailureRejected,
         AuthFailureCode.unknown => l10n.authFailureUnknown,
       };
 
@@ -47,4 +57,18 @@ abstract final class AuthCopy {
   /// [AuthFailure] conocido, se degrada al mensaje genérico.
   static String error(AppLocalizations l10n, Object error) =>
       failure(l10n, AuthFailure.from(error));
+
+  /// `dd/MM/yyyy`, sin depender de los datos de locale de `intl` (que en esta
+  /// app no se inicializan): es el formato numérico habitual en Argentina.
+  static String shortDate(DateTime date) =>
+      '${_twoDigits(date.day)}/${_twoDigits(date.month)}/${date.year}';
+
+  /// `dd/MM/yyyy HH:mm:ss`, para etiquetar un factor nuevo de forma única y
+  /// legible. Con segundos: el servidor rechaza dos altas con el mismo nombre
+  /// y un reintento dentro del mismo minuto tiene que generar uno distinto.
+  static String shortDateTime(DateTime date) =>
+      '${shortDate(date)} ${_twoDigits(date.hour)}:${_twoDigits(date.minute)}'
+      ':${_twoDigits(date.second)}';
+
+  static String _twoDigits(int value) => value.toString().padLeft(2, '0');
 }

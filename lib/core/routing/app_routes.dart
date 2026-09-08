@@ -62,6 +62,11 @@ enum AppRoute {
   /// autorización real la hacen las RPCs de la migración 0028.
   adminVerifications('/admin/verificaciones', BusinessRole.admin),
 
+  /// Alta y verificación del segundo factor TOTP para poder operar la cola
+  /// (T-028; avance parcial de T-076). Se llega desde `/admin/verificaciones`
+  /// sin cerrar sesión; al verificar, vuelve a la cola por nombre de ruta.
+  adminSecondFactor('/admin/segundo-factor', BusinessRole.admin),
+
   /// Sesión inconsistente o acceso no permitido.
   sessionIssue('/sesion-invalida', null);
 

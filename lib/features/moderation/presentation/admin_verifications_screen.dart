@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/gen/app_localizations.dart';
+import '../../../core/routing/app_routes.dart';
 import '../../../shared/models/data_failure.dart';
 import '../../../shared/widgets/feedback_widgets.dart';
+import '../../authentication/providers/auth_providers.dart';
 import '../../companies/data/company_access_repository.dart';
 import '../../companies/domain/company_verification.dart';
 import '../../companies/providers/company_verification_providers.dart';
@@ -19,31 +22,33 @@ import '../../companies/providers/company_verification_providers.dart';
 /// `admin_list_company_verifications` y `admin_review_company_verification`
 /// (migración 0028), que exigen rol admin leído de `profiles` y claim
 /// `aal = aal2`, y fallan cerradas.
+///
+/// El nivel se observa del estado de sesión: cuando la persona verifica su
+/// segundo factor en `/admin/segundo-factor`, el token nuevo llega por el
+/// mismo stream que el login y esta pantalla pasa sola de la explicación a la
+/// cola, sin reiniciar y con el mismo usuario.
 class AdminVerificationsScreen extends ConsumerWidget {
   const AdminVerificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final secondFactor = ref.watch(hasSecondFactorProvider);
+    // Solo `currentLevel == aal2` habilita la cola. Que la cuenta tenga un
+    // factor verificado (`nextLevel`) no dice nada sobre ESTA sesión.
+    final verified = ref.watch(secondFactorVerifiedProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.adminVerificationsTitle)),
       body: SafeArea(
-        child: switch (secondFactor) {
-          AsyncData(value: false) => const _SecondFactorRequired(),
-          AsyncData(value: true) => const _Queue(),
-          AsyncError() => const _SecondFactorRequired(),
-          _ => const Center(child: CircularProgressIndicator()),
-        },
+        child: verified ? const _Queue() : const _SecondFactorRequired(),
       ),
     );
   }
 }
 
-/// Sesión sin segundo factor: se explica y no se muestra ni un dato de la cola.
-/// Ante un error al leer el nivel se cae acá a propósito — no saber si hay
-/// AAL2 es lo mismo que no tenerlo.
+/// Sesión sin segundo factor: se explica, se ofrece resolverlo sin cerrar
+/// sesión y no se muestra ni un dato de la cola. Un claim ilegible cae acá a
+/// propósito — no saber si hay AAL2 es lo mismo que no tenerlo.
 class _SecondFactorRequired extends StatelessWidget {
   const _SecondFactorRequired();
 
@@ -51,13 +56,25 @@ class _SecondFactorRequired extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: MessageBanner.error(
-            title: l10n.adminVerificationsMfaTitle,
-            message: l10n.adminVerificationsMfaBody,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MessageBanner.error(
+                title: l10n.adminVerificationsMfaTitle,
+                message: l10n.adminVerificationsMfaBody,
+              ),
+              FilledButton.icon(
+                onPressed: () =>
+                    context.goNamed(AppRoute.adminSecondFactor.name),
+                icon: const Icon(Icons.phonelink_lock_outlined),
+                label: Text(l10n.adminVerificationsMfaAction),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import '../domain/auth_status.dart';
 import '../domain/business_role.dart';
+import '../domain/second_factor.dart';
 
 /// Roles que el registro público puede **solicitar**.
 ///
@@ -39,7 +40,9 @@ abstract interface class AuthRepository {
   /// Estado conocido en este instante, sin esperar al stream.
   AuthStatus get currentStatus;
 
-  /// Emite cada cambio de sesión (alta, login, refresh, logout, expiración).
+  /// Emite cada cambio de sesión (alta, login, refresh, logout, expiración y
+  /// verificación del segundo factor, que cambia el nivel sin cambiar de
+  /// usuario).
   Stream<AuthStatus> statusChanges();
 
   /// Alta con correo y contraseña.
@@ -65,4 +68,41 @@ abstract interface class AuthRepository {
 
   /// Cierra la sesión de este dispositivo.
   Future<void> signOut();
+
+  // --- Segundo factor TOTP ---------------------------------------------------
+  //
+  // Alcance deliberado: alta y verificación. No hay baja ni reemplazo de un
+  // factor verificado, ni códigos de recuperación, ni recuperación por
+  // pérdida del autenticador (ver README, «Segundo factor»).
+
+  /// Factores TOTP **verificados** de la cuenta, según el servidor (refresca
+  /// la sesión para no decidir con una lista vieja). Vacío si nunca terminó
+  /// un alta.
+  Future<List<SecondFactor>> listVerifiedSecondFactors();
+
+  /// Inicia un alta TOTP: crea un factor **pendiente** y devuelve su secreto
+  /// y URI para el QR. No cambia el nivel de la sesión.
+  ///
+  /// El servidor rechaza esto con `insufficient_aal` cuando ya hay un factor
+  /// verificado y la sesión es `aal1`: en ese caso corresponde desafiar el
+  /// existente, no crear otro.
+  Future<TotpEnrollment> enrollTotp({required String friendlyName});
+
+  /// Emite un desafío para [factorId] (pendiente o verificado). Vence solo.
+  Future<SecondFactorChallenge> challengeSecondFactor(String factorId);
+
+  /// Verifica [code] contra un desafío. Al aceptarlo, el servidor marca el
+  /// factor como verificado (si era pendiente), emite un token `aal2` y el
+  /// cambio llega por [statusChanges] con el **mismo** usuario y rol.
+  Future<void> verifySecondFactor({
+    required String factorId,
+    required String challengeId,
+    required String code,
+  });
+
+  /// Descarta un factor **pendiente** creado por un alta que no se terminó
+  /// (cancelación, salida de la pantalla). Un factor verificado no se toca
+  /// desde acá: el servidor exige `aal2` para eso y no es parte de este
+  /// alcance. Si el factor ya no existe, no es un error.
+  Future<void> discardPendingSecondFactor(String factorId);
 }

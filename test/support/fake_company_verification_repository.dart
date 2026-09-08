@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:talentflash_argentina/features/companies/data/company_access_repository.dart';
 import 'package:talentflash_argentina/features/companies/data/company_verification_repository.dart';
 import 'package:talentflash_argentina/features/companies/domain/company_verification.dart';
@@ -12,7 +14,6 @@ class FakeCompanyVerificationRepository
     implements CompanyVerificationRepository {
   FakeCompanyVerificationRepository({
     CompanyVerification? verification,
-    this.secondFactor = true,
     List<CompanyVerificationRequest>? queue,
   }) : verification =
            verification ??
@@ -23,8 +24,11 @@ class FakeCompanyVerificationRepository
        queue = queue ?? <CompanyVerificationRequest>[];
 
   CompanyVerification verification;
-  bool secondFactor;
   List<CompanyVerificationRequest> queue;
+
+  /// Retiene la próxima lectura de la cola hasta que el test la complete,
+  /// para simular una respuesta tardía.
+  Completer<void>? pendingQueueFetch;
 
   /// Fallo a devolver la próxima vez que se llame a ESE método. Un
   /// `nextFailure` global se lo comía la primera lectura de la pantalla y
@@ -87,20 +91,22 @@ class FakeCompanyVerificationRepository
   }
 
   @override
-  Future<bool> hasSecondFactor() async {
-    calls.add('hasSecondFactor');
-    return secondFactor;
-  }
-
-  @override
   Future<List<CompanyVerificationRequest>> fetchVerificationQueue(
     CompanyVerificationStatus status,
   ) async {
     calls.add('fetchVerificationQueue:${status.wireName}');
-    _maybeThrow(nextQueueFailure, () => nextQueueFailure = null);
-    return queue
+    // La respuesta se fija al momento de la llamada, como haría el servidor:
+    // así una lectura retenida devuelve los datos de ENTONCES aunque el test
+    // cambie la cola mientras tanto.
+    final snapshot = queue
         .where((request) => request.requestStatus == status)
         .toList(growable: false);
+    final pending = pendingQueueFetch;
+    if (pending != null) {
+      await pending.future;
+    }
+    _maybeThrow(nextQueueFailure, () => nextQueueFailure = null);
+    return snapshot;
   }
 
   @override

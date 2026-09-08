@@ -8,6 +8,7 @@
     "db:lint": "supabase db lint --schema public",
     "db:test": "node scripts/run-db-tests.mjs",
     "db:concurrency": "node scripts/db-concurrency-test.mjs",
+    "mfa:test": "node scripts/mfa-integration-test.mjs",
     "db:test:supabase": "supabase test db",
     "storage:test": "node scripts/storage-test.mjs",
     "functions:test": "deno test supabase/functions/avatar"

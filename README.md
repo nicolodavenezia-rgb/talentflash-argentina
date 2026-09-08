@@ -57,16 +57,26 @@ la pantalla in-app de cambio de contraseña, que depende del enlace profundo
 (T-013), CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
 FCM/APNs y cualquier proyecto remoto.
 
-Del segundo factor hay una mitad y falta la otra, y conviene no confundirlas. La
-**exigencia** existe y es server-side: revisar una verificación de empresa pide
-el claim `aal = aal2` del JWT además del rol admin, con comparación exacta y
-fallo cerrado si el claim falta o trae otro nivel, y `config.toml` habilita el
-enrolamiento TOTP para que ese nivel sea alcanzable. Lo que no existe es la
-**experiencia**: la app solo **lee** el nivel de la sesión; no da de alta un
-factor, no emite el desafío y no lo verifica, así que su sesión se queda en
-`aal1` y la cola de `/admin/verificaciones` no se puede trabajar desde la app
-hasta que ese flujo exista. El guard que se ve ahí es visual: esconde la cola y
-explica por qué, pero no autoriza nada — la autorización la aplica el servidor. Del Bloque D queda pendiente el soporte
+Del segundo factor conviene separar tres cosas. La **exigencia** es server-side:
+revisar una verificación de empresa pide el claim `aal = aal2` del JWT además
+del rol admin, con comparación exacta y fallo cerrado si el claim falta o trae
+otro nivel, y `config.toml` habilita el enrolamiento TOTP para que ese nivel
+sea alcanzable. La **experiencia de alta y verificación** existe en la app:
+desde `/admin/verificaciones`, una sesión admin sin `aal2` tiene una acción que
+lleva a `/admin/segundo-factor` sin cerrar sesión; sin factor verificado se
+inicia el alta (QR y clave manual como alternativa) y se pide el primer
+código; con un factor verificado se desafía ese factor sin crear otro; con
+varios, se elige cuál usar. Al verificar, el SDK emite la sesión nueva (mismo
+usuario, token `aal2`), el estado de sesión la propaga y la cola aparece sola.
+Solo `currentLevel == aal2` habilita la cola: tener un factor verificado
+(`nextLevel`) no dice nada sobre la sesión actual. Cerrar sesión descarta todo
+lo sensible, y un nuevo inicio de sesión vuelve a pedir el código. Lo que
+**no** existe, y la pantalla lo dice en vez de simularlo: recuperación por
+pérdida del autenticador, baja o reemplazo de un factor verificado y códigos
+de recuperación; una cuenta admin que pierde su app queda sin poder operar la
+cola hasta que se defina ese circuito. El guard que se ve en la cola es visual:
+esconde la cola y explica por qué, pero no autoriza nada — la autorización la
+aplica el servidor. Del Bloque D queda pendiente el soporte
 de avatares WebP: la Edge Function los rechaza con `unsupported_format`
 (la librería de imágenes no los decodifica), así que el whitelist efectivo hoy
 es JPEG/PNG.
@@ -190,6 +200,23 @@ definido: no hay esquema de deep link ni URL de redirección en la allowlist de
 `config.toml`. Por eso no existe una pantalla de "nueva contraseña": sería un
 formulario que no podría funcionar.
 
+**Probar el segundo factor de administración:** el seed no trae ninguna cuenta
+`admin`. Para probarlo a mano, registrá una cuenta desde la app (o con
+`empresa`/`candidato` de prueba) y promovela desde `psql` dentro del
+contenedor de la base — es la única vía admitida (`docs/SECURITY.md` §3) y el
+trigger de la migración `0019` propaga el rol al claim:
+
+```sql
+update public.profiles set role = 'admin' where email = 'admin-local@dev.talentflash.test';
+```
+
+Cerrá sesión y volvé a entrar para que el token traiga el rol nuevo. En
+`/admin/verificaciones` vas a ver la acción **Verificar segundo factor**: la
+primera vez muestra el QR y la clave manual para cargar en una app de
+autenticación (Google Authenticator, Microsoft Authenticator, Aegis…); las
+siguientes, solo pide el código. `npm run mfa:test` hace el mismo recorrido
+con cuentas sintéticas y códigos calculados, y las borra al terminar.
+
 ## Verificación
 
 ```powershell
@@ -206,10 +233,15 @@ npm run storage:test     # integración real contra el bucket avatars (upload, t
 npm run db:concurrency   # carreras reales entre las tres puertas que crean una membresía
                          # (0031), con dos sesiones psql simultáneas: dos códigos para la
                          # misma cuenta, onboarding y bootstrap concurrentes, canje cruzado
+npm run mfa:test         # segundo factor TOTP de administración contra el GoTrue real:
+                         # alta, desafío y verificación con códigos calculados (RFC 6238),
+                         # RPC rechazada con aal1 y aceptada con aal2, reingreso y nuevo
+                         # desafío, aal2 sin rol admin rechazado; cuentas sintéticas que
+                         # se crean y borran en la corrida (nunca imprime secretos)
 ```
 
 La CI (`.github/workflows/ci.yml`) corre formato + analyze + tests Flutter,
-reset/lint/pgTAP de Supabase, `db:concurrency`, `functions:test` y
+reset/lint/pgTAP de Supabase, `db:concurrency`, `mfa:test`, `functions:test` y
 `storage:test` (con `denoland/setup-deno@v2` fijado a la versión exacta
 **v2.7.14** en los dos jobs que instalan Deno: una versión flotante cambia las
 banderas aceptadas sin aviso), el guard del grafo offline de la Edge Function

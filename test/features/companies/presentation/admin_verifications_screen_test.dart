@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
 import 'package:talentflash_argentina/features/authentication/domain/business_role.dart';
+import 'package:talentflash_argentina/features/authentication/domain/session_assurance.dart';
+import 'package:talentflash_argentina/features/authentication/presentation/second_factor_screen.dart';
+import 'package:talentflash_argentina/features/authentication/providers/auth_providers.dart';
 import 'package:talentflash_argentina/features/companies/data/company_access_repository.dart';
 import 'package:talentflash_argentina/features/companies/domain/company_verification.dart';
 import 'package:talentflash_argentina/shared/models/data_failure.dart';
@@ -16,7 +21,8 @@ import '../../../support/pump_app.dart';
 /// El guard de AAL2 que se prueba acá es VISUAL. El que decide de verdad es
 /// `private.require_verification_reviewer()` en la migración 0028, y sus casos
 /// —claim ausente, aal1, 'AAL2' con la caja equivocada, aal3, y AAL2 sin rol
-/// admin— viven en `017_company_verification_test.sql`.
+/// admin— viven en `017_company_verification_test.sql`. El flujo de alta y
+/// verificación TOTP se prueba en `second_factor_screen_test.dart`.
 void main() {
   CompanyVerificationRequest solicitud({
     String requestId = 'req-1',
@@ -40,6 +46,7 @@ void main() {
   Future<TalentFlashHarness> entrarComoAdmin(
     WidgetTester tester, {
     required FakeCompanyVerificationRepository repository,
+    SessionAssurance assurance = SessionAssurance.aal2,
   }) async {
     final auth = FakeAuthRepository(initialStatus: const AuthStatusSignedOut());
     final harness = await pumpTalentFlashApp(
@@ -48,7 +55,7 @@ void main() {
       companyVerificationRepository: repository,
     );
     await tester.pumpAndSettle();
-    auth.emitSignedIn(BusinessRole.admin);
+    auth.emitSignedIn(BusinessRole.admin, assurance: assurance);
     await tester.pumpAndSettle();
     harness.router.go('/admin/verificaciones');
     await tester.pumpAndSettle();
@@ -63,11 +70,12 @@ void main() {
   testWidgets('sin segundo factor no se muestra ni un dato de la cola', (
     tester,
   ) async {
-    final repository = FakeCompanyVerificationRepository(
-      secondFactor: false,
-      queue: [solicitud()],
+    final repository = FakeCompanyVerificationRepository(queue: [solicitud()]);
+    await entrarComoAdmin(
+      tester,
+      repository: repository,
+      assurance: SessionAssurance.aal1,
     );
-    await entrarComoAdmin(tester, repository: repository);
 
     expect(textoVisible(tester), contains('Necesitás segundo factor'));
     expect(
@@ -82,6 +90,156 @@ void main() {
       reason: 'ni siquiera se pide la cola',
     );
   });
+
+  testWidgets('un claim aal ilegible vale lo mismo que no tener AAL2', (
+    tester,
+  ) async {
+    final repository = FakeCompanyVerificationRepository(queue: [solicitud()]);
+    await entrarComoAdmin(
+      tester,
+      repository: repository,
+      assurance: SessionAssurance.unknown,
+    );
+
+    expect(textoVisible(tester), contains('Necesitás segundo factor'));
+    expect(find.text('Aprobar'), findsNothing);
+  });
+
+  testWidgets(
+    'sin AAL2 hay una acción para configurar o verificar el factor sin '
+    'cerrar sesión',
+    (tester) async {
+      final repository = FakeCompanyVerificationRepository(
+        queue: [solicitud()],
+      );
+      final harness = await entrarComoAdmin(
+        tester,
+        repository: repository,
+        assurance: SessionAssurance.aal1,
+      );
+
+      await ensureAndTap(tester, find.text('Verificar segundo factor'));
+
+      expect(harness.location, '/admin/segundo-factor');
+      expect(find.byType(SecondFactorScreen), findsOneWidget);
+      expect(
+        harness.authRepository.calls,
+        isNot(contains('signOut')),
+        reason: 'la acción no cierra la sesión',
+      );
+    },
+  );
+
+  testWidgets(
+    'al verificar el factor la cola aparece sola, con el mismo usuario',
+    (tester) async {
+      final repository = FakeCompanyVerificationRepository(
+        queue: [solicitud()],
+      );
+      final harness = await entrarComoAdmin(
+        tester,
+        repository: repository,
+        assurance: SessionAssurance.aal1,
+      );
+      expect(find.text('Parrilla Don Julio Dev'), findsNothing);
+      // Identidad según la APP (provider), no según el fake.
+      final antes = harness.container.read(currentAuthUserProvider);
+      expect(antes, isNotNull);
+
+      // Lo que emite el SDK tras `mfaChallengeVerified`: misma cuenta, token
+      // nuevo con aal2. Ningún reinicio ni cambio de usuario.
+      harness.authRepository.emitSignedIn(
+        BusinessRole.admin,
+        assurance: SessionAssurance.aal2,
+      );
+      await tester.pumpAndSettle();
+
+      expect(harness.container.read(currentAuthUserProvider), antes);
+      expect(
+        harness.container.read(sessionAssuranceProvider),
+        SessionAssurance.aal2,
+      );
+      expect(harness.location, '/admin/verificaciones');
+      expect(find.text('Parrilla Don Julio Dev'), findsOneWidget);
+      expect(repository.calls, contains('fetchVerificationQueue:pending'));
+    },
+  );
+
+  testWidgets('cerrar sesión descarta la cola y un nuevo login vuelve a pedir '
+      'el factor', (tester) async {
+    final repository = FakeCompanyVerificationRepository(queue: [solicitud()]);
+    final harness = await entrarComoAdmin(tester, repository: repository);
+    expect(find.text('Parrilla Don Julio Dev'), findsOneWidget);
+
+    harness.authRepository.emit(const AuthStatusSignedOut());
+    await tester.pumpAndSettle();
+    expect(find.text('Parrilla Don Julio Dev'), findsNothing);
+
+    // Nuevo inicio de sesión de la misma cuenta: la sesión nueva es aal1
+    // aunque la cuenta tenga un factor verificado.
+    harness.authRepository.emitSignedIn(BusinessRole.admin);
+    await tester.pumpAndSettle();
+    harness.router.go('/admin/verificaciones');
+    await tester.pumpAndSettle();
+
+    expect(textoVisible(tester), contains('Necesitás segundo factor'));
+    expect(find.text('Parrilla Don Julio Dev'), findsNothing);
+  });
+
+  testWidgets(
+    'una respuesta tardía de la cuenta anterior no se muestra a la siguiente',
+    (tester) async {
+      final repository = FakeCompanyVerificationRepository(
+        queue: [solicitud(companyName: 'Empresa de la cuenta A')],
+      );
+      // La primera lectura queda colgada hasta que el test la libere.
+      final gate = Completer<void>();
+      repository.pendingQueueFetch = gate;
+      final auth = FakeAuthRepository(
+        initialStatus: const AuthStatusSignedOut(),
+      );
+      final harness = await pumpTalentFlashApp(
+        tester,
+        authRepository: auth,
+        companyVerificationRepository: repository,
+      );
+      await tester.pumpAndSettle();
+      auth.emitSignedIn(BusinessRole.admin, assurance: SessionAssurance.aal2);
+      await tester.pumpAndSettle();
+      harness.router.go('/admin/verificaciones');
+      // Sin pumpAndSettle: el indicador de carga anima mientras la lectura
+      // sigue en vuelo.
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        repository.calls.where((c) => c.startsWith('fetchVerificationQueue')),
+        hasLength(1),
+      );
+
+      // Cambio de cuenta con la lectura todavía en vuelo.
+      auth.emit(const AuthStatusSignedOut());
+      await tester.pumpAndSettle();
+      repository.pendingQueueFetch = null;
+      repository.queue = [solicitud(companyName: 'Empresa de la cuenta B')];
+      auth.emitSignedIn(
+        BusinessRole.admin,
+        id: 'user-admin-b',
+        assurance: SessionAssurance.aal2,
+      );
+      await tester.pumpAndSettle();
+      harness.router.go('/admin/verificaciones');
+      await tester.pumpAndSettle();
+      expect(find.text('Empresa de la cuenta B'), findsOneWidget);
+
+      // Recién ahora responde la lectura de la cuenta A.
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Empresa de la cuenta A'), findsNothing);
+      expect(find.text('Empresa de la cuenta B'), findsOneWidget);
+    },
+  );
 
   testWidgets('con segundo factor se lista la cola pendiente', (tester) async {
     final repository = FakeCompanyVerificationRepository(

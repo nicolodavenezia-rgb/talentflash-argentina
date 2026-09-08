@@ -42,6 +42,12 @@ jobs:
       # No va en pgTAP: cada archivo de ahí corre dentro de UNA transacción y
       # una carrera entre dos transacciones no se puede simular ahí adentro.
       - run: npm run db:concurrency
+      # Segundo factor TOTP de administración contra el GoTrue real del stack:
+      # alta, desafío y verificación con códigos calculados de verdad, y las
+      # RPC de revisión rechazando con aal1 y aceptando con aal2. Cuentas
+      # sintéticas creadas y borradas en la misma corrida; el único fixture
+      # privilegiado (promover a admin) va por psql dentro del contenedor.
+      - run: npm run mfa:test
       # Versión exacta, no `v2.x`: una versión flotante cambia el conjunto de
       # banderas aceptadas sin previo aviso — fue exactamente lo que rompió
       # `deno check --cached-only`. v2.7.14 es la baseline verificada.

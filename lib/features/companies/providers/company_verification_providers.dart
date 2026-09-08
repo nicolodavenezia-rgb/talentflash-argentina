@@ -67,11 +67,9 @@ final constanciaSignedUrlProvider = FutureProvider.autoDispose
           .createConstanciaSignedUrl(path);
     });
 
-/// ¿La sesión llegó a AAL2? Es el guard VISUAL del panel: esconde la pantalla
-/// y explica por qué, pero la autorización real la aplica la RPC.
-final hasSecondFactorProvider = FutureProvider.autoDispose<bool>((ref) {
-  return ref.watch(companyVerificationRepositoryProvider).hasSecondFactor();
-});
+// El guard visual de AAL2 del panel es `secondFactorVerifiedProvider`
+// (feature de autenticación): se deriva del estado de sesión y cambia solo al
+// verificar el segundo factor.
 
 // ---------------------------------------------------------------------------
 // Envío de la solicitud (lado empresa)
@@ -185,6 +183,14 @@ final verificationQueueFilterProvider =
 
 final verificationQueueProvider =
     FutureProvider.autoDispose<List<CompanyVerificationRequest>>((ref) {
+      // Atada a la cuenta: si la sesión cambia mientras la lista viaja, el
+      // provider se reconstruye y la respuesta tardía de la cuenta anterior
+      // se descarta en vez de mostrarse a la siguiente. Sin sesión no se pide
+      // nada: la pantalla ya no está y una RPC sin JWT solo haría ruido.
+      final user = ref.watch(currentAuthUserProvider);
+      if (user == null) {
+        return const <CompanyVerificationRequest>[];
+      }
       final status = ref.watch(verificationQueueFilterProvider);
       return ref
           .watch(companyVerificationRepositoryProvider)
@@ -195,7 +201,12 @@ final verificationQueueProvider =
 class VerificationReviewController
     extends AsyncNotifier<VerificationActionOutcome?> {
   @override
-  FutureOr<VerificationActionOutcome?> build() => null;
+  FutureOr<VerificationActionOutcome?> build() {
+    // Misma regla que la cola: un resultado (o un error) de una revisión en
+    // vuelo no puede quedar colgado de la cuenta siguiente.
+    ref.watch(currentAuthUserProvider);
+    return null;
+  }
 
   Future<void> approve(String requestId) {
     return _run(requestId: requestId, approve: true);
@@ -220,6 +231,10 @@ class VerificationReviewController
     if (state.isLoading) {
       return;
     }
+    // Cuenta dueña de esta revisión. Riverpod 3 reutiliza la instancia del
+    // notifier cuando el provider se reconstruye, así que `ref.mounted` no
+    // distingue un cambio de cuenta: se compara la identidad a la vuelta.
+    final owner = ref.read(currentAuthUserProvider)?.id;
     state = const AsyncValue<VerificationActionOutcome?>.loading();
     try {
       await ref
@@ -229,16 +244,32 @@ class VerificationReviewController
             approve: approve,
             reason: reason,
           );
+      if (!_stillOwnedBy(owner)) {
+        return;
+      }
       ref.invalidate(verificationQueueProvider);
       state = const AsyncValue<VerificationActionOutcome?>.data(
         VerificationActionOutcome.reviewed,
       );
     } catch (error, stackTrace) {
+      if (!_stillOwnedBy(owner)) {
+        return;
+      }
       state = AsyncValue<VerificationActionOutcome?>.error(
         error is DataFailure ? error : DataFailure.from(error),
         stackTrace,
       );
     }
+  }
+
+  /// `false` si el notifier ya no existe o si la sesión pasó a otra cuenta
+  /// (o a ninguna) mientras la revisión viajaba: ese resultado no le
+  /// pertenece a nadie y no se muestra.
+  bool _stillOwnedBy(String? owner) {
+    if (!ref.mounted) {
+      return false;
+    }
+    return owner != null && ref.read(currentAuthUserProvider)?.id == owner;
   }
 }
 

@@ -110,24 +110,6 @@ class SupabaseCompanyVerificationRepository
   }
 
   @override
-  Future<bool> hasSecondFactor() async {
-    // Dato del propio token, sin ida y vuelta: sirve para explicar la situación
-    // antes de que el servidor rechace, y no autoriza nada por sí mismo.
-    //
-    // Fail-closed: `getAuthenticatorAssuranceLevel` decodifica el access token
-    // y lanza si no tiene forma de JWT (sesión rara, token de utilería). No
-    // poder leer el nivel es exactamente lo mismo que no tenerlo.
-    try {
-      final level = _client.auth.mfa
-          .getAuthenticatorAssuranceLevel()
-          .currentLevel;
-      return level == AuthenticatorAssuranceLevels.aal2;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  @override
   Future<List<CompanyVerificationRequest>> fetchVerificationQueue(
     CompanyVerificationStatus status,
   ) {

@@ -82,6 +82,8 @@ Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/of
 
 `/admin/verificaciones`, `/admin/moderacion` (§16), `/admin/denuncias`, `/admin/metricas`, `/admin/usuarios` (§17).
 
+`/admin/segundo-factor` **(implementado)**: alta y verificación del segundo factor TOTP sin cerrar sesión. Se llega desde `/admin/verificaciones` cuando la sesión no tiene `aal2`; al verificar, el estado de sesión cambia solo (mismo usuario, nivel nuevo) y la app vuelve a la cola. Sin factor verificado muestra el QR y la clave manual (alternativa accesible al QR) y pide el primer código; con un factor verificado pide el código de ese factor y no crea otro; con varios, pide elegir. No incluye recuperación por pérdida del autenticador, baja ni reemplazo de un factor verificado: la pantalla lo dice en vez de prometer un circuito que no existe.
+
 ### 1.5 Guards de navegación (orden de evaluación)
 
 0. `sessionGuard` **(implementado)**: mientras la sesión no se resolvió, todo va a `/inicio`; nunca se dibuja una pantalla privada ni el login de alguien que sí tiene sesión.

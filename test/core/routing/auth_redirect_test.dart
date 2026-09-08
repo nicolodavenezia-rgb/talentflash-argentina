@@ -107,6 +107,10 @@ void main() {
         redirect(const AuthStatusSignedOut(), '/admin'),
         '/auth/login?destino=%2Fadmin',
       );
+      expect(
+        redirect(const AuthStatusSignedOut(), '/admin/segundo-factor'),
+        '/auth/login?destino=%2Fadmin%2Fsegundo-factor',
+      );
     });
 
     test('el binario general muestra la bienvenida', () {
@@ -205,6 +209,11 @@ void main() {
         redirect(candidate, '/admin'),
         '/sesion-invalida?motivo=sin-permiso',
       );
+      expect(
+        redirect(candidate, '/admin/segundo-factor'),
+        '/sesion-invalida?motivo=sin-permiso',
+        reason: 'el alta TOTP de administración es solo para admin',
+      );
     });
 
     test('no vuelve al login ni al registro estando autenticado', () {
@@ -267,6 +276,12 @@ void main() {
 
     test('entra a su propio panel', () {
       expect(redirect(admin, '/admin'), isNull);
+      expect(redirect(admin, '/admin/verificaciones'), isNull);
+      expect(
+        redirect(admin, '/admin/segundo-factor'),
+        isNull,
+        reason: 'el alta TOTP se hace con la sesión abierta, sin salir',
+      );
     });
 
     test('un binario de candidato no lo degrada', () {
@@ -340,6 +355,7 @@ void main() {
         AppRoute.companyReconsent,
         AppRoute.adminHome,
         AppRoute.adminVerifications,
+        AppRoute.adminSecondFactor,
       ]);
     });
 

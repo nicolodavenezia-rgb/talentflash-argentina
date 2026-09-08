@@ -514,6 +514,12 @@ abstract class AppLocalizations {
   /// **'No pudimos completar la acción. Reintentá en unos minutos.'**
   String get authFailureUnknown;
 
+  /// No description provided for @authFailureSessionMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sesión terminó. Volvé a iniciar sesión.'**
+  String get authFailureSessionMissing;
+
   /// Encabezado del cartel de error de los formularios de autenticación
   ///
   /// In es, this message translates to:
@@ -2317,8 +2323,242 @@ abstract class AppLocalizations {
   /// No description provided for @adminVerificationsMfaBody.
   ///
   /// In es, this message translates to:
-  /// **'Para revisar verificaciones hay que iniciar sesión con segundo factor. Cerrá sesión, activá el segundo factor y volvé a entrar.'**
+  /// **'Para revisar verificaciones tenés que confirmar tu segundo factor en esta sesión. Si todavía no lo configuraste, lo hacés en el mismo paso, sin cerrar sesión.'**
   String get adminVerificationsMfaBody;
+
+  /// Botón de la cola admin que lleva al alta o verificación TOTP
+  ///
+  /// In es, this message translates to:
+  /// **'Verificar segundo factor'**
+  String get adminVerificationsMfaAction;
+
+  /// No description provided for @mfaTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Segundo factor'**
+  String get mfaTitle;
+
+  /// No description provided for @mfaPreparing.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando el segundo factor…'**
+  String get mfaPreparing;
+
+  /// No description provided for @mfaEnrollTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Configurá tu autenticador'**
+  String get mfaEnrollTitle;
+
+  /// No description provided for @mfaEnrollIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Escaneá el código QR con una app de autenticación (por ejemplo Google Authenticator, Microsoft Authenticator o Aegis). Si no podés escanearlo, cargá la clave manual que sigue.'**
+  String get mfaEnrollIntro;
+
+  /// No description provided for @mfaEnrollPendingNote.
+  ///
+  /// In es, this message translates to:
+  /// **'El segundo factor queda activo recién cuando ingresás un código válido. Si salís antes, no queda configurado.'**
+  String get mfaEnrollPendingNote;
+
+  /// No description provided for @mfaLimitsNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardá bien el acceso a tu app de autenticación: esta versión no permite recuperar, dar de baja ni reemplazar el autenticador desde la app.'**
+  String get mfaLimitsNote;
+
+  /// No description provided for @mfaQrSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'Código QR para registrar TalentFlash en tu app de autenticación. Si no podés escanearlo, usá la clave manual que sigue.'**
+  String get mfaQrSemantics;
+
+  /// No description provided for @mfaManualKeyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave manual'**
+  String get mfaManualKeyLabel;
+
+  /// No description provided for @mfaManualKeyHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargala en tu app como clave de tiempo (TOTP), sin espacios.'**
+  String get mfaManualKeyHelp;
+
+  /// Etiqueta para lectores de pantalla de la clave TOTP, deletreada
+  ///
+  /// In es, this message translates to:
+  /// **'Clave manual, carácter por carácter: {clave}'**
+  String mfaManualKeySemantics(String clave);
+
+  /// No description provided for @mfaCodeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de 6 dígitos'**
+  String get mfaCodeLabel;
+
+  /// No description provided for @mfaCodeHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Es el código que muestra tu app ahora; cambia cada 30 segundos.'**
+  String get mfaCodeHelp;
+
+  /// No description provided for @mfaCodeRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el código de tu app.'**
+  String get mfaCodeRequired;
+
+  /// No description provided for @mfaCodeFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'El código tiene 6 dígitos.'**
+  String get mfaCodeFormat;
+
+  /// No description provided for @mfaSubmitEnroll.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar segundo factor'**
+  String get mfaSubmitEnroll;
+
+  /// No description provided for @mfaSubmitVerify.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificar'**
+  String get mfaSubmitVerify;
+
+  /// No description provided for @mfaCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar y volver'**
+  String get mfaCancel;
+
+  /// No description provided for @mfaBackToQueue.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a la cola'**
+  String get mfaBackToQueue;
+
+  /// No description provided for @mfaChallengeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmá tu segundo factor'**
+  String get mfaChallengeTitle;
+
+  /// Bajada del desafío sobre un factor ya verificado
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el código que muestra tu app de autenticación para {nombre}.'**
+  String mfaChallengeIntro(String nombre);
+
+  /// No description provided for @mfaChooseTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué autenticador vas a usar?'**
+  String get mfaChooseTitle;
+
+  /// No description provided for @mfaChooseIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta tiene más de un autenticador registrado. Elegí con cuál vas a verificar esta sesión.'**
+  String get mfaChooseIntro;
+
+  /// No description provided for @mfaChooseAnother.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar otro autenticador'**
+  String get mfaChooseAnother;
+
+  /// No description provided for @mfaFactorUnnamed.
+  ///
+  /// In es, this message translates to:
+  /// **'Autenticador sin nombre'**
+  String get mfaFactorUnnamed;
+
+  /// Rótulo de un factor sin etiqueta en la lista para elegir; la fecha lo distingue
+  ///
+  /// In es, this message translates to:
+  /// **'Autenticador sin nombre, registrado el {fecha}'**
+  String mfaFactorUnnamedCreated(String fecha);
+
+  /// Etiqueta con la que se guarda un factor nuevo; única por la fecha, hora y segundos
+  ///
+  /// In es, this message translates to:
+  /// **'TalentFlash · {fecha}'**
+  String mfaFriendlyName(String fecha);
+
+  /// No description provided for @mfaVerified.
+  ///
+  /// In es, this message translates to:
+  /// **'Segundo factor verificado. Ya podés revisar la cola.'**
+  String get mfaVerified;
+
+  /// No description provided for @mfaAlreadyVerified.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sesión ya tiene el segundo factor verificado.'**
+  String get mfaAlreadyVerified;
+
+  /// No description provided for @mfaErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos verificar el código'**
+  String get mfaErrorTitle;
+
+  /// No description provided for @mfaUnavailableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos preparar el segundo factor'**
+  String get mfaUnavailableTitle;
+
+  /// No description provided for @mfaFailureInvalidCode.
+  ///
+  /// In es, this message translates to:
+  /// **'El código no es válido. Fijate que sea el actual de tu app y probá de nuevo.'**
+  String get mfaFailureInvalidCode;
+
+  /// No description provided for @mfaFailureChallengeExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Se venció el tiempo para ingresar el código. Probá de nuevo con el código actual de tu app.'**
+  String get mfaFailureChallengeExpired;
+
+  /// No description provided for @mfaFailureFactorNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos ese autenticador. Volvé a la cola y empezá de nuevo.'**
+  String get mfaFailureFactorNotFound;
+
+  /// No description provided for @mfaFailureNameConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Quedó un alta anterior sin terminar con ese nombre. Reintentá para generar una nueva.'**
+  String get mfaFailureNameConflict;
+
+  /// No description provided for @mfaFailureTooManyFactors.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta llegó al máximo de autenticadores registrados.'**
+  String get mfaFailureTooManyFactors;
+
+  /// No description provided for @mfaFailureInsufficientAssurance.
+  ///
+  /// In es, this message translates to:
+  /// **'Para hacer esto primero tenés que verificar el autenticador que ya tenés.'**
+  String get mfaFailureInsufficientAssurance;
+
+  /// No description provided for @mfaFailureNotEnabled.
+  ///
+  /// In es, this message translates to:
+  /// **'El segundo factor no está habilitado en este entorno.'**
+  String get mfaFailureNotEnabled;
+
+  /// No description provided for @mfaFailureRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'La verificación fue rechazada. Probá de nuevo con el código actual de tu app.'**
+  String get mfaFailureRejected;
 
   /// No description provided for @adminVerificationsEmpty.
   ///

@@ -1,5 +1,6 @@
 import 'authenticated_user.dart';
 import 'business_role.dart';
+import 'session_assurance.dart';
 
 /// Estado de autenticación observable por la UI y por los guards de ruta.
 ///
@@ -23,6 +24,17 @@ sealed class AuthStatus {
     AuthStatusSignedIn(:final authUser) => authUser,
     _ => null,
   };
+
+  /// Nivel de garantía de la sesión. Sin sesión válida es [SessionAssurance.unknown].
+  SessionAssurance get assurance => switch (this) {
+    AuthStatusSignedIn(:final assurance) => assurance,
+    _ => SessionAssurance.unknown,
+  };
+
+  /// `true` solo con sesión válida **y** claim `aal2` exacto. Es el único
+  /// dato que habilita a dibujar la cola administrativa; la autorización real
+  /// sigue siendo de las RPC (migración 0028).
+  bool get hasSecondFactorVerified => assurance.isSecondFactorVerified;
 }
 
 /// Sesión todavía no restaurada (primer frame, rehidratación del SDK).
@@ -54,20 +66,34 @@ final class AuthStatusSignedOut extends AuthStatus {
 }
 
 /// Sesión válida con rol confiable resuelto.
+///
+/// [assurance] forma parte de la igualdad a propósito: verificar el segundo
+/// factor cambia el token pero no la identidad, y sin este campo el estado
+/// "mismo usuario, ahora con aal2" sería igual al anterior y nadie se
+/// enteraría (ni el router, ni la cola administrativa).
 final class AuthStatusSignedIn extends AuthStatus {
-  const AuthStatusSignedIn(this.authUser);
+  const AuthStatusSignedIn(
+    this.authUser, {
+    this.assurance = SessionAssurance.unknown,
+  });
 
   final AuthenticatedUser authUser;
 
+  /// Nivel de **esta** sesión, leído del claim `aal` del token vigente.
+  @override
+  final SessionAssurance assurance;
+
   @override
   bool operator ==(Object other) =>
-      other is AuthStatusSignedIn && other.authUser == authUser;
+      other is AuthStatusSignedIn &&
+      other.authUser == authUser &&
+      other.assurance == assurance;
 
   @override
-  int get hashCode => Object.hash(AuthStatusSignedIn, authUser);
+  int get hashCode => Object.hash(AuthStatusSignedIn, authUser, assurance);
 
   @override
-  String toString() => 'AuthStatusSignedIn($authUser)';
+  String toString() => 'AuthStatusSignedIn($authUser, ${assurance.name})';
 }
 
 /// Hay sesión pero el claim `app_metadata.role` falta o no es válido.

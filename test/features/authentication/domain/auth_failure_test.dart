@@ -25,6 +25,45 @@ void main() {
       });
     });
 
+    test(
+      'traduce los error_code del segundo factor (verificados en local)',
+      () {
+        // Los códigos y estados de abajo son los que devolvió el GoTrue del
+        // stack local en `npm run mfa:test`.
+        final cases = <(String, String), AuthFailureCode>{
+          ('mfa_verification_failed', '422'): AuthFailureCode.mfaInvalidCode,
+          ('mfa_challenge_expired', '422'): AuthFailureCode.mfaChallengeExpired,
+          ('mfa_factor_not_found', '404'): AuthFailureCode.mfaFactorNotFound,
+          ('mfa_factor_name_conflict', '422'):
+              AuthFailureCode.mfaFactorNameConflict,
+          ('too_many_enrolled_mfa_factors', '422'):
+              AuthFailureCode.mfaTooManyFactors,
+          ('insufficient_aal', '403'): AuthFailureCode.mfaInsufficientAssurance,
+          ('mfa_totp_enroll_not_enabled', '422'): AuthFailureCode.mfaNotEnabled,
+          ('mfa_totp_verify_not_enabled', '422'): AuthFailureCode.mfaNotEnabled,
+          ('mfa_verification_rejected', '403'): AuthFailureCode.mfaRejected,
+          ('mfa_ip_address_mismatch', '403'): AuthFailureCode.mfaRejected,
+          ('session_not_found', '403'): AuthFailureCode.sessionMissing,
+          ('refresh_token_already_used', '400'): AuthFailureCode.sessionMissing,
+        };
+        cases.forEach((input, expected) {
+          final failure = AuthFailure.from(
+            AuthApiException(
+              'mensaje interno',
+              code: input.$1,
+              statusCode: input.$2,
+            ),
+          );
+          expect(failure.code, expected, reason: 'para ${input.$1}');
+        });
+      },
+    );
+
+    test('sin sesión en el SDK es un error de sesión, no de credenciales', () {
+      final failure = AuthFailure.from(AuthSessionMissingException());
+      expect(failure.code, AuthFailureCode.sessionMissing);
+    });
+
     test('cualquier 429 se trata como límite de intentos', () {
       final failure = AuthFailure.from(
         AuthApiException('too many', statusCode: '429'),

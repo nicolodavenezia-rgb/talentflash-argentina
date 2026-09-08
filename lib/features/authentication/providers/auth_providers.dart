@@ -8,6 +8,7 @@ import '../data/supabase_auth_repository.dart';
 import '../domain/auth_status.dart';
 import '../domain/authenticated_user.dart';
 import '../domain/business_role.dart';
+import '../domain/session_assurance.dart';
 
 /// Repositorio de autenticación. En tests se sobreescribe con un fake, de modo
 /// que ninguna prueba necesita un Supabase remoto ni el singleton del SDK.
@@ -43,6 +44,10 @@ final authStatusProvider = NotifierProvider<AuthStatusNotifier, AuthStatus>(
 
 /// Usuario autenticado con rol válido, o `null` (sin sesión, todavía cargando
 /// o con claim inconsistente).
+///
+/// Es identidad, no sesión: verificar el segundo factor **no** cambia este
+/// valor (mismo id, correo y rol). Quien necesite el nivel de la sesión mira
+/// [sessionAssuranceProvider].
 final currentAuthUserProvider = Provider<AuthenticatedUser?>((ref) {
   return ref.watch(authStatusProvider).user;
 });
@@ -58,4 +63,21 @@ final businessRoleProvider = Provider<BusinessRole?>((ref) {
 /// `false` mientras la sesión todavía se está restaurando.
 final authResolvedProvider = Provider<bool>((ref) {
   return ref.watch(authStatusProvider).isResolved;
+});
+
+/// Nivel de garantía de la sesión vigente (claim `aal` del token).
+///
+/// Se deriva del mismo stream que el resto del estado de sesión, así que
+/// verificar el segundo factor lo actualiza sin reiniciar nada: el SDK emite
+/// la sesión nueva, el repositorio la traduce y este provider cambia de
+/// `aal1` a `aal2` con el mismo usuario.
+final sessionAssuranceProvider = Provider<SessionAssurance>((ref) {
+  return ref.watch(authStatusProvider).assurance;
+});
+
+/// Guard VISUAL de la cola administrativa: `true` solo con claim `aal2`
+/// exacto en la sesión actual. Tener un factor verificado (`nextLevel`) no
+/// alcanza. La autorización real la aplican las RPC (migración 0028).
+final secondFactorVerifiedProvider = Provider<bool>((ref) {
+  return ref.watch(authStatusProvider).hasSecondFactorVerified;
 });

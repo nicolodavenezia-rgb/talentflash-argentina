@@ -126,6 +126,7 @@
   "authFailureRateLimited": "Hiciste muchos intentos seguidos. Esperá unos minutos y volvé a probar.",
   "authFailureNetwork": "No pudimos conectarnos. Revisá tu conexión y reintentá.",
   "authFailureUnknown": "No pudimos completar la acción. Reintentá en unos minutos.",
+  "authFailureSessionMissing": "Tu sesión terminó. Volvé a iniciar sesión.",
   "authErrorTitle": "No pudimos continuar",
   "@authErrorTitle": {
     "description": "Encabezado del cartel de error de los formularios de autenticación"
@@ -578,7 +579,85 @@
   "verificationStatusRejected": "Rechazadas",
   "adminVerificationsTitle": "Verificaciones de empresa",
   "adminVerificationsMfaTitle": "Necesitás segundo factor",
-  "adminVerificationsMfaBody": "Para revisar verificaciones hay que iniciar sesión con segundo factor. Cerrá sesión, activá el segundo factor y volvé a entrar.",
+  "adminVerificationsMfaBody": "Para revisar verificaciones tenés que confirmar tu segundo factor en esta sesión. Si todavía no lo configuraste, lo hacés en el mismo paso, sin cerrar sesión.",
+  "adminVerificationsMfaAction": "Verificar segundo factor",
+  "@adminVerificationsMfaAction": {
+    "description": "Botón de la cola admin que lleva al alta o verificación TOTP"
+  },
+  "mfaTitle": "Segundo factor",
+  "mfaPreparing": "Preparando el segundo factor…",
+  "mfaEnrollTitle": "Configurá tu autenticador",
+  "mfaEnrollIntro": "Escaneá el código QR con una app de autenticación (por ejemplo Google Authenticator, Microsoft Authenticator o Aegis). Si no podés escanearlo, cargá la clave manual que sigue.",
+  "mfaEnrollPendingNote": "El segundo factor queda activo recién cuando ingresás un código válido. Si salís antes, no queda configurado.",
+  "mfaLimitsNote": "Guardá bien el acceso a tu app de autenticación: esta versión no permite recuperar, dar de baja ni reemplazar el autenticador desde la app.",
+  "mfaQrSemantics": "Código QR para registrar TalentFlash en tu app de autenticación. Si no podés escanearlo, usá la clave manual que sigue.",
+  "mfaManualKeyLabel": "Clave manual",
+  "mfaManualKeyHelp": "Cargala en tu app como clave de tiempo (TOTP), sin espacios.",
+  "mfaManualKeySemantics": "Clave manual, carácter por carácter: {clave}",
+  "@mfaManualKeySemantics": {
+    "description": "Etiqueta para lectores de pantalla de la clave TOTP, deletreada",
+    "placeholders": {
+      "clave": {
+        "type": "String",
+        "example": "A B C D E F G H"
+      }
+    }
+  },
+  "mfaCodeLabel": "Código de 6 dígitos",
+  "mfaCodeHelp": "Es el código que muestra tu app ahora; cambia cada 30 segundos.",
+  "mfaCodeRequired": "Ingresá el código de tu app.",
+  "mfaCodeFormat": "El código tiene 6 dígitos.",
+  "mfaSubmitEnroll": "Activar segundo factor",
+  "mfaSubmitVerify": "Verificar",
+  "mfaCancel": "Cancelar y volver",
+  "mfaBackToQueue": "Volver a la cola",
+  "mfaChallengeTitle": "Confirmá tu segundo factor",
+  "mfaChallengeIntro": "Ingresá el código que muestra tu app de autenticación para {nombre}.",
+  "@mfaChallengeIntro": {
+    "description": "Bajada del desafío sobre un factor ya verificado",
+    "placeholders": {
+      "nombre": {
+        "type": "String",
+        "example": "TalentFlash · 08/09/2026 14:32:05"
+      }
+    }
+  },
+  "mfaChooseTitle": "¿Qué autenticador vas a usar?",
+  "mfaChooseIntro": "Tu cuenta tiene más de un autenticador registrado. Elegí con cuál vas a verificar esta sesión.",
+  "mfaChooseAnother": "Usar otro autenticador",
+  "mfaFactorUnnamed": "Autenticador sin nombre",
+  "mfaFactorUnnamedCreated": "Autenticador sin nombre, registrado el {fecha}",
+  "@mfaFactorUnnamedCreated": {
+    "description": "Rótulo de un factor sin etiqueta en la lista para elegir; la fecha lo distingue",
+    "placeholders": {
+      "fecha": {
+        "type": "String",
+        "example": "08/09/2026"
+      }
+    }
+  },
+  "mfaFriendlyName": "TalentFlash · {fecha}",
+  "@mfaFriendlyName": {
+    "description": "Etiqueta con la que se guarda un factor nuevo; única por la fecha, hora y segundos",
+    "placeholders": {
+      "fecha": {
+        "type": "String",
+        "example": "08/09/2026 14:32:05"
+      }
+    }
+  },
+  "mfaVerified": "Segundo factor verificado. Ya podés revisar la cola.",
+  "mfaAlreadyVerified": "Tu sesión ya tiene el segundo factor verificado.",
+  "mfaErrorTitle": "No pudimos verificar el código",
+  "mfaUnavailableTitle": "No pudimos preparar el segundo factor",
+  "mfaFailureInvalidCode": "El código no es válido. Fijate que sea el actual de tu app y probá de nuevo.",
+  "mfaFailureChallengeExpired": "Se venció el tiempo para ingresar el código. Probá de nuevo con el código actual de tu app.",
+  "mfaFailureFactorNotFound": "No encontramos ese autenticador. Volvé a la cola y empezá de nuevo.",
+  "mfaFailureNameConflict": "Quedó un alta anterior sin terminar con ese nombre. Reintentá para generar una nueva.",
+  "mfaFailureTooManyFactors": "Tu cuenta llegó al máximo de autenticadores registrados.",
+  "mfaFailureInsufficientAssurance": "Para hacer esto primero tenés que verificar el autenticador que ya tenés.",
+  "mfaFailureNotEnabled": "El segundo factor no está habilitado en este entorno.",
+  "mfaFailureRejected": "La verificación fue rechazada. Probá de nuevo con el código actual de tu app.",
   "adminVerificationsEmpty": "No hay solicitudes en este estado.",
   "adminVerificationsErrorTitle": "No pudimos completar la acción",
   "adminVerificationsResolved": "Solicitud resuelta.",

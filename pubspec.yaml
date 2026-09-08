@@ -46,6 +46,12 @@ dependencies:
   # costo asociado; encapsulado tras AvatarImagePicker para poder testear
   # sin abrir UI nativa.
   file_selector: ^1.0.3
+  # Dibuja en el cliente el QR del alta TOTP a partir de la URI `otpauth://`
+  # (segundo factor para administración, T-028/T-076). Paquete Dart puro con
+  # licencia BSD-3, sin servicio ni costo asociado; se eligió en vez de
+  # renderizar el SVG que manda GoTrue porque no hay ningún renderer de SVG
+  # entre las dependencias y así el secreto vive en una sola copia en memoria.
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
