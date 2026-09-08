@@ -43,7 +43,31 @@ de secretos (gitleaks)`.
 
 ## 2. Qué existe solo en un PR abierto
 
-### PR #4 — `docs: versionar el método de trabajo con ChatGPT y Claude`
+> **Adenda del 2026-09-08.** El PR #4 de abajo ya se fusionó (merge
+> `6d9c173`, 2026-09-07): `main` pasó de `327883c` a `6d9c173` y este
+> documento vive en `main`. Lo que hoy existe **solo en un PR abierto** es el
+> PR #5.
+
+### PR #5 — `feat(auth): alta y verificación TOTP para operar la cola admin`
+
+- Enlace: <https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/5>
+- Rama: `feat/admin-mfa-enrollment` · base `main` (`6d9c173`)
+- Qué agrega: la **experiencia** de segundo factor que la [§4](#4-desfases-y-matices-que-hay-que-tener-presentes)
+  marcaba como inexistente — alta TOTP (QR + clave manual), desafío y
+  verificación desde `/admin/segundo-factor`, con acción desde
+  `/admin/verificaciones` sin cerrar sesión; el nivel de la sesión
+  (`SessionAssurance`, claim `aal` exacto) pasa a ser parte de `AuthStatus`
+  y la cola aparece sola al llegar a `aal2`. Suma `npm run mfa:test`
+  (integración real contra el GoTrue local, también en CI), `qr_flutter`, y
+  actualiza README, SECURITY, ROADMAP (T-076) y UX_FLOWS.
+- Qué **no** agrega, a propósito: recuperación por pérdida del autenticador,
+  baja o reemplazo de un factor verificado, códigos de recuperación. No toca
+  migraciones, RLS ni la exigencia AAL2.
+- **Está abierto al momento de esta adenda y no se fusionó.** Si querés
+  saber si ya lo está, corré los comandos de la
+  [§6](#6-cómo-comprobar-este-documento).
+
+### PR #4 — `docs: versionar el método de trabajo con ChatGPT y Claude` (fusionado el 2026-09-07)
 
 - Enlace: <https://github.com/nicolodavenezia-rgb/talentflash-argentina/pull/4>
 - Rama: `codex/documentar-flujo-chatgpt-claude` · base `main`
@@ -176,6 +200,13 @@ la app nunca llega a `aal2`, así que **`/admin/verificaciones` no se puede
 operar desde la app**, aunque la guarda server-side sea correcta. Por eso es la
 siguiente prioridad (ver [§5](#5-pendientes-conocidos)).
 
+> **Adenda del 2026-09-08.** Lo anterior sigue siendo cierto para `main`
+> (`6d9c173`). La experiencia de **alta y verificación** existe en el PR #5
+> ([§2](#2-qué-existe-solo-en-un-pr-abierto)), sin fusionar. Lo que ese PR
+> tampoco resuelve, y queda como decisión de circuito del fundador: qué pasa
+> cuando un admin pierde su app de autenticación (hoy no hay recuperación,
+> baja ni reemplazo del factor).
+
 ### Las decisiones de CUIT siguen abiertas y son del fundador
 
 El ROADMAP (T-027) documenta **dos decisiones sin resolver**, ambas explicadas
@@ -274,6 +305,11 @@ Lo único que cambia con el tiempo es **qué rama corresponde retomar**, y eso a
 |---|---|
 | revisar o ajustar el método de trabajo | `codex/documentar-flujo-chatgpt-claude` (mientras su PR siga abierto) |
 | empezar una tarea nueva — incluido el segundo factor de la §5 | una rama nueva desde `origin/main` actualizado |
+
+> **Adenda del 2026-09-08.** El método ya está en `main` (PR #4 fusionado).
+> Para retomar el segundo factor mientras su PR siga abierto, la rama es
+> `feat/admin-mfa-enrollment` (PR #5); para cualquier otra tarea, una rama
+> nueva desde `origin/main` actualizado.
 
 Las ramas de los PR #2 y #3 (`ci/edge-offline-dependency-guard` y
 `feat/company-management-and-verification`) ya están fusionadas: sirven para
