@@ -63,8 +63,16 @@ class FakeAuthRepository implements AuthRepository {
   AuthFailure? nextVerifyFailure;
   AuthFailure? nextDiscardFailure;
 
-  /// Retiene la próxima operación de segundo factor.
+  /// Retiene la próxima operación de segundo factor, sea cual sea.
   Completer<void>? pendingSecondFactorAction;
+
+  /// Retiene **una** operación por nombre (`enrollTotp`, `verifySecondFactor`,
+  /// …). Hace falta para ejercitar las ramas donde una sola llamada queda en
+  /// vuelo mientras las demás pasan: con el gate compartido, retener el alta
+  /// obligaba a retener también la lectura de factores y el flujo nunca
+  /// llegaba a crear el pendiente.
+  final Map<String, Completer<void>> pendingByCall =
+      <String, Completer<void>>{};
 
   int challengeCounter = 0;
   String? lastFriendlyName;
@@ -160,7 +168,7 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<List<SecondFactor>> listVerifiedSecondFactors() async {
     calls.add('listVerifiedSecondFactors');
-    await _awaitPendingSecondFactor();
+    await _awaitPendingSecondFactor('listVerifiedSecondFactors');
     _throwIf(nextListFactorsFailure, () => nextListFactorsFailure = null);
     return List<SecondFactor>.unmodifiable(verifiedFactors);
   }
@@ -169,7 +177,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<TotpEnrollment> enrollTotp({required String friendlyName}) async {
     calls.add('enrollTotp');
     lastFriendlyName = friendlyName;
-    await _awaitPendingSecondFactor();
+    await _awaitPendingSecondFactor('enrollTotp');
     _throwIf(nextEnrollFailure, () => nextEnrollFailure = null);
     return nextEnrollment;
   }
@@ -178,7 +186,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<SecondFactorChallenge> challengeSecondFactor(String factorId) async {
     calls.add('challengeSecondFactor:$factorId');
     lastChallengedFactorId = factorId;
-    await _awaitPendingSecondFactor();
+    await _awaitPendingSecondFactor('challengeSecondFactor');
     _throwIf(nextChallengeFailure, () => nextChallengeFailure = null);
     challengeCounter++;
     return SecondFactorChallenge(
@@ -198,7 +206,7 @@ class FakeAuthRepository implements AuthRepository {
     lastVerifiedFactorId = factorId;
     lastVerifiedChallengeId = challengeId;
     lastVerifiedCode = code;
-    await _awaitPendingSecondFactor();
+    await _awaitPendingSecondFactor('verifySecondFactor');
     _throwIf(nextVerifyFailure, () => nextVerifyFailure = null);
     // Igual que el SDK con `mfaChallengeVerified`: la sesión vigente vuelve a
     // emitirse con `aal2`, mismo usuario y misma sesión.
@@ -218,6 +226,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> discardPendingSecondFactor(String factorId) async {
     calls.add('discardPendingSecondFactor:$factorId');
     discardedFactorIds.add(factorId);
+    await _awaitPendingSecondFactor('discardPendingSecondFactor');
     _throwIf(nextDiscardFailure, () => nextDiscardFailure = null);
   }
 
@@ -228,7 +237,11 @@ class FakeAuthRepository implements AuthRepository {
     }
   }
 
-  Future<void> _awaitPendingSecondFactor() async {
+  Future<void> _awaitPendingSecondFactor(String call) async {
+    final byCall = pendingByCall[call];
+    if (byCall != null) {
+      await byCall.future;
+    }
     final pending = pendingSecondFactorAction;
     if (pending != null) {
       await pending.future;

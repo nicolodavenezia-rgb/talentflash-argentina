@@ -163,7 +163,10 @@ final class SecondFactorChallenging extends SecondFactorCodeEntry {
 /// * Una respuesta tardía de un flujo anterior (otra cuenta, cancelado) no se
 ///   aplica: cada operación lleva el número de época en que arrancó.
 /// * Un alta interrumpida deja un factor pendiente en el servidor; se
-///   descarta al cancelar o al salir, siempre que la misma sesión siga viva.
+///   descarta al cancelar o al salir, siempre que la misma sesión siga viva
+///   (se relee del repositorio en ese instante, no de una copia guardada).
+///   La excepción es el factor cuyo código ya viaja: ese no se toca, porque
+///   el servidor puede estar aceptándolo justo entonces.
 class SecondFactorController extends Notifier<SecondFactorFlow> {
   static final _codePattern = RegExp(r'^\d{6}$');
 
@@ -173,11 +176,16 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   /// Sesión dueña del flujo en curso; `null` si no hay flujo.
   _SessionKey? _flowSession;
 
-  /// Última sesión vista en el stream (puede ser `null`).
-  _SessionKey? _currentSession;
-
   /// Factor creado por este flujo y todavía no verificado.
   String? _pendingFactorId;
+
+  /// Factor cuyo código ya viaja hacia el servidor. Un `unenroll` disparado
+  /// mientras esa verificación está en vuelo correría contra ella y podría
+  /// borrar un factor que el servidor acaba de aceptar; como no hay
+  /// recuperación ni reemplazo (alcance del PR), eso dejaría a la cuenta sin
+  /// segundo factor y sin poder operar la cola. Dentro de un life-cycle no se
+  /// puede leer `state`, así que `isSubmitting` se espeja acá.
+  String? _verifyingFactorId;
 
   /// Sube cada vez que el flujo se invalida (cancelar, cambiar de cuenta,
   /// verificar). Las continuaciones comparan su época con la vigente.
@@ -187,7 +195,6 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   SecondFactorFlow build() {
     _repository = ref.watch(authRepositoryProvider);
     _now = ref.watch(clockProvider);
-    _currentSession = _SessionKey.of(ref.read(authStatusProvider));
     ref.listen(authStatusProvider, (_, next) => _onSessionChanged(next));
     // Al salir de la pantalla no queda ni el secreto en memoria ni un factor
     // pendiente en el servidor. Solo se usan campos: dentro de un
@@ -213,7 +220,6 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
       return;
     }
     _flowSession = owner;
-    _currentSession = owner;
     if (status.hasSecondFactorVerified) {
       state = const SecondFactorAlreadyVerified();
       return;
@@ -322,6 +328,9 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
         }
         _updateEntry((entry) => entry.copyWith(challenge: challenge));
       }
+      // Desde acá y hasta que el servidor conteste, este factor no se descarta
+      // aunque la pantalla se desmonte: ver [_verifyingFactorId].
+      _verifyingFactorId = current.factorId;
       await _repository.verifySecondFactor(
         factorId: current.factorId,
         challengeId: challenge.id,
@@ -353,6 +362,10 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
           clearChallenge: dropChallenge,
         ),
       );
+    } finally {
+      if (_verifyingFactorId == current.factorId) {
+        _verifyingFactorId = null;
+      }
     }
   }
 
@@ -361,11 +374,14 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   void cancel() {
     final pending = _pendingFactorId;
     final owner = _flowSession;
+    final verifying = _verifyingFactorId;
     _epoch++;
     _pendingFactorId = null;
     _flowSession = null;
     state = const SecondFactorIdle();
-    if (pending != null && owner != null) {
+    // Mismo criterio que `_discardOnDispose`: un factor cuyo código ya viaja
+    // no se borra, porque el servidor puede estar aceptándolo justo ahora.
+    if (pending != null && owner != null && pending != verifying) {
       _discardOrphan(pending, owner: owner);
     }
   }
@@ -393,7 +409,6 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
 
   void _onSessionChanged(AuthStatus next) {
     final nextSession = _SessionKey.of(next);
-    _currentSession = nextSession;
     final owner = _flowSession;
     if (owner == null) {
       return;
@@ -405,8 +420,22 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
       // flujo ya no está.
       _epoch++;
       _pendingFactorId = null;
+      _verifyingFactorId = null;
       _flowSession = null;
-      state = const SecondFactorIdle();
+      // Sin sesión, el router se lleva la pantalla y `Idle` no llega a
+      // dibujarse. Con una sesión nueva todavía utilizable (la misma cuenta
+      // reingresando, u otra cuenta admin) la pantalla SÍ se queda: `Idle` se
+      // dibuja igual que «preparando» y nadie vuelve a llamar a `start()`, así
+      // que anunciaría para siempre un trabajo que no existe. Se informa el
+      // corte y se ofrece reintentar, que rearma el flujo con la sesión nueva.
+      state = nextSession == null
+          ? const SecondFactorIdle()
+          : const SecondFactorUnavailable(
+              AuthFailure(
+                AuthFailureCode.staleSession,
+                debugDetail: 'la sesión cambió durante el flujo',
+              ),
+            );
       return;
     }
     if (next.hasSecondFactorVerified && state is! SecondFactorVerified) {
@@ -415,6 +444,7 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
       // pestaña). Nada de lo que vuelva después puede pisar este estado.
       _epoch++;
       _pendingFactorId = null;
+      _verifyingFactorId = null;
       state = const SecondFactorVerified();
     }
   }
@@ -422,17 +452,31 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   void _discardOnDispose() {
     final pending = _pendingFactorId;
     final owner = _flowSession;
+    final verifying = _verifyingFactorId;
     _pendingFactorId = null;
-    if (pending != null && owner != null) {
-      _discardOrphan(pending, owner: owner);
+    if (pending == null || owner == null) {
+      return;
     }
+    if (pending == verifying) {
+      // El código ya viaja: un alta con el código enviado no es un «alta
+      // interrumpida». O la acepta el servidor —y borrarla dejaría a la
+      // cuenta sin segundo factor, sin baja ni recuperación posibles— o el
+      // factor pendiente lo vence GoTrue solo, y el próximo alta lo limpia.
+      return;
+    }
+    _discardOrphan(pending, owner: owner);
   }
 
   /// Borra un factor pendiente **solo** si la sesión sigue siendo la que lo
-  /// creó: con otra sesión el pedido iría con un token ajeno (y el
-  /// repositorio lo cortaría igual).
+  /// creó: el `unenroll` del SDK viaja con el bearer de la sesión VIGENTE, así
+  /// que con otra sesión el pedido saldría con un token ajeno.
+  ///
+  /// La sesión se lee del repositorio en este mismo instante y no de un campo:
+  /// el caso que hay que cubrir es justamente el dispose, donde el
+  /// `ref.listen` ya está cerrado y cualquier copia guardada quedó congelada
+  /// en la sesión anterior.
   void _discardOrphan(String factorId, {required _SessionKey owner}) {
-    if (_currentSession != owner) {
+    if (_SessionKey.of(_repository.currentStatus) != owner) {
       return;
     }
     unawaited(

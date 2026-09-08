@@ -40,8 +40,11 @@ abstract final class AuthCopy {
         AuthFailureCode.emailNotConfirmed => l10n.authFailureEmailNotConfirmed,
         AuthFailureCode.rateLimited => l10n.authFailureRateLimited,
         AuthFailureCode.network => l10n.authFailureNetwork,
-        AuthFailureCode.sessionMissing ||
-        AuthFailureCode.staleSession => l10n.authFailureSessionMissing,
+        AuthFailureCode.sessionMissing => l10n.authFailureSessionMissing,
+        // No es «tu sesión terminó»: la sesión vigente puede ser perfectamente
+        // válida (la misma cuenta reingresando, u otra). Lo que caducó es la
+        // operación, que pertenecía a la sesión anterior.
+        AuthFailureCode.staleSession => l10n.mfaFailureStaleSession,
         AuthFailureCode.mfaInvalidCode => l10n.mfaFailureInvalidCode,
         AuthFailureCode.mfaChallengeExpired => l10n.mfaFailureChallengeExpired,
         AuthFailureCode.mfaFactorNotFound => l10n.mfaFailureFactorNotFound,

@@ -658,6 +658,7 @@
   "mfaFailureInsufficientAssurance": "Para hacer esto primero tenés que verificar el autenticador que ya tenés.",
   "mfaFailureNotEnabled": "El segundo factor no está habilitado en este entorno.",
   "mfaFailureRejected": "La verificación fue rechazada. Probá de nuevo con el código actual de tu app.",
+  "mfaFailureStaleSession": "La sesión cambió mientras preparábamos el segundo factor. Reintentá para empezar de nuevo.",
   "adminVerificationsEmpty": "No hay solicitudes en este estado.",
   "adminVerificationsErrorTitle": "No pudimos completar la acción",
   "adminVerificationsResolved": "Solicitud resuelta.",

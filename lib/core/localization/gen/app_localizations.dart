@@ -2560,6 +2560,12 @@ abstract class AppLocalizations {
   /// **'La verificación fue rechazada. Probá de nuevo con el código actual de tu app.'**
   String get mfaFailureRejected;
 
+  /// No description provided for @mfaFailureStaleSession.
+  ///
+  /// In es, this message translates to:
+  /// **'La sesión cambió mientras preparábamos el segundo factor. Reintentá para empezar de nuevo.'**
+  String get mfaFailureStaleSession;
+
   /// No description provided for @adminVerificationsEmpty.
   ///
   /// In es, this message translates to:

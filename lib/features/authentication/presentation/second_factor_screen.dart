@@ -22,8 +22,12 @@ import 'widgets/auth_form_widgets.dart';
 ///
 /// Lo que se ve acá —QR, clave manual, código— vive únicamente en memoria
 /// mientras dura el flujo; no se guarda, no se loguea y no viaja por URL. La
-/// clave se muestra seleccionable para cargarla a mano; no hay botón de
-/// copiar a propósito, para no dejarla en el portapapeles del sistema.
+/// clave se muestra seleccionable para poder leerla con el teclado y cargarla
+/// a mano; la app no la copia sola ni ofrece un botón de copiar. Sí queda el
+/// menú de selección del sistema (copiar, compartir): es una acción deliberada
+/// de la persona y esconder ese menú no la impediría —`Ctrl+C` sobre la
+/// selección copia igual—, así que la clave se protege donde sí se puede, no
+/// persistiéndola ni registrándola, no prometiendo un portapapeles cerrado.
 ///
 /// Alcance deliberado: alta y verificación. No hay recuperación por pérdida
 /// del autenticador, baja ni reemplazo de un factor verificado, ni códigos de
@@ -483,6 +487,10 @@ class _CodeFormState extends ConsumerState<_CodeForm> {
               // Tres líneas: al 200 % en un teléfono angosto la ayuda no
               // entra en dos y se perdería justo la pista de los 30 s.
               helperMaxLines: 3,
+              // Lo mismo para el error, que sin esto es UNA línea con elipsis
+              // (`errorMaxLines` por defecto es null) y al 200 % se cortaría
+              // justo el mensaje que dice cómo corregir.
+              errorMaxLines: 3,
               border: const OutlineInputBorder(),
             ),
             validator: (value) {

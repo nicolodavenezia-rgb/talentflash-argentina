@@ -1419,6 +1419,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'La verificación fue rechazada. Probá de nuevo con el código actual de tu app.';
 
   @override
+  String get mfaFailureStaleSession =>
+      'La sesión cambió mientras preparábamos el segundo factor. Reintentá para empezar de nuevo.';
+
+  @override
   String get adminVerificationsEmpty => 'No hay solicitudes en este estado.';
 
   @override

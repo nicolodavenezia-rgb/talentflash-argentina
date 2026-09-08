@@ -629,12 +629,47 @@ void main() {
         );
         await settle();
 
-        expect(state(), isA<SecondFactorIdle>());
+        // No queda en `Idle`: la pantalla dibuja `Idle` igual que «preparando»
+        // y nadie vuelve a llamar a `start()`, así que anunciaría para siempre
+        // un trabajo inexistente. Con una sesión nueva todavía utilizable se
+        // informa el corte y se ofrece reintentar.
+        final flow = state();
+        expect(flow, isA<SecondFactorUnavailable>());
+        expect(
+          (flow as SecondFactorUnavailable).failure.code,
+          AuthFailureCode.staleSession,
+        );
         expect(
           repository.discardedFactorIds,
           isEmpty,
           reason: 'la sesión que creó el pendiente ya no está',
         );
+        expect(
+          repository.calls,
+          isNot(contains('discardPendingSecondFactor:factor-pendiente')),
+        );
+      },
+    );
+
+    test(
+      'sin sesión el flujo vuelve a Idle: el router se lleva la pantalla y no '
+      'hay nada que reintentar',
+      () async {
+        await arrange(
+          initial: const AuthStatusSignedIn(
+            admin,
+            assurance: SessionAssurance.aal1,
+            sessionId: 'sesion-1',
+          ),
+        );
+        await controller().start(friendlyName: friendlyName);
+        expect(state(), isA<SecondFactorEnrolling>());
+
+        repository.emit(const AuthStatusSignedOut());
+        await settle();
+
+        expect(state(), isA<SecondFactorIdle>());
+        expect(repository.discardedFactorIds, isEmpty);
       },
     );
 
@@ -695,5 +730,158 @@ void main() {
         expect(repository.discardedFactorIds, isEmpty);
       },
     );
+
+    test('un alta que resuelve DESPUÉS del dispose relee la sesión del '
+        'repositorio y no descarta con el bearer ajeno', () async {
+      await arrange(
+        initial: const AuthStatusSignedIn(
+          admin,
+          assurance: SessionAssurance.aal1,
+          sessionId: 'sesion-1',
+        ),
+      );
+      // El alta queda en vuelo y la pantalla se va: a partir de acá el
+      // `ref.listen` del controller está cerrado, así que una copia guardada
+      // de la sesión quedaría congelada en `sesion-1` para siempre.
+      final alta = Completer<void>();
+      repository.pendingByCall['enrollTotp'] = alta;
+      final arranque = controller().start(friendlyName: friendlyName);
+      await settle();
+      container.dispose();
+
+      // Recién ahora cambia la sesión, y recién después contesta el alta:
+      // la continuación de `start` es la que decide si descartar.
+      repository.emit(
+        const AuthStatusSignedIn(
+          otherAdmin,
+          assurance: SessionAssurance.aal1,
+          sessionId: 'sesion-2',
+        ),
+      );
+      await settle();
+      alta.complete();
+      await arranque;
+      await settle();
+
+      expect(
+        repository.discardedFactorIds,
+        isEmpty,
+        reason:
+            'el unenroll del SDK viaja con el bearer de la sesión VIGENTE: '
+            'con otra sesión no debe salir ninguna solicitud del flujo viejo',
+      );
+    });
+  });
+
+  group('verificación en vuelo al salir de la pantalla', () {
+    test(
+      'salir mientras el código viaja NO borra el factor que el servidor está '
+      'aceptando',
+      () async {
+        await arrange();
+        await controller().start(friendlyName: friendlyName);
+        expect(state(), isA<SecondFactorEnrolling>());
+
+        // El código ya salió y el servidor todavía no contestó.
+        final verificando = Completer<void>();
+        repository.pendingByCall['verifySecondFactor'] = verificando;
+        final envio = controller().submitCode('123456');
+        await settle();
+        expect(
+          repository.calls,
+          contains('verifySecondFactor:factor-pendiente'),
+          reason: 'la verificación está en vuelo',
+        );
+
+        // Atrás del navegador / del sistema: la ruta se va aunque «Cancelar»
+        // esté deshabilitado por el envío en curso.
+        container.dispose();
+        await settle();
+
+        expect(
+          repository.discardedFactorIds,
+          isEmpty,
+          reason:
+              'borrar el factor acá correría contra la verificación y podría '
+              'dejar la cuenta en aal2 sin autenticador, sin baja ni '
+              'recuperación posibles',
+        );
+
+        verificando.complete();
+        await envio;
+        await settle();
+        expect(repository.discardedFactorIds, isEmpty);
+      },
+    );
+
+    test(
+      'un alta sin código enviado sí se descarta al salir (la regla anterior '
+      'no se debilita)',
+      () async {
+        await arrange();
+        await controller().start(friendlyName: friendlyName);
+        expect(state(), isA<SecondFactorEnrolling>());
+
+        container.dispose();
+        await settle();
+
+        expect(repository.discardedFactorIds, <String>['factor-pendiente']);
+      },
+    );
+
+    test('cancelar con el alta todavía en vuelo descarta el pendiente reción '
+        'creado con la MISMA sesión', () async {
+      await arrange();
+      final alta = Completer<void>();
+      repository.pendingByCall['enrollTotp'] = alta;
+      final arranque = controller().start(friendlyName: friendlyName);
+      await settle();
+      expect(state(), isA<SecondFactorPreparing>());
+
+      controller().cancel();
+      await settle();
+      alta.complete();
+      await arranque;
+      await settle();
+
+      expect(state(), isA<SecondFactorIdle>());
+      expect(repository.discardedFactorIds, <String>[
+        'factor-pendiente',
+      ], reason: 'el factor que el servidor creó tras el cancel no queda vivo');
+    });
+
+    test('si la sesión cambió mientras el alta viajaba, el pendiente NO se '
+        'descarta (iría con el token de la sesión nueva)', () async {
+      await arrange(
+        initial: const AuthStatusSignedIn(
+          admin,
+          assurance: SessionAssurance.aal1,
+          sessionId: 'sesion-1',
+        ),
+      );
+      final alta = Completer<void>();
+      repository.pendingByCall['enrollTotp'] = alta;
+      final arranque = controller().start(friendlyName: friendlyName);
+      await settle();
+      expect(state(), isA<SecondFactorPreparing>());
+
+      repository.emit(
+        const AuthStatusSignedIn(
+          otherAdmin,
+          assurance: SessionAssurance.aal1,
+          sessionId: 'sesion-2',
+        ),
+      );
+      await settle();
+      alta.complete();
+      await arranque;
+      await settle();
+
+      expect(repository.discardedFactorIds, isEmpty);
+      expect(
+        repository.calls,
+        isNot(contains('discardPendingSecondFactor:factor-pendiente')),
+      );
+    });
   });
 }

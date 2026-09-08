@@ -606,5 +606,61 @@ void main() {
       expect(find.text('Activar segundo factor'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'el mensaje de error del campo puede ocupar varias líneas: al 200 % no '
+      'se corta con elipsis',
+      (tester) async {
+        await abrirSegundoFactor(tester);
+
+        final decoration = tester
+            .widget<TextField>(
+              find.descendant(
+                of: codeField(),
+                matching: find.byType(TextField),
+              ),
+            )
+            .decoration!;
+        // `errorMaxLines` por defecto es null, que en Flutter significa UNA
+        // línea con `TextOverflow.ellipsis` (no «sin límite»): el mensaje que
+        // dice cómo corregir se cortaría justo donde hace falta leerlo.
+        expect(decoration.errorMaxLines, isNotNull);
+        expect(decoration.errorMaxLines, greaterThan(1));
+        expect(decoration.helperMaxLines, greaterThan(1));
+      },
+    );
+
+    testWidgets('un cambio a otra sesión admin no deja la pantalla anunciando '
+        '«preparando» para siempre: explica y ofrece reintentar', (
+      tester,
+    ) async {
+      final harness = await abrirSegundoFactor(tester);
+      expect(find.byType(QrImageView), findsOneWidget);
+
+      // Otra sesión admin (otra pestaña, u otra cuenta admin) sin pasar por
+      // SignedOut: el router no mueve la pantalla, así que si el flujo
+      // volviera a `Idle` se quedaría con el spinner de «preparando».
+      harness.authRepository.emitSignedIn(
+        BusinessRole.admin,
+        id: 'admin-2',
+        email: 'otra@dev.talentflash.test',
+        sessionId: 'sesion-2',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SecondFactorScreen), findsOneWidget);
+      expect(find.byType(QrImageView), findsNothing);
+      expect(find.text('JBSW Y3DP EHPK 3PXP'), findsNothing);
+      expect(
+        textoVisible(tester),
+        isNot(contains('Preparando el segundo factor')),
+        reason: 'no puede anunciar un trabajo que no está ocurriendo',
+      );
+      expect(
+        textoVisible(tester),
+        contains('La sesión cambió mientras preparábamos el segundo factor'),
+      );
+      expect(find.text('Reintentar'), findsOneWidget);
+    });
   });
 }
