@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/auth_failure.dart';
@@ -10,11 +8,26 @@ import '../domain/business_role.dart';
 import '../domain/second_factor.dart';
 import '../domain/session_assurance.dart';
 import 'auth_repository.dart';
+import 'jwt_claims.dart';
 
 /// Implementación sobre Supabase Auth (GoTrue).
 ///
 /// Recibe el `GoTrueClient` por constructor para poder ejercitarla en tests
 /// contra un cliente HTTP falso, sin ningún proyecto remoto.
+///
+/// Las operaciones de segundo factor quedan **atadas a la sesión que las
+/// inició** en dos capas que se complementan:
+///
+/// * acá, una operación de varios pasos captura la sesión al empezar
+///   ([_requireSession]) y la vuelve a comprobar después de cada espera y
+///   justo antes de la siguiente llamada al SDK ([_ensureSameSession]): una
+///   continuación nunca manda una solicitud con credenciales de otra cuenta
+///   (ni de otra sesión de la misma cuenta);
+/// * en el cliente HTTP (`SessionScopedHttpClient`, cableado en
+///   `bootstrap.dart`), la **respuesta** de una solicitud de segundo factor se
+///   descarta si la sesión cambió mientras viajaba, antes de que el SDK pueda
+///   guardarla como sesión o emitir eventos por ella. Hace falta porque
+///   `mfa.verify` guarda la sesión y notifica antes de devolver el control.
 class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository(this._auth);
 
@@ -85,17 +98,16 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<List<SecondFactor>> listVerifiedSecondFactors() {
     return _guard(() async {
-      // `listFactors` refresca la sesión antes de leer: la lista sale del
-      // servidor y no de un token viejo. Solo se devuelven los TOTP que ya
-      // están `verified`; un alta interrumpida no cuenta como configurada.
-      final factors = await _auth.mfa.listFactors();
+      final factors = await _serverFactors(_requireSession());
       return [
-        for (final factor in factors.totp)
-          SecondFactor(
-            id: factor.id,
-            friendlyName: _nonEmpty(factor.friendlyName),
-            createdAt: factor.createdAt,
-          ),
+        for (final factor in factors)
+          if (factor.factorType == FactorType.totp &&
+              factor.status == FactorStatus.verified)
+            SecondFactor(
+              id: factor.id,
+              friendlyName: _nonEmpty(factor.friendlyName),
+              createdAt: factor.createdAt,
+            ),
       ];
     });
   }
@@ -103,23 +115,33 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<TotpEnrollment> enrollTotp({required String friendlyName}) {
     return _guard(() async {
+      final scope = _requireSession();
       // Un alta interrumpida (pestaña cerrada, app matada, sesión perdida)
       // deja un factor pendiente que el servidor cuenta para el tope de
       // factores y que choca por nombre. Antes de crear otro se descartan los
-      // pendientes de la cuenta; la lista viene fresca porque el flujo acaba
-      // de refrescar la sesión al listar los verificados. Es best-effort: si
-      // uno no se puede borrar, el servidor dirá lo suyo en el enroll.
-      final stale = _auth.currentUser?.factors ?? const <Factor>[];
+      // pendientes de la cuenta según el SERVIDOR (`/user`), no según la copia
+      // del usuario que guarda la sesión, que es la foto del último login o
+      // refresco. Es best-effort: si uno no se puede borrar, el servidor dirá
+      // lo suyo en el enroll. Lo que NO se tolera es que la sesión cambie en
+      // el medio: cada paso vuelve a comprobar la sesión, así el POST de alta
+      // nunca sale con el token de otra cuenta aunque un DELETE haya tardado.
+      final stale = await _serverFactors(scope);
       for (final factor in stale) {
-        if (factor.factorType == FactorType.totp &&
-            factor.status == FactorStatus.unverified) {
-          try {
-            await _auth.mfa.unenroll(factor.id);
-          } on AuthException catch (_) {
-            // Ya no existe o no se pudo: sigue el alta igual.
+        if (factor.factorType != FactorType.totp ||
+            factor.status != FactorStatus.unverified) {
+          continue;
+        }
+        _ensureSameSession(scope);
+        try {
+          await _auth.mfa.unenroll(factor.id);
+        } on AuthException catch (error) {
+          if (error.code == AuthFailureCode.staleSession.wireCode) {
+            rethrow;
           }
+          // Ya no existe o no se pudo: sigue el alta igual.
         }
       }
+      _ensureSameSession(scope);
       final response = await _auth.mfa.enroll(
         issuer: totpIssuer,
         friendlyName: friendlyName,
@@ -146,6 +168,7 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<SecondFactorChallenge> challengeSecondFactor(String factorId) {
     return _guard(() async {
+      _requireSession();
       final response = await _auth.mfa.challenge(factorId: factorId);
       return SecondFactorChallenge(
         id: response.id,
@@ -162,9 +185,12 @@ class SupabaseAuthRepository implements AuthRepository {
     required String code,
   }) {
     return _guard(() async {
+      _requireSession();
       // Al aceptar, el SDK guarda la sesión nueva (token `aal2`) y emite
       // `mfaChallengeVerified` por `onAuthStateChange`: el cambio de nivel
-      // llega a la app por el mismo stream que cualquier otro evento.
+      // llega a la app por el mismo stream que cualquier otro evento. Si la
+      // sesión cambió mientras la respuesta viajaba, el cliente HTTP la
+      // convierte en `stale_session` y el SDK no guarda nada.
       await _auth.mfa.verify(
         factorId: factorId,
         challengeId: challengeId,
@@ -176,6 +202,7 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> discardPendingSecondFactor(String factorId) {
     return _guard(() async {
+      _requireSession();
       try {
         await _auth.mfa.unenroll(factorId);
       } on AuthException catch (error) {
@@ -189,11 +216,59 @@ class SupabaseAuthRepository implements AuthRepository {
     });
   }
 
+  /// Factores de la cuenta según el servidor (`GET /user`), que no toca la
+  /// sesión del SDK. Si el access token ya venció (la app estuvo dormida y el
+  /// refresco automático todavía no corrió) se refresca antes: el SDK ya
+  /// descarta por su cuenta un refresco cuya sesión cambió mientras esperaba.
+  /// [scope] es la sesión que inició la operación; se vuelve a comprobar tras
+  /// cada espera.
+  Future<List<Factor>> _serverFactors(String scope) async {
+    if (_auth.currentSession?.isExpired ?? false) {
+      await _auth.refreshSession();
+      _ensureSameSession(scope);
+    }
+    final response = await _auth.getUser();
+    _ensureSameSession(scope);
+    return response.user?.factors ?? const <Factor>[];
+  }
+
+  /// Identidad de la sesión vigente ([sessionIdentityOf]), o `null` sin
+  /// sesión.
+  String? _sessionScope() =>
+      sessionIdentityOf(_auth.currentSession?.accessToken);
+
+  /// Sesión que inicia una operación de segundo factor. Sin sesión no hay
+  /// operación posible. Se llama justo antes de la llamada al SDK: el SDK
+  /// toma la sesión en ese mismo instante, sin ningún `await` entre medio.
+  String _requireSession() {
+    final scope = _sessionScope();
+    if (scope == null) {
+      throw const AuthFailure(
+        AuthFailureCode.sessionMissing,
+        debugDetail: 'operación de segundo factor sin sesión',
+      );
+    }
+    return scope;
+  }
+
+  /// Corta una operación de varios pasos si la sesión que la inició
+  /// ([scope]) ya no es la vigente. Se llama después de cada espera y justo
+  /// antes de la siguiente llamada al SDK.
+  void _ensureSameSession(String scope) {
+    if (_sessionScope() != scope) {
+      throw const AuthFailure(
+        AuthFailureCode.staleSession,
+        debugDetail: 'la sesión cambió durante la operación',
+      );
+    }
+  }
+
   /// Traduce sesión del SDK a estado de dominio.
   ///
   /// El rol sale **solo** de `app_metadata`, que escribe el servidor.
   /// `user_metadata` es input del cliente y se ignora para autorizar. El nivel
-  /// de garantía sale del claim `aal` del propio token.
+  /// de garantía y la identidad de sesión salen de los claims del propio
+  /// token.
   static AuthStatus statusFromSession(Session? session) {
     final user = session?.user;
     if (session == null || user == null) {
@@ -204,9 +279,12 @@ class SupabaseAuthRepository implements AuthRepository {
     if (role == null) {
       return AuthStatusInconsistent(userId: user.id, rawClaim: claim);
     }
+    final claims = decodeJwtClaims(session.accessToken);
+    final sessionId = claims?['session_id'];
     return AuthStatusSignedIn(
       AuthenticatedUser(id: user.id, email: user.email ?? '', role: role),
       assurance: assuranceFromAccessToken(session.accessToken),
+      sessionId: sessionId is String && sessionId.isNotEmpty ? sessionId : null,
     );
   }
 
@@ -217,22 +295,11 @@ class SupabaseAuthRepository implements AuthRepository {
   /// JSON o un claim con otro valor dan [SessionAssurance.unknown], que vale
   /// lo mismo que no tener segundo factor.
   static SessionAssurance assuranceFromAccessToken(String accessToken) {
-    final parts = accessToken.split('.');
-    if (parts.length != 3) {
+    final claims = decodeJwtClaims(accessToken);
+    if (claims == null) {
       return SessionAssurance.unknown;
     }
-    try {
-      final payload = utf8.decode(
-        base64Url.decode(base64Url.normalize(parts[1])),
-      );
-      final claims = jsonDecode(payload);
-      if (claims is! Map<String, dynamic>) {
-        return SessionAssurance.unknown;
-      }
-      return SessionAssurance.fromClaim(claims['aal']);
-    } on FormatException {
-      return SessionAssurance.unknown;
-    }
+    return SessionAssurance.fromClaim(claims['aal']);
   }
 
   static String? _nonEmpty(String? value) {

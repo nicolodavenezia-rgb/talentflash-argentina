@@ -52,15 +52,17 @@ dependencies:
   # renderizar el SVG que manda GoTrue porque no hay ningún renderer de SVG
   # entre las dependencias y así el secreto vive en una sola copia en memoria.
   qr_flutter: ^4.1.0
+  # Ya venía como dependencia transitiva del SDK y como dev_dependency para
+  # el cliente HTTP falso de los tests. Pasa a dependencia directa (misma
+  # versión) porque la app envuelve el cliente HTTP que recibe Supabase con
+  # `SessionScopedHttpClient`: una respuesta MFA que llega cuando la sesión
+  # que la pidió ya no es la vigente se descarta antes de que el SDK pueda
+  # guardarla como sesión.
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # Cliente HTTP falso (package:http/testing.dart) para ejercitar el
-  # repositorio de auth contra respuestas reales de GoTrue sin ningún
-  # proyecto Supabase remoto. Ya venía como dependencia transitiva del SDK.
-  http: ^1.6.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

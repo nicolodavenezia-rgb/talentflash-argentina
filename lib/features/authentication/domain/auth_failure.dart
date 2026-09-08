@@ -19,6 +19,12 @@ enum AuthFailureCode {
   /// iniciar sesión. Distinto de [invalidCredentials].
   sessionMissing,
 
+  /// La operación pertenecía a una sesión que dejó de ser la vigente mientras
+  /// viajaba (cierre de sesión, otra cuenta, reingreso): se descartó antes de
+  /// que el SDK pudiera aplicarla. La UI no la muestra como error de la
+  /// sesión nueva; el flujo que la pidió ya no existe.
+  staleSession,
+
   // --- Segundo factor (TOTP). Los `error_code` de GoTrue de abajo se
   // --- verificaron contra el stack local con `npm run mfa:test`.
 
@@ -51,7 +57,14 @@ enum AuthFailureCode {
   /// (`mfa_verification_rejected`, `mfa_ip_address_mismatch`).
   mfaRejected,
 
-  unknown,
+  unknown;
+
+  /// `error_code` con el que `SessionScopedHttpClient` descarta una respuesta
+  /// de una sesión que ya no es la vigente. No lo emite GoTrue.
+  String? get wireCode => switch (this) {
+    AuthFailureCode.staleSession => 'stale_session',
+    _ => null,
+  };
 }
 
 /// Error tipado de la capa de autenticación.
@@ -131,6 +144,10 @@ class AuthFailure implements Exception {
       case 'refresh_token_not_found':
       case 'refresh_token_already_used':
         return AuthFailureCode.sessionMissing;
+      // Lo emite `SessionScopedHttpClient`, no GoTrue: la respuesta llegó
+      // para una sesión que ya no es la vigente.
+      case 'stale_session':
+        return AuthFailureCode.staleSession;
       case 'mfa_verification_failed':
         return AuthFailureCode.mfaInvalidCode;
       case 'mfa_challenge_expired':

@@ -40,7 +40,8 @@ abstract final class AuthCopy {
         AuthFailureCode.emailNotConfirmed => l10n.authFailureEmailNotConfirmed,
         AuthFailureCode.rateLimited => l10n.authFailureRateLimited,
         AuthFailureCode.network => l10n.authFailureNetwork,
-        AuthFailureCode.sessionMissing => l10n.authFailureSessionMissing,
+        AuthFailureCode.sessionMissing ||
+        AuthFailureCode.staleSession => l10n.authFailureSessionMissing,
         AuthFailureCode.mfaInvalidCode => l10n.mfaFailureInvalidCode,
         AuthFailureCode.mfaChallengeExpired => l10n.mfaFailureChallengeExpired,
         AuthFailureCode.mfaFactorNotFound => l10n.mfaFailureFactorNotFound,

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:talentflash_argentina/features/authentication/data/auth_repository.dart';
+import 'package:talentflash_argentina/features/authentication/data/session_scoped_http_client.dart';
 import 'package:talentflash_argentina/features/authentication/data/supabase_auth_repository.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_failure.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
@@ -23,16 +24,22 @@ void main() {
   SupabaseAuthRepository buildRepository(
     Future<http.Response> Function(http.Request request) handler,
   ) {
-    final client = GoTrueClient(
+    late final GoTrueClient client;
+    client = GoTrueClient(
       url: 'http://127.0.0.1:54321/auth/v1',
       autoRefreshToken: false,
       // El flujo PKCE necesita almacenamiento asíncrono; para estos tests
       // alcanza con el implícito.
       flowType: AuthFlowType.implicit,
-      httpClient: MockClient((request) {
-        requests.add(request);
-        return handler(request);
-      }),
+      // Mismo cableado que `bootstrap.dart`: el guard de sesión entre el SDK
+      // y la red. `requests` registra lo que el guard dejó salir.
+      httpClient: SessionScopedHttpClient(
+        MockClient((request) {
+          requests.add(request);
+          return handler(request);
+        }),
+        currentAccessToken: () => client.currentSession?.accessToken,
+      ),
     );
     addTearDown(client.dispose);
     return SupabaseAuthRepository(client);
@@ -404,8 +411,13 @@ void main() {
   group('segundo factor TOTP', () {
     /// Sesión aal1 de una admin, más los endpoints de MFA con las formas
     /// reales del stack local (`npm run mfa:test`).
+    /// [factors] viaja en la sesión del login (la copia que guarda el SDK);
+    /// [userFactors] es lo que responde `GET /user` (el servidor). Por
+    /// defecto coinciden; los tests que prueban que se consulta al servidor
+    /// los separan.
     Future<SupabaseAuthRepository> signedInAdmin({
       List<Map<String, dynamic>>? factors,
+      List<Map<String, dynamic>>? userFactors,
       http.Response Function(http.Request request)? mfa,
     }) async {
       final repository = buildRepository((request) async {
@@ -416,6 +428,17 @@ void main() {
               appRole: 'admin',
               accessToken: GoTrueFixtures.accessTokenWithClaims(aal: 'aal1'),
               factors: factors,
+            ),
+          );
+        }
+        if (path.endsWith('/user') && request.method == 'GET') {
+          // Lo que devuelve `/user`: el usuario con sus factores vigentes.
+          return json(
+            jsonEncode(
+              GoTrueFixtures.user(
+                appRole: 'admin',
+                factors: userFactors ?? factors,
+              ),
             ),
           );
         }
@@ -440,9 +463,11 @@ void main() {
       return repository;
     }
 
-    test('lista solo los factores TOTP verificados, tras refrescar', () async {
+    test('lista solo los factores TOTP verificados según el servidor', () async {
       final repository = await signedInAdmin(
-        factors: [
+        // La copia de la sesión está vieja a propósito: lo que vale es `/user`.
+        factors: [GoTrueFixtures.factor(id: 'viejo-en-sesion')],
+        userFactors: [
           GoTrueFixtures.factor(id: 'ok', friendlyName: 'Celular'),
           GoTrueFixtures.factor(id: 'pendiente', status: 'unverified'),
           GoTrueFixtures.factor(id: 'sms', factorType: 'phone'),
@@ -452,10 +477,11 @@ void main() {
 
       final factors = await repository.listVerifiedSecondFactors();
 
+      expect(requests.single.method, 'GET');
       expect(
-        requests.single.url.queryParameters['grant_type'],
-        'refresh_token',
-        reason: 'la lista sale del servidor, no del token guardado',
+        requests.single.url.path,
+        endsWith('/user'),
+        reason: 'la lista sale del servidor (`/user`), sin refrescar la sesión',
       );
       expect(factors.map((f) => f.id), <String>['ok', 'sin-nombre']);
       expect(factors.first.friendlyName, 'Celular');
@@ -481,7 +507,10 @@ void main() {
           friendlyName: 'TalentFlash · 08/09/2026 14:32',
         );
 
-        final request = requests.single;
+        // Primero consulta al servidor qué pendientes hay; después crea.
+        expect(requests.first.method, 'GET');
+        expect(requests.first.url.path, endsWith('/user'));
+        final request = requests.last;
         expect(request.method, 'POST');
         expect(request.url.path, endsWith('/factors'));
         final body = jsonDecode(request.body) as Map<String, dynamic>;
@@ -501,7 +530,11 @@ void main() {
       'antes de un alta nueva descarta los factores pendientes viejos',
       () async {
         final repository = await signedInAdmin(
-          factors: [
+          // La copia de la sesión no los conoce: la limpieza consulta al
+          // servidor, que es el único que sabe qué quedó de un alta
+          // interrumpida en otra pestaña o antes de un cierre.
+          factors: const [],
+          userFactors: [
             GoTrueFixtures.factor(id: 'huerfano-1', status: 'unverified'),
             GoTrueFixtures.factor(id: 'verificado', status: 'verified'),
             GoTrueFixtures.factor(

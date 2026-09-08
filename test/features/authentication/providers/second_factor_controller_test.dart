@@ -605,6 +605,59 @@ void main() {
       },
     );
 
+    test(
+      'la misma cuenta en una sesión nueva es otro flujo, aunque no pase por '
+      'SignedOut',
+      () async {
+        await arrange(
+          initial: const AuthStatusSignedIn(
+            admin,
+            assurance: SessionAssurance.aal1,
+            sessionId: 'sesion-1',
+          ),
+        );
+        await controller().start(friendlyName: friendlyName);
+        expect(state(), isA<SecondFactorEnrolling>());
+
+        // Reingreso de la misma cuenta: otro `session_id`.
+        repository.emit(
+          const AuthStatusSignedIn(
+            admin,
+            assurance: SessionAssurance.aal1,
+            sessionId: 'sesion-2',
+          ),
+        );
+        await settle();
+
+        expect(state(), isA<SecondFactorIdle>());
+        expect(
+          repository.discardedFactorIds,
+          isEmpty,
+          reason: 'la sesión que creó el pendiente ya no está',
+        );
+      },
+    );
+
+    test(
+      'verificar conserva la sesión: mismo session_id, nivel nuevo',
+      () async {
+        await arrange(
+          initial: const AuthStatusSignedIn(
+            admin,
+            assurance: SessionAssurance.aal1,
+            sessionId: 'sesion-1',
+          ),
+        );
+        await controller().start(friendlyName: friendlyName);
+
+        await controller().submitCode('123456');
+        await settle();
+
+        expect(state(), isA<SecondFactorVerified>());
+        expect(container.read(authStatusProvider).sessionId, 'sesion-1');
+      },
+    );
+
     test('con la cuenta nueva el flujo arranca de cero', () async {
       await arrange();
       await controller().start(friendlyName: friendlyName);

@@ -22,11 +22,13 @@ abstract final class GoTrueFixtures {
     String? aal,
     List<Map<String, Object?>> amr = const [],
     int? exp,
+    String sub = userId,
+    String? sessionId,
   }) {
     String part(Map<String, Object?> map) =>
         base64Url.encode(utf8.encode(jsonEncode(map))).replaceAll('=', '');
     final payload = <String, Object?>{
-      'sub': userId,
+      'sub': sub,
       'role': 'authenticated',
       'amr': amr,
       'exp':
@@ -34,6 +36,9 @@ abstract final class GoTrueFixtures {
           DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
               1000,
       'aal': ?aal,
+      // GoTrue lo conserva al refrescar y al verificar el segundo factor, y
+      // lo cambia en cada inicio de sesión (también de la misma cuenta).
+      'session_id': ?sessionId,
     };
     return '${part(<String, Object?>{'alg': 'HS256', 'typ': 'JWT'})}'
         '.${part(payload)}'
@@ -46,9 +51,10 @@ abstract final class GoTrueFixtures {
     String email = 'persona@dev.talentflash.test',
     bool includeAppRole = true,
     List<Map<String, dynamic>>? factors,
+    String id = userId,
   }) {
     return <String, dynamic>{
-      'id': userId,
+      'id': id,
       'aud': 'authenticated',
       'role': 'authenticated',
       'email': email,
@@ -99,6 +105,8 @@ abstract final class GoTrueFixtures {
     bool includeAppRole = true,
     String? accessToken,
     List<Map<String, dynamic>>? factors,
+    String id = userId,
+    String refreshToken = 'refresh-de-utileria',
   }) {
     final expiresAt =
         DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
@@ -108,13 +116,14 @@ abstract final class GoTrueFixtures {
       'token_type': 'bearer',
       'expires_in': 3600,
       'expires_at': expiresAt,
-      'refresh_token': 'refresh-de-utileria',
+      'refresh_token': refreshToken,
       'user': user(
         appRole: appRole,
         requestedRole: requestedRole,
         email: email,
         includeAppRole: includeAppRole,
         factors: factors,
+        id: id,
       ),
     });
   }

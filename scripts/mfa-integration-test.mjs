@@ -337,6 +337,8 @@ async function main() {
   ok(Array.isArray(admin2Claims.amr) && admin2Claims.amr.some((m) => m.method === 'totp'), 'el amr del token nuevo incluye totp');
   ok(admin2Claims.sub === admin1Claims.sub, 'mismo usuario antes y después de verificar (mismo sub)');
   ok(admin2Claims.app_metadata?.role === 'admin', 'mismo rol antes y después de verificar');
+  ok(typeof admin1Claims.session_id === 'string' && admin1Claims.session_id.length > 0, 'el token trae session_id (identidad de la sesión que usa la app)');
+  ok(admin2Claims.session_id === admin1Claims.session_id, 'verificar conserva el session_id: misma sesión, nivel nuevo');
   const verifiedFactor = (good.json.user?.factors ?? []).find((f) => f.id === factorId);
   ok(verifiedFactor?.status === 'verified', `el factor quedó "verified" (llegó "${verifiedFactor?.status}")`);
 
@@ -354,6 +356,7 @@ async function main() {
   ok(admin3 !== null, 'reingreso de la admin con contraseña');
   if (!admin3) throw new Error('sin reingreso de la admin no se puede seguir');
   ok(claims(admin3.token).aal === 'aal1', `la sesión nueva vuelve a ser aal1 (llegó "${claims(admin3.token).aal}")`);
+  ok(claims(admin3.token).session_id !== admin1Claims.session_id, 'el reingreso de la misma cuenta es OTRA sesión: session_id distinto');
   const factorsAfterLogin = (await getUser(admin3.token)).json?.factors ?? [];
   const verifiedAfterLogin = factorsAfterLogin.filter((f) => f.status === 'verified' && f.factor_type === 'totp');
   ok(verifiedAfterLogin.length === 1 && verifiedAfterLogin[0].id === factorId, `la sesión nueva ve el factor verificado (nextLevel sería aal2; llegaron ${verifiedAfterLogin.length})`);

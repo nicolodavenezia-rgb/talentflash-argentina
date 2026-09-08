@@ -94,6 +94,7 @@ class FakeAuthRepository implements AuthRepository {
     String email = 'persona@dev.talentflash.test',
     SessionAssurance assurance = SessionAssurance.aal1,
     String? id,
+    String? sessionId,
   }) {
     emit(
       AuthStatusSignedIn(
@@ -103,6 +104,7 @@ class FakeAuthRepository implements AuthRepository {
           role: role,
         ),
         assurance: assurance,
+        sessionId: sessionId,
       ),
     );
   }
@@ -199,11 +201,15 @@ class FakeAuthRepository implements AuthRepository {
     await _awaitPendingSecondFactor();
     _throwIf(nextVerifyFailure, () => nextVerifyFailure = null);
     // Igual que el SDK con `mfaChallengeVerified`: la sesión vigente vuelve a
-    // emitirse con `aal2`, mismo usuario.
+    // emitirse con `aal2`, mismo usuario y misma sesión.
     final current = _status;
     if (current is AuthStatusSignedIn) {
       emit(
-        AuthStatusSignedIn(current.authUser, assurance: SessionAssurance.aal2),
+        AuthStatusSignedIn(
+          current.authUser,
+          assurance: SessionAssurance.aal2,
+          sessionId: current.sessionId,
+        ),
       );
     }
   }

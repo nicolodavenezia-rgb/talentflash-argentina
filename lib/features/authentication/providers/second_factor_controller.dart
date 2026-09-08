@@ -170,11 +170,11 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   late AuthRepository _repository;
   late DateTime Function() _now;
 
-  /// Cuenta dueña del flujo en curso; `null` si no hay flujo.
-  String? _flowUserId;
+  /// Sesión dueña del flujo en curso; `null` si no hay flujo.
+  _SessionKey? _flowSession;
 
-  /// Última cuenta vista en el stream de sesión (puede ser `null`).
-  String? _sessionUserId;
+  /// Última sesión vista en el stream (puede ser `null`).
+  _SessionKey? _currentSession;
 
   /// Factor creado por este flujo y todavía no verificado.
   String? _pendingFactorId;
@@ -187,7 +187,7 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   SecondFactorFlow build() {
     _repository = ref.watch(authRepositoryProvider);
     _now = ref.watch(clockProvider);
-    _sessionUserId = ref.read(authStatusProvider).user?.id;
+    _currentSession = _SessionKey.of(ref.read(authStatusProvider));
     ref.listen(authStatusProvider, (_, next) => _onSessionChanged(next));
     // Al salir de la pantalla no queda ni el secreto en memoria ni un factor
     // pendiente en el servidor. Solo se usan campos: dentro de un
@@ -205,15 +205,15 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
       return;
     }
     final status = ref.read(authStatusProvider);
-    final user = status.user;
-    if (user == null) {
+    final owner = _SessionKey.of(status);
+    if (owner == null) {
       state = const SecondFactorUnavailable(
         AuthFailure(AuthFailureCode.sessionMissing),
       );
       return;
     }
-    _flowUserId = user.id;
-    _sessionUserId = user.id;
+    _flowSession = owner;
+    _currentSession = owner;
     if (status.hasSecondFactorVerified) {
       state = const SecondFactorAlreadyVerified();
       return;
@@ -232,7 +232,7 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
         if (!_isCurrent(epoch)) {
           // El flujo se canceló mientras el servidor creaba el factor: no se
           // muestra y, si la sesión sigue siendo la misma, se descarta.
-          _discardOrphan(enrollment.factorId, owner: user.id);
+          _discardOrphan(enrollment.factorId, owner: owner);
           return;
         }
         _pendingFactorId = enrollment.factorId;
@@ -360,10 +360,10 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   /// curso, el factor pendiente del servidor.
   void cancel() {
     final pending = _pendingFactorId;
-    final owner = _flowUserId;
+    final owner = _flowSession;
     _epoch++;
     _pendingFactorId = null;
-    _flowUserId = null;
+    _flowSession = null;
     state = const SecondFactorIdle();
     if (pending != null && owner != null) {
       _discardOrphan(pending, owner: owner);
@@ -392,19 +392,20 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   }
 
   void _onSessionChanged(AuthStatus next) {
-    final nextUserId = next.user?.id;
-    _sessionUserId = nextUserId;
-    final owner = _flowUserId;
+    final nextSession = _SessionKey.of(next);
+    _currentSession = nextSession;
+    final owner = _flowSession;
     if (owner == null) {
       return;
     }
-    if (nextUserId != owner) {
-      // Cierre de sesión o cambio de cuenta: se descarta todo lo sensible y
-      // se invalida cualquier respuesta en vuelo del flujo anterior. No se
-      // llama al servidor: la sesión de esa cuenta ya no está.
+    if (nextSession != owner) {
+      // Cierre de sesión, otra cuenta o la misma cuenta en una sesión nueva:
+      // se descarta todo lo sensible y se invalida cualquier respuesta en
+      // vuelo del flujo anterior. No se llama al servidor: la sesión de ese
+      // flujo ya no está.
       _epoch++;
       _pendingFactorId = null;
-      _flowUserId = null;
+      _flowSession = null;
       state = const SecondFactorIdle();
       return;
     }
@@ -420,17 +421,18 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
 
   void _discardOnDispose() {
     final pending = _pendingFactorId;
-    final owner = _flowUserId;
+    final owner = _flowSession;
     _pendingFactorId = null;
     if (pending != null && owner != null) {
       _discardOrphan(pending, owner: owner);
     }
   }
 
-  /// Borra un factor pendiente **solo** si la sesión sigue siendo de la
-  /// cuenta que lo creó: con otra cuenta el pedido iría con un token ajeno.
-  void _discardOrphan(String factorId, {required String owner}) {
-    if (_sessionUserId != owner) {
+  /// Borra un factor pendiente **solo** si la sesión sigue siendo la que lo
+  /// creó: con otra sesión el pedido iría con un token ajeno (y el
+  /// repositorio lo cortaría igual).
+  void _discardOrphan(String factorId, {required _SessionKey owner}) {
+    if (_currentSession != owner) {
       return;
     }
     unawaited(
@@ -439,6 +441,35 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
           .then<void>((_) {}, onError: (Object _) {}),
     );
   }
+}
+
+/// Sesión dueña de un flujo: la cuenta **y** la identidad de sesión. Comparar
+/// solo la cuenta no alcanza: cerrar sesión y volver a entrar con la misma
+/// cuenta es otra sesión, y un flujo empezado en la anterior no le pertenece.
+/// Con tokens que no traen `session_id` (dobles de prueba) queda solo la
+/// cuenta, y el cierre de sesión igual pasa por `SignedOut`.
+class _SessionKey {
+  const _SessionKey(this.userId, this.sessionId);
+
+  final String userId;
+  final String? sessionId;
+
+  static _SessionKey? of(AuthStatus status) {
+    final user = status.user;
+    if (user == null) {
+      return null;
+    }
+    return _SessionKey(user.id, status.sessionId);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SessionKey &&
+      other.userId == userId &&
+      other.sessionId == sessionId;
+
+  @override
+  int get hashCode => Object.hash(userId, sessionId);
 }
 
 final secondFactorControllerProvider =

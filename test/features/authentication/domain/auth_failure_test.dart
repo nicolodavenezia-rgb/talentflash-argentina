@@ -45,6 +45,8 @@ void main() {
           ('mfa_ip_address_mismatch', '403'): AuthFailureCode.mfaRejected,
           ('session_not_found', '403'): AuthFailureCode.sessionMissing,
           ('refresh_token_already_used', '400'): AuthFailureCode.sessionMissing,
+          // Lo emite SessionScopedHttpClient, no GoTrue.
+          ('stale_session', '401'): AuthFailureCode.staleSession,
         };
         cases.forEach((input, expected) {
           final failure = AuthFailure.from(

@@ -31,6 +31,13 @@ sealed class AuthStatus {
     _ => SessionAssurance.unknown,
   };
 
+  /// Identidad de la sesión (claim `session_id`), o `null` sin sesión válida
+  /// o cuando el token no la trae.
+  String? get sessionId => switch (this) {
+    AuthStatusSignedIn(:final sessionId) => sessionId,
+    _ => null,
+  };
+
   /// `true` solo con sesión válida **y** claim `aal2` exacto. Es el único
   /// dato que habilita a dibujar la cola administrativa; la autorización real
   /// sigue siendo de las RPC (migración 0028).
@@ -75,6 +82,7 @@ final class AuthStatusSignedIn extends AuthStatus {
   const AuthStatusSignedIn(
     this.authUser, {
     this.assurance = SessionAssurance.unknown,
+    this.sessionId,
   });
 
   final AuthenticatedUser authUser;
@@ -83,14 +91,25 @@ final class AuthStatusSignedIn extends AuthStatus {
   @override
   final SessionAssurance assurance;
 
+  /// Identidad de **esta** sesión (claim `session_id`). Se conserva al
+  /// refrescar el token y al verificar el segundo factor; cambia en cada
+  /// inicio de sesión, también de la misma cuenta. Por eso forma parte de la
+  /// igualdad: cerrar sesión y volver a entrar con la misma cuenta es otra
+  /// sesión, y un flujo empezado en la anterior no le pertenece. `null` si
+  /// el token no lo trae.
+  @override
+  final String? sessionId;
+
   @override
   bool operator ==(Object other) =>
       other is AuthStatusSignedIn &&
       other.authUser == authUser &&
-      other.assurance == assurance;
+      other.assurance == assurance &&
+      other.sessionId == sessionId;
 
   @override
-  int get hashCode => Object.hash(AuthStatusSignedIn, authUser, assurance);
+  int get hashCode =>
+      Object.hash(AuthStatusSignedIn, authUser, assurance, sessionId);
 
   @override
   String toString() => 'AuthStatusSignedIn($authUser, ${assurance.name})';
