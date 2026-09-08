@@ -78,10 +78,11 @@ void main() {
     });
 
     test('sin claim o sin forma de JWT, es el token entero', () {
-      expect(
-        sessionIdentityOf(GoTrueFixtures.accessTokenWithClaims(aal: 'aal1')),
-        GoTrueFixtures.accessTokenWithClaims(aal: 'aal1'),
-      );
+      // Un solo token para los dos lados: el fixture sella `exp` con el reloj,
+      // así que dos invocaciones a distinto lado de un borde de segundo dan
+      // strings distintos y la aserción fallaría por el reloj, no por el guard.
+      final sinClaim = GoTrueFixtures.accessTokenWithClaims(aal: 'aal1');
+      expect(sessionIdentityOf(sinClaim), sinClaim);
       expect(
         sessionIdentityOf(GoTrueFixtures.accessToken),
         GoTrueFixtures.accessToken,

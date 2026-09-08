@@ -248,6 +248,13 @@ De [ROADMAP.md](ROADMAP.md) y del README:
   ya integrado. El nivel `aal2` **es alcanzable**: `supabase/config.toml` ya
   habilita el enrolamiento TOTP, así que falta la superficie de la app (alta,
   desafío, verificación y recuperación), no la configuración del servidor.
+
+  > **Adenda del 2026-09-08.** Sigue siendo cierto para `main` (`6d9c173`).
+  > **Alta, desafío y verificación** existen en el PR #5, sin fusionar
+  > ([§2](#2-qué-existe-solo-en-un-pr-abierto)). Lo que queda pendiente y sin
+  > circuito definido, también después de ese PR, es la **recuperación**:
+  > pérdida del autenticador, baja o reemplazo de un factor verificado y
+  > códigos de recuperación.
 - **T-012** — Google y Apple: sin botones ni puntos de entrada en la UI.
 - **T-013** — pantalla in-app de cambio de contraseña: depende de definir el
   esquema de enlace profundo.

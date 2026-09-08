@@ -207,7 +207,13 @@ contenedor de la base — es la única vía admitida (`docs/SECURITY.md` §3) y 
 trigger de la migración `0019` propaga el rol al claim:
 
 ```sql
-update public.profiles set role = 'admin' where email = 'admin-local@dev.talentflash.test';
+-- Poné el correo de la cuenta que registraste (o una del seed, p. ej.
+-- 'empresa7@dev.talentflash.test'): con un correo inexistente el UPDATE
+-- afecta 0 filas y NO da error, así que conviene comprobarlo con el select.
+update public.profiles set role = 'admin' where email = 'TU_CORREO_ACA';
+select p.role::text || '/' || coalesce(u.raw_app_meta_data ->> 'role', '')
+from public.profiles p join auth.users u on u.id = p.id
+where p.email = 'TU_CORREO_ACA';  -- tiene que devolver admin/admin
 ```
 
 Cerrá sesión y volvé a entrar para que el token traiga el rol nuevo. En

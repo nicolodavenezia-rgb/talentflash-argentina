@@ -75,9 +75,11 @@ abstract interface class AuthRepository {
   // factor verificado, ni códigos de recuperación, ni recuperación por
   // pérdida del autenticador (ver README, «Segundo factor»).
 
-  /// Factores TOTP **verificados** de la cuenta, según el servidor (refresca
-  /// la sesión para no decidir con una lista vieja). Vacío si nunca terminó
-  /// un alta.
+  /// Factores TOTP **verificados** de la cuenta, según el servidor
+  /// (`GET /user`), **sin** refrescar la sesión: refrescar rota el refresh
+  /// token y le movería la sesión a las demás pestañas. Solo se refresca si el
+  /// access token ya venció, para poder llamar. Vacío si nunca terminó un
+  /// alta.
   Future<List<SecondFactor>> listVerifiedSecondFactors();
 
   /// Inicia un alta TOTP: crea un factor **pendiente** y devuelve su secreto

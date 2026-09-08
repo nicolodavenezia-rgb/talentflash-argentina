@@ -381,13 +381,18 @@ async function main() {
   if (!company1) throw new Error('sin login de la empresa no se puede seguir');
   const companyPending = await enroll(company1.token, `Empresa ${RUN_ID}`);
   ok(companyPending.status === 200, `la cuenta de empresa puede dar de alta un factor (llegó ${companyPending.status})`);
+  if (companyPending.status !== 200) throw new Error('sin alta pendiente de la empresa no se puede seguir');
   const discarded = await unenroll(company1.token, companyPending.json.id);
   ok(discarded.status === 200 && discarded.json?.id === companyPending.json.id, `un factor PENDIENTE se puede descartar con sesión aal1 (llegó ${discarded.status})`);
   const afterDiscard = (await getUser(company1.token)).json?.factors ?? [];
   ok(afterDiscard.length === 0, `tras descartar no queda ningún factor (llegaron ${afterDiscard.length})`);
 
   const companyEnroll = await enroll(company1.token, `Empresa ${RUN_ID}`);
+  ok(companyEnroll.status === 200 && Boolean(companyEnroll.json?.totp?.secret), `alta TOTP de la cuenta de empresa para el segundo tramo (llegó ${companyEnroll.status}/${companyEnroll.json?.error_code ?? ''})`);
+  if (companyEnroll.status !== 200) throw new Error('sin alta de la empresa no se puede seguir');
   const companyChallenge = await challenge(company1.token, companyEnroll.json.id);
+  ok(companyChallenge.status === 200 && Boolean(companyChallenge.json?.id), `desafío del factor de la empresa (llegó ${companyChallenge.status}/${companyChallenge.json?.error_code ?? ''})`);
+  if (companyChallenge.status !== 200) throw new Error('sin desafío de la empresa no se puede seguir');
   const companyVerify = await verify(
     company1.token,
     companyEnroll.json.id,
@@ -413,6 +418,7 @@ async function main() {
 }
 
 const watchdog = setTimeout(() => {
+  console.log(`1..${testNumber}`);
   console.error(`[mfa:test] timeout global de ${GLOBAL_TIMEOUT_MS} ms superado.`);
   cleanup();
   process.exit(1);
@@ -421,6 +427,9 @@ const watchdog = setTimeout(() => {
 try {
   await main();
 } catch (error) {
+  // El plan también en el camino de error: una salida TAP sin `1..N` se lee
+  // como truncada y no dice cuántas aserciones llegaron a correr.
+  console.log(`1..${testNumber}`);
   console.error('[mfa:test] error inesperado:', error);
   cleanup();
   process.exit(1);
