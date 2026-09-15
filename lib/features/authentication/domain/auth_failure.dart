@@ -57,6 +57,17 @@ enum AuthFailureCode {
   /// (`mfa_verification_rejected`, `mfa_ip_address_mismatch`).
   mfaRejected,
 
+  /// **Esta misma sesión** ya verificó su segundo factor mientras la operación
+  /// corría: el nivel subió de `aal1` a `aal2` sin que cambiara la sesión.
+  ///
+  /// No lo emite GoTrue: lo emite el repositorio para cortar un alta que dejó
+  /// de tener sentido (`SupabaseAuthRepository.enrollTotp`). **No es
+  /// [staleSession]**: la sesión es la misma —el `session_id` no cambió— y
+  /// sigue siendo válida; lo que cambió es su nivel. Decirle a la persona que
+  /// su sesión cambió sería falso, y dejarla en un error sería peor todavía:
+  /// su sesión ya está autorizada y lo que corresponde es llevarla a la cola.
+  mfaAlreadyVerified,
+
   unknown;
 
   /// `error_code` con el que `SessionScopedHttpClient` descarta una respuesta

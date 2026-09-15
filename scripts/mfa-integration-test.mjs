@@ -56,6 +56,47 @@ function ok(condition, description) {
   return Boolean(condition);
 }
 
+/// Línea informativa que **no** cuenta como aserción (comentario TAP).
+function note(message) {
+  console.log(`# ${message}`);
+}
+
+/// `true` solo si la respuesta es un **200 con cuerpo de usuario de GoTrue**.
+///
+/// Sin esto, `res.json?.factors ?? []` convierte un 401, un 429 o un 500 en una
+/// lista vacía y una comprobación del tipo «el factor desapareció» se aprueba
+/// sola. GoTrue puede omitir `factors` cuando no hay ninguno, pero esa forma
+/// solo se acepta **después** de validar que la respuesta fue exitosa.
+function isUserBody(res) {
+  return (
+    res?.status === 200 &&
+    res.json !== null &&
+    typeof res.json === 'object' &&
+    typeof res.json.id === 'string' &&
+    typeof res.json.aud === 'string'
+  );
+}
+
+/// Factores de una respuesta de `/user` **ya validada**, o `null` si la
+/// respuesta no sirve. `null` hace fallar a quien lo consuma, en vez de
+/// parecerse a «no hay factores».
+function factorsOf(res) {
+  return isUserBody(res) ? (res.json.factors ?? []) : null;
+}
+
+/// `true` solo si la respuesta es un **200 con sesión** (token + refresh).
+/// Mismo criterio que [isUserBody]: de un cuerpo de error no se leen claims ni
+/// se encadena otro refresco.
+function isSessionBody(res) {
+  return (
+    res?.status === 200 &&
+    res.json !== null &&
+    typeof res.json === 'object' &&
+    typeof res.json.access_token === 'string' &&
+    typeof res.json.refresh_token === 'string'
+  );
+}
+
 // --- HTTP -------------------------------------------------------------------
 async function http(path, { token, method = 'GET', body } = {}) {
   const headers = { apikey: ANON_KEY, 'Content-Type': 'application/json' };
@@ -101,6 +142,15 @@ async function login(email) {
 
 async function logout(token) {
   return http('/auth/v1/logout?scope=global', { method: 'POST', token });
+}
+
+/// Renovación legítima de la sesión. GoTrue rota el refresh token, así que el
+/// devuelto reemplaza al usado.
+async function refreshSession(refreshToken) {
+  return http('/auth/v1/token?grant_type=refresh_token', {
+    method: 'POST',
+    body: { refresh_token: refreshToken },
+  });
 }
 
 async function enroll(token, friendlyName) {
@@ -287,6 +337,19 @@ async function main() {
   const admin1Claims = claims(admin1.token);
   ok(admin1Claims.app_metadata?.role === 'admin', `el JWT trae app_metadata.role = admin (llegó "${admin1Claims.app_metadata?.role}")`);
   ok(admin1Claims.aal === 'aal1', `una sesión de contraseña sola es aal1 (llegó "${admin1Claims.aal}")`);
+
+  // C6 · Renovación legítima ANTES de verificar. Es la premisa de
+  // `sessionIdentityOf`: si el refresco cambiara el `session_id`, la app
+  // trataría cada refresco como un cambio de sesión. Se comprueba el estado
+  // HTTP antes de leer ningún campo.
+  const refreshBefore = await refreshSession(admin1.refresh);
+  // El estado HTTP se comprueba ANTES de leer ningún campo: de un cuerpo de
+  // error no se sacan claims.
+  const refreshBeforeOk = ok(isSessionBody(refreshBefore), `C6: refresco ANTES de verificar responde 200 con sesión (llegó ${refreshBefore.status})`);
+  const refreshBeforeClaims = refreshBeforeOk ? claims(refreshBefore.json.access_token) : null;
+  ok(refreshBeforeClaims?.session_id === admin1Claims.session_id, 'C6: el refresco en aal1 CONSERVA el session_id (misma sesión)');
+  ok(refreshBeforeClaims?.aal === 'aal1', `C6: el refresco en aal1 conserva el nivel (llegó "${refreshBeforeClaims?.aal}")`);
+  ok(refreshBeforeOk && refreshBefore.json.refresh_token !== admin1.refresh, 'C6: el refresh token rota (el anterior queda consumido)');
   const factorsBefore = (await getUser(admin1.token)).json?.factors ?? [];
   ok(factorsBefore.length === 0, `la cuenta arranca sin factores (llegaron ${factorsBefore.length})`);
 
@@ -342,6 +405,21 @@ async function main() {
   const verifiedFactor = (good.json.user?.factors ?? []).find((f) => f.id === factorId);
   ok(verifiedFactor?.status === 'verified', `el factor quedó "verified" (llegó "${verifiedFactor?.status}")`);
 
+  // C6 · Renovación legítima DESPUÉS de verificar. Si el refresco bajara el
+  // nivel, la cola se cerraría sola a mitad de sesión sin que nadie tocara
+  // nada. Separado de cualquier baja de factor a propósito: una baja SÍ
+  // cambia el nivel del token siguiente.
+  const refreshAfter = await refreshSession(good.json.refresh_token);
+  const refreshAfterOk = ok(isSessionBody(refreshAfter), `C6: refresco DESPUÉS de verificar responde 200 con sesión (llegó ${refreshAfter.status})`);
+  const refreshAfterClaims = refreshAfterOk ? claims(refreshAfter.json.access_token) : null;
+  ok(refreshAfterClaims?.session_id === admin1Claims.session_id, 'C6: el refresco posterior CONSERVA el session_id');
+  ok(refreshAfterClaims?.aal === 'aal2', `C6: el refresco NO baja el nivel: sigue aal2 (llegó "${refreshAfterClaims?.aal}")`);
+  // No se encadena otro refresco sobre una respuesta inválida: el token que
+  // usaríamos vendría de un cuerpo de error.
+  const refreshChained = refreshAfterOk ? await refreshSession(refreshAfter.json.refresh_token) : null;
+  const refreshChainedOk = ok(isSessionBody(refreshChained), `C6: segundo refresco encadenado responde 200 con sesión (llegó ${refreshChained?.status ?? 'no se intentó'})`);
+  ok(refreshChainedOk && claims(refreshChained.json.access_token).aal === 'aal2', 'C6: el nivel sigue aal2 tras encadenar refrescos');
+
   // 6. Con aal2 la RPC acepta.
   const listAfter = await rpcList(admin2Token);
   ok(listAfter.status === 200 && Array.isArray(listAfter.json), `admin aal2: listar la cola responde 200 con una lista (llegó ${listAfter.status}/${listAfter.json?.code ?? ''})`);
@@ -364,6 +442,21 @@ async function main() {
   ok(listRelogin.json?.code === 'TFMFA', `tener un factor verificado NO alcanza: con aal1 la cola sigue rechazada (llegó ${listRelogin.status}/${listRelogin.json?.code})`);
   const enrollAal1 = await enroll(admin3.token, `Segundo ${RUN_ID}`);
   ok(enrollAal1.status === 403 && enrollAal1.json?.error_code === 'insufficient_aal', `con un factor verificado y sesión aal1, dar de alta OTRO factor se rechaza con insufficient_aal (llegó ${enrollAal1.status}/${enrollAal1.json?.error_code})`);
+
+  // D1 · La regla del servidor sobre la que se apoya la corrección del
+  // cliente: con `aal1` la baja de un factor VERIFICADO se rechaza y el factor
+  // sobrevive. Por eso el repositorio solo manda una baja con la sesión en
+  // `aal1`: es el único nivel en el que el servidor garantiza que no puede
+  // destruir un factor verificado. Si una versión futura de GoTrue cambiara
+  // esto, la corrección quedaría coja y hay que enterarse acá.
+  const unenrollAal1 = await unenroll(admin3.token, factorId);
+  note(`D1: DELETE de un factor verificado con aal1 -> ${unenrollAal1.status}/${unenrollAal1.json?.error_code ?? ''}`);
+  ok(unenrollAal1.status !== 200 && unenrollAal1.json?.error_code === 'insufficient_aal', `D1: con aal1 NO se puede dar de baja un factor verificado (llegó ${unenrollAal1.status}/${unenrollAal1.json?.error_code})`);
+  // Un rechazo HTTP no alcanza: se vuelve a consultar el estado al servidor.
+  const afterReject = await getUser(admin3.token);
+  ok(isUserBody(afterReject), `D1: la consulta posterior al rechazo es un 200 con cuerpo de usuario (llegó ${afterReject.status})`);
+  const survivors = (factorsOf(afterReject) ?? []).filter((f) => f.id === factorId);
+  ok(factorsOf(afterReject) !== null && survivors.length === 1 && survivors[0].status === 'verified', `D1: tras el rechazo el factor SIGUE verified en el servidor (llegaron ${survivors.length}/"${survivors[0]?.status}")`);
 
   const challenge2 = await challenge(admin3.token, factorId);
   ok(challenge2.status === 200, `nuevo desafío sobre el factor existente (llegó ${challenge2.status})`);
@@ -404,6 +497,23 @@ async function main() {
   ok(companyList.status !== 200 && companyList.json?.code === '42501', `aal2 sin rol admin: listar la cola se rechaza con 42501 (llegó ${companyList.status}/${companyList.json?.code})`);
   const companyReview = await rpcReview(companyVerify.json.access_token);
   ok(companyReview.status !== 200 && companyReview.json?.code === '42501', `aal2 sin rol admin: resolver se rechaza con 42501 (llegó ${companyReview.status}/${companyReview.json?.code})`);
+
+  // D1 · La otra mitad del contrato, y la que explica por qué el cliente NO
+  // puede pedir una baja con aal2: el servidor la acepta y el factor
+  // desaparece de verdad. Va al final y sobre la cuenta de empresa, que ya no
+  // se usa para nada más, porque es destructivo.
+  const companyToken = companyVerify.json.access_token;
+  const unenrollAal2 = await unenroll(companyToken, companyEnroll.json.id);
+  note(`D1: DELETE de un factor verificado con aal2 -> ${unenrollAal2.status}/${unenrollAal2.json?.error_code ?? ''}`);
+  ok(unenrollAal2.status === 200, `D1: con aal2 el servidor ACEPTA dar de baja un factor verificado (llegó ${unenrollAal2.status})`);
+  // De nuevo: un 200 no alcanza, se vuelve a consultar el estado.
+  const afterDelete = await getUser(companyToken);
+  // Primero la respuesta tiene que ser válida. Si no, la ausencia del factor no
+  // demuestra nada: un 401 tampoco trae factores.
+  ok(isUserBody(afterDelete), `D1: la consulta posterior al borrado es un 200 con cuerpo de usuario (llegó ${afterDelete.status})`);
+  const factorsAfterDelete = factorsOf(afterDelete);
+  ok(factorsAfterDelete !== null && !factorsAfterDelete.some((f) => f.id === companyEnroll.json.id), `D1: y el factor DESAPARECE del servidor (quedaron ${factorsAfterDelete === null ? 'respuesta inválida' : factorsAfterDelete.length} factores)`);
+  note('D1: por eso el repositorio solo manda una baja con la sesión en aal1');
 
   // 9. Limpieza de las cuentas sintéticas.
   const remaining = cleanup();

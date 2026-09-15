@@ -28,6 +28,13 @@ import 'jwt_claims.dart';
 ///   descarta si la sesión cambió mientras viajaba, antes de que el SDK pueda
 ///   guardarla como sesión o emitir eventos por ella. Hace falta porque
 ///   `mfa.verify` guarda la sesión y notifica antes de devolver el control.
+///
+/// Esas dos capas responden «¿sigue siendo la misma sesión?». Hay una tercera
+/// pregunta que la identidad de sesión **no puede** responder, porque una
+/// verificación legítima cambia el nivel sin cambiar de sesión: «¿esta sesión
+/// sigue estando en el nivel en el que esta operación tiene sentido?». De eso
+/// se ocupa [_canUnenroll], que impide mandar una baja de factor con un nivel
+/// distinto de `aal1`.
 class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository(this._auth);
 
@@ -132,6 +139,18 @@ class SupabaseAuthRepository implements AuthRepository {
           continue;
         }
         _ensureSameSession(scope);
+        // La lectura de arriba puede haber quedado vieja: mientras viajaba,
+        // el servidor pudo aceptar el código de ese mismo factor. El nivel de
+        // la sesión es la señal que lo delata, y se lee JUSTO acá, sin ningún
+        // `await` hasta la llamada al SDK ([_canUnenroll]).
+        if (!_canUnenroll()) {
+          // `continue` y no `break`: la condición se vuelve a evaluar para
+          // cada factor en vez de asumir que el nivel ya no va a cambiar. No
+          // se asume monotonía —el nivel de una sesión puede bajar, por
+          // ejemplo si un refresco lo recalcula tras perder el factor
+          // verificado— y así el comportamiento no depende de esa suposición.
+          continue;
+        }
         try {
           await _auth.mfa.unenroll(factor.id);
         } on AuthException catch (error) {
@@ -142,6 +161,19 @@ class SupabaseAuthRepository implements AuthRepository {
         }
       }
       _ensureSameSession(scope);
+      // Si la sesión ya subió a `aal2`, esta alta perdió sentido: la cuenta
+      // acaba de verificar su segundo factor en esta misma sesión. El servidor
+      // NO la rechaza: con `aal2` un alta nueva devuelve 200 (el rechazo
+      // `insufficient_aal` es para `aal1`, y eso sí lo fija `npm run mfa:test`),
+      // así que seguir dejaría un factor
+      // pendiente de más que nadie va a verificar. Se corta con un fallo
+      // propio, no con `staleSession`: la sesión es la misma.
+      if (_currentAssurance() == SessionAssurance.aal2) {
+        throw const AuthFailure(
+          AuthFailureCode.mfaAlreadyVerified,
+          debugDetail: 'la sesión subió a aal2 durante el alta',
+        );
+      }
       final response = await _auth.mfa.enroll(
         issuer: totpIssuer,
         friendlyName: friendlyName,
@@ -203,6 +235,18 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> discardPendingSecondFactor(String factorId) {
     return _guard(() async {
       _requireSession();
+      // Mismo criterio que la limpieza del alta ([_canUnenroll]), y hace falta
+      // por un camino propio: acá no se mira el estado del factor, así que un
+      // factor que el servidor ya aceptó se descartaría igual. Si el cliente
+      // se enteró de la verificación —por el evento del SDK o por un refresco
+      // legítimo, que recalcula el nivel a partir de los factores vigentes y
+      // devuelve `aal2`—, el descarte ya no sale y el factor sobrevive. Si no
+      // se enteró, el claim sigue en `aal1` y esta comprobación no alcanza:
+      // ver el límite en [_canUnenroll]. Se lee el nivel justo antes de
+      // llamar al SDK.
+      if (!_canUnenroll()) {
+        return;
+      }
       try {
         await _auth.mfa.unenroll(factorId);
       } on AuthException catch (error) {
@@ -250,6 +294,48 @@ class SupabaseAuthRepository implements AuthRepository {
     }
     return scope;
   }
+
+  /// Nivel de la sesión vigente, leído del token **en este instante**.
+  ///
+  /// Sin sesión o con un token ilegible da [SessionAssurance.unknown], que
+  /// nunca vale por `aal1` ni por una verificación exitosa.
+  SessionAssurance _currentAssurance() {
+    final accessToken = _auth.currentSession?.accessToken;
+    if (accessToken == null) {
+      return SessionAssurance.unknown;
+    }
+    return assuranceFromAccessToken(accessToken);
+  }
+
+  /// Invariante que protege de borrar un factor **verificado** sin querer:
+  /// una baja de factor solo se manda con la sesión exactamente en `aal1`.
+  ///
+  /// **Por qué exactamente `aal1` y no «distinto de `aal2`».** Con la sesión
+  /// en `aal1`, la baja de un factor verificado se rechaza con
+  /// `422 insufficient_aal` y el factor sobrevive; con `aal2`, el servidor la
+  /// acepta y lo borra. Las dos mitades son aserciones de `npm run mfa:test`
+  /// contra el GoTrue del stack local, y en las dos se vuelve a consultar el
+  /// estado después: un 200 no alcanza. Con [SessionAssurance.unknown]
+  /// no se puede afirmar ninguna de las dos, así que tampoco se manda: un
+  /// nivel ilegible nunca se interpreta como `aal1`.
+  ///
+  /// **Qué cubre y qué no.** Esta comprobación lee el claim del token que el
+  /// cliente tiene en la mano; el servidor decide por el nivel de la
+  /// **sesión**, y no son lo mismo. Medido contra el GoTrue local: un DELETE
+  /// hecho con un token cuyo claim todavía dice `aal1`, sobre una sesión que
+  /// el servidor ya subió a `aal2`, se acepta y borra el factor. Así que esto
+  /// cierra la ventana en la que la app **ya se enteró** de que subió de nivel
+  /// —la que reproduce `test_integration/d1_regresion_servidor_test.dart`— y
+  /// **no** cierra aquella en la que el servidor aceptó el código y la
+  /// respuesta nunca llegó: ahí el claim sigue en `aal1` y la baja prospera.
+  /// Cerrarla pide releer el estado del factor contra el servidor antes de
+  /// cada baja, y queda fuera de este cambio.
+  ///
+  /// **No** reemplaza a la identidad de sesión: [_ensureSameSession] sigue
+  /// comparando `session_id`, que es lo que distingue una sesión de otra. El
+  /// nivel no es identidad —una verificación legítima lo cambia dentro de la
+  /// misma sesión— sino una condición para ejecutar una operación destructiva.
+  bool _canUnenroll() => _currentAssurance() == SessionAssurance.aal1;
 
   /// Corta una operación de varios pasos si la sesión que la inició
   /// ([scope]) ya no es la vigente. Se llama después de cada espera y justo

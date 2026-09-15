@@ -54,6 +54,10 @@ abstract final class AuthCopy {
           l10n.mfaFailureInsufficientAssurance,
         AuthFailureCode.mfaNotEnabled => l10n.mfaFailureNotEnabled,
         AuthFailureCode.mfaRejected => l10n.mfaFailureRejected,
+        // La sesión es la misma y ya está verificada: el texto existente lo
+        // dice tal cual. Es el mismo que ve quien entra a la pantalla con la
+        // sesión ya en `aal2`, que es la situación en la que quedó.
+        AuthFailureCode.mfaAlreadyVerified => l10n.mfaAlreadyVerified,
         AuthFailureCode.unknown => l10n.authFailureUnknown,
       };
 

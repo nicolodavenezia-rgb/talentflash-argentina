@@ -181,10 +181,17 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
 
   /// Factor cuyo código ya viaja hacia el servidor. Un `unenroll` disparado
   /// mientras esa verificación está en vuelo correría contra ella y podría
-  /// borrar un factor que el servidor acaba de aceptar; como no hay
-  /// recuperación ni reemplazo (alcance del PR), eso dejaría a la cuenta sin
-  /// segundo factor y sin poder operar la cola. Dentro de un life-cycle no se
-  /// puede leer `state`, así que `isSubmitting` se espeja acá.
+  /// borrar un factor que el servidor acaba de aceptar, dejando a la cuenta
+  /// sin el segundo factor que la persona acaba de configurar y sin poder
+  /// operar la cola hasta que lo configure de nuevo (comprobado contra el
+  /// servidor: con **cero** factores verificados se puede volver a dar de alta
+  /// TOTP desde `aal1` y recuperar `aal2`; no se afirma nada sobre otros
+  /// escenarios de pérdida del autenticador, que no se probaron). Dentro de un
+  /// life-cycle no se puede leer `state`, así que `isSubmitting` se espeja acá.
+  ///
+  /// Este campo cubre el flujo **vivo**. El caso en el que la pantalla se
+  /// destruye y se vuelve a crear lo cubre el repositorio, que no depende de
+  /// que ningún campo sobreviva al `autoDispose`.
   String? _verifyingFactorId;
 
   /// Sube cada vez que el flujo se invalida (cancelar, cambiar de cuenta,
@@ -264,9 +271,25 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
       }
     } on Object catch (error) {
       if (!_isCurrent(epoch)) {
+        // Lo más frecuente cuando el nivel subió: el stream de sesión ya trajo
+        // `aal2` y dejó el flujo en `SecondFactorVerified`. Ese estado no se
+        // pisa: la persona ya vio que su verificación salió bien.
         return;
       }
-      state = SecondFactorUnavailable(AuthFailure.from(error));
+      final failure = AuthFailure.from(error);
+      if (failure.code == AuthFailureCode.mfaAlreadyVerified) {
+        // La sesión subió a `aal2` mientras preparábamos el alta, y el
+        // repositorio la cortó antes de crear un factor de más. La sesión
+        // vigente ya está autorizada: no es un error que haya que explicar
+        // ni un flujo para reintentar. Se termina como si se hubiera entrado
+        // con la sesión ya verificada, que es exactamente lo que pasa ahora,
+        // y la pantalla lleva a la cola.
+        _pendingFactorId = null;
+        _verifyingFactorId = null;
+        state = const SecondFactorAlreadyVerified();
+        return;
+      }
+      state = SecondFactorUnavailable(failure);
     }
   }
 
@@ -459,9 +482,10 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
     }
     if (pending == verifying) {
       // El código ya viaja: un alta con el código enviado no es un «alta
-      // interrumpida». O la acepta el servidor —y borrarla dejaría a la
-      // cuenta sin segundo factor, sin baja ni recuperación posibles— o el
-      // factor pendiente lo vence GoTrue solo, y el próximo alta lo limpia.
+      // interrumpida». O la acepta el servidor —y borrarla dejaría a la cuenta
+      // sin el segundo factor recién configurado, obligándola a configurarlo de
+      // nuevo para volver a operar la cola— o el factor pendiente lo vence
+      // GoTrue solo, y el próximo alta lo limpia.
       return;
     }
     _discardOrphan(pending, owner: owner);
