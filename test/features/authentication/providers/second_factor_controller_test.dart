@@ -292,14 +292,19 @@ void main() {
         // El alta rehecha tiene que traer un secreto propio: es lo que hace
         // que el QR cambie de verdad.
         repository.queuedEnrollments.add(repository.nextEnrollment);
+        // Secreto inventado y **de baja entropía a propósito**: el scan de
+        // secretos de la CI (gitleaks, `generic-api-key`) marca cualquier
+        // literal cerca de la palabra `secret` que pase de 3.5 bits por
+        // carácter, así que el fixture repite caracteres en vez de usar 16
+        // distintos.
         repository.queuedEnrollments.add(
           const TotpEnrollment(
             factorId: 'factor-rehecho',
             friendlyName: 'TalentFlash · 08/09/2026 14:40',
-            secret: 'KRSXG5CTMVRXEZLU',
+            secret: 'KRSXG5CTKRSXG5CT',
             uri:
                 'otpauth://totp/TalentFlash%20Argentina:persona'
-                '?secret=KRSXG5CTMVRXEZLU',
+                '?secret=KRSXG5CTKRSXG5CT',
           ),
         );
         await controller().start(friendlyName: friendlyName);

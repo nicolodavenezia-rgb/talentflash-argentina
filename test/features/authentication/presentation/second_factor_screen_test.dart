@@ -27,6 +27,12 @@ import '../../../support/pump_app.dart';
 /// en `npm run mfa:test`. Acá se prueba la pantalla: qué muestra, qué pide,
 /// qué nunca muestra, y cómo vuelve a la cola cuando la sesión sube a aal2.
 void main() {
+  // Secretos de prueba, inventados. Además de falsos son **de baja entropía a
+  // propósito**: el scan de secretos de la CI (gitleaks, regla
+  // `generic-api-key`) marca cualquier literal cerca de la palabra `secret`
+  // que pase de 3.5 bits por carácter, y un fixture con las 16 letras
+  // distintas lo supera y rompe la CI. Si hace falta otro, que repita
+  // caracteres como estos dos.
   const secret = 'JBSWY3DPEHPK3PXP';
 
   CompanyVerificationRequest solicitud() => const CompanyVerificationRequest(
@@ -109,10 +115,10 @@ void main() {
           TotpEnrollment(
             factorId: 'factor-rehecho',
             friendlyName: 'TalentFlash · 08/09/2026 14:40',
-            secret: 'KRSXG5CTMVRXEZLU',
+            secret: 'KRSXG5CTKRSXG5CT',
             uri:
                 'otpauth://totp/TalentFlash%20Argentina:persona'
-                '?secret=KRSXG5CTMVRXEZLU',
+                '?secret=KRSXG5CTKRSXG5CT',
           ),
         ]);
         final harness = await abrirSegundoFactor(tester, auth: auth);
@@ -138,7 +144,7 @@ void main() {
           reason: 'y dice qué tiene que hacer la persona',
         );
         expect(
-          find.text('KRSX G5CT MVRX EZLU'),
+          find.text('KRSX G5CT KRSX G5CT'),
           findsOneWidget,
           reason: 'la clave manual es la del factor nuevo',
         );

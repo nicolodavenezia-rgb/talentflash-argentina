@@ -1,0 +1,25 @@
+# Falsos positivos aceptados del scan de secretos (gitleaks).
+#
+# Cada línea es una huella `commit:archivo:regla:línea`, o sea que perdona ESE
+# hallazgo en ESE commit y nada más: si mañana aparece un secreto de verdad en
+# el mismo archivo, se sigue marcando. Nunca agregar acá un secreto real: lo
+# que corresponde con un secreto filtrado es rotarlo, no silenciarlo.
+#
+# Estas cuatro son el mismo literal inventado, `KRSXG5CTMVRXEZLU`, un secreto
+# TOTP de fixture en dos tests de widget y de controller. No abre nada: no
+# existe ninguna cuenta con ese factor. La regla `generic-api-key` lo marcó
+# porque aparece pegado a la palabra `secret` y sus 16 caracteres son todos
+# distintos, con lo que pasa el umbral de entropía de 3.5 bits por carácter
+# —el fixture viejo, `JBSWY3DPEHPK3PXP`, queda en 3.375 y por eso nunca se
+# marcó—.
+#
+# En el árbol de trabajo ya está corregido: el fixture pasó a repetir
+# caracteres (`KRSXG5CTKRSXG5CT`, 3.0) y los dos tests llevan un comentario
+# que explica por qué tienen que quedarse así. Estas huellas hacen falta igual
+# porque gitleaks recorre los commits del PR y el commit d92473f, ya
+# publicado, conserva el literal viejo. Se resuelve con huellas y no
+# reescribiendo la rama: no se hace force push sobre un PR abierto.
+d92473fe2b587683c25abe6a8399fa33deb8429f:test/features/authentication/providers/second_factor_controller_test.dart:generic-api-key:299
+d92473fe2b587683c25abe6a8399fa33deb8429f:test/features/authentication/providers/second_factor_controller_test.dart:generic-api-key:302
+d92473fe2b587683c25abe6a8399fa33deb8429f:test/features/authentication/presentation/second_factor_screen_test.dart:generic-api-key:112
+d92473fe2b587683c25abe6a8399fa33deb8429f:test/features/authentication/presentation/second_factor_screen_test.dart:generic-api-key:115
