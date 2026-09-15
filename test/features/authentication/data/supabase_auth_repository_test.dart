@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:talentflash_argentina/features/authentication/data/auth_repository.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_attempt_recorder.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_cleanup_policy.dart';
 import 'package:talentflash_argentina/features/authentication/data/session_scoped_http_client.dart';
 import 'package:talentflash_argentina/features/authentication/data/supabase_auth_repository.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_failure.dart';
@@ -21,9 +23,19 @@ void main() {
   late List<http.Request> requests;
 
   /// Construye el repositorio con un GoTrue apuntado al cliente falso.
+  /// [ownedFactors] son los pendientes que el test siembra en el servidor
+  /// falso: se registran como propios de esta instancia, igual que haría el
+  /// alta real, porque representan un alta interrumpida de ESTA misma app.
+  /// Sin eso, la política de limpieza no los tocaría y el test no ejercitaría
+  /// lo que dice ejercitar.
   SupabaseAuthRepository buildRepository(
-    Future<http.Response> Function(http.Request request) handler,
-  ) {
+    Future<http.Response> Function(http.Request request) handler, {
+    List<String> ownedFactors = const [],
+  }) {
+    final cleanup = SecondFactorCleanupPolicy();
+    for (final id in ownedFactors) {
+      cleanup.recordEnrolled(id);
+    }
     late final GoTrueClient client;
     client = GoTrueClient(
       url: 'http://127.0.0.1:54321/auth/v1',
@@ -34,15 +46,18 @@ void main() {
       // Mismo cableado que `bootstrap.dart`: el guard de sesión entre el SDK
       // y la red. `requests` registra lo que el guard dejó salir.
       httpClient: SessionScopedHttpClient(
-        MockClient((request) {
-          requests.add(request);
-          return handler(request);
-        }),
+        SecondFactorAttemptRecorder.withInnerClient(
+          cleanup,
+          MockClient((request) {
+            requests.add(request);
+            return handler(request);
+          }),
+        ),
         currentAccessToken: () => client.currentSession?.accessToken,
       ),
     );
     addTearDown(client.dispose);
-    return SupabaseAuthRepository(client);
+    return SupabaseAuthRepository(client, cleanup);
   }
 
   http.Response json(String body, {int status = 200}) => http.Response(
@@ -419,8 +434,11 @@ void main() {
       List<Map<String, dynamic>>? factors,
       List<Map<String, dynamic>>? userFactors,
       http.Response Function(http.Request request)? mfa,
+      List<String> ownedFactors = const [],
     }) async {
-      final repository = buildRepository((request) async {
+      final repository = buildRepository(ownedFactors: ownedFactors, (
+        request,
+      ) async {
         final path = request.url.path;
         if (path.endsWith('/token')) {
           return json(
@@ -532,7 +550,10 @@ void main() {
         final repository = await signedInAdmin(
           // La copia de la sesión no los conoce: la limpieza consulta al
           // servidor, que es el único que sabe qué quedó de un alta
-          // interrumpida en otra pestaña o antes de un cierre.
+          // interrumpida. Son altas de ESTA instancia —por eso van como
+          // propias—; los de otra corrida ya no se tocan, y eso lo cubre
+          // `supabase_auth_repository_assurance_test.dart`.
+          ownedFactors: const ['huerfano-1', 'huerfano-2', 'sms-pendiente'],
           factors: const [],
           userFactors: [
             GoTrueFixtures.factor(id: 'huerfano-1', status: 'unverified'),
@@ -561,12 +582,20 @@ void main() {
 
         await repository.enrollTotp(friendlyName: 'x');
 
-        final deletes = requests
-            .where((r) => r.method == 'DELETE')
-            .map((r) => r.url.pathSegments.last)
-            .toList();
-        expect(deletes, <String>['huerfano-1', 'huerfano-2']);
-        expect(requests.last.method, 'POST');
+        expect(
+          requests.where((r) => r.method == 'DELETE'),
+          isEmpty,
+          reason:
+              'la app NO manda bajas automáticas: el endpoint de baja es '
+              'incondicional y su chequeo de nivel no es atómico. Los '
+              'pendientes viejos los recolecta el servidor, y por eso el '
+              'desafío se pide recién al mandar el código',
+        );
+        expect(
+          requests.last.method,
+          'POST',
+          reason: 'el alta sigue adelante igual',
+        );
         expect(requests.last.url.path, endsWith('/factors'));
       },
     );
@@ -761,8 +790,10 @@ void main() {
       );
     });
 
-    test('descartar un factor pendiente pega DELETE al factor', () async {
+    test('descartar un factor pendiente NO pega ningún DELETE, ni siquiera con '
+        'todas las precondiciones cumplidas', () async {
       final repository = await signedInAdmin(
+        ownedFactors: const ['factor-1'],
         mfa: (request) => request.method == 'DELETE'
             ? json(jsonEncode({'id': 'factor-1'}))
             : http.Response('', 404),
@@ -770,8 +801,14 @@ void main() {
 
       await repository.discardPendingSecondFactor('factor-1');
 
-      expect(requests.single.method, 'DELETE');
-      expect(requests.single.url.path, endsWith('/factors/factor-1'));
+      expect(
+        requests,
+        isEmpty,
+        reason:
+            'el factor es propio y no tiene intentos sin resolver, y aun '
+            'así no sale nada: el endpoint de baja es incondicional. Ver '
+            'SecondFactorCleanupPolicy.automaticUnenrollEnabled',
+      );
     });
 
     test('descartar un factor que ya no existe no es un error', () async {
@@ -792,8 +829,14 @@ void main() {
       );
     });
 
-    test('otros fallos al descartar sí se propagan tipados', () async {
+    test('el descarte no falla ni aunque el servidor fuera a rechazarlo: no '
+        'llega a preguntarle', () async {
+      // Antes esto comprobaba que un 403 del DELETE se propagara tipado.
+      // Ya no hay DELETE, así que lo que queda por fijar es que el camino
+      // termina bien y en silencio: la pantalla que lo llama al salir no
+      // tiene que ver un error por algo que la app decidió no hacer.
       final repository = await signedInAdmin(
+        ownedFactors: const ['factor-1'],
         mfa: (_) => json(
           GoTrueFixtures.errorJson(
             code: 403,
@@ -806,14 +849,9 @@ void main() {
 
       await expectLater(
         repository.discardPendingSecondFactor('factor-1'),
-        throwsA(
-          isA<AuthFailure>().having(
-            (f) => f.code,
-            'code',
-            AuthFailureCode.mfaInsufficientAssurance,
-          ),
-        ),
+        completes,
       );
+      expect(requests, isEmpty);
     });
   });
 }

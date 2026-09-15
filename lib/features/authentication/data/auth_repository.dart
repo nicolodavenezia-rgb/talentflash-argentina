@@ -73,7 +73,9 @@ abstract interface class AuthRepository {
   //
   // Alcance deliberado: alta y verificación. No hay baja ni reemplazo de un
   // factor verificado, ni códigos de recuperación, ni recuperación por
-  // pérdida del autenticador (ver README, «Segundo factor»).
+  // pérdida del autenticador (ver SECURITY.md §2, y el README en «Probar la
+  // autenticación en local»; no hay ninguna sección del README que se llame
+  // «Segundo factor», como decía antes esta línea).
 
   /// Factores TOTP **verificados** de la cuenta, según el servidor
   /// (`GET /user`), **sin** refrescar la sesión: refrescar rota el refresh
@@ -102,9 +104,20 @@ abstract interface class AuthRepository {
     required String code,
   });
 
-  /// Descarta un factor **pendiente** creado por un alta que no se terminó
-  /// (cancelación, salida de la pantalla). Un factor verificado no se toca
-  /// desde acá: el servidor exige `aal2` para eso y no es parte de este
-  /// alcance. Si el factor ya no existe, no es un error.
+  /// Pide descartar un factor **pendiente** creado por un alta que no se
+  /// terminó (cancelación, salida de la pantalla). Si el factor ya no existe,
+  /// no es un error.
+  ///
+  /// **El contrato es «pedí», no «se borró», y la implementación de
+  /// Supabase hoy no borra nada.** No manda ninguna baja automática, porque
+  /// el endpoint de GoTrue no permite borrar de forma condicional y atómica;
+  /// volver sin haber tocado el servidor es su comportamiento normal, no un
+  /// fallo silencioso. Quien llame a esto **no puede asumir** que el
+  /// pendiente desapareció: lo recolecta el servidor si nunca pidió un
+  /// desafío, y si lo pidió, lo barre la próxima verificación exitosa. El
+  /// motivo completo está en `SecondFactorCleanupPolicy` y en SECURITY.md §2.
+  ///
+  /// Un factor verificado no se toca desde acá, y tampoco se ofrece darlo de
+  /// baja: no es parte de este alcance.
   Future<void> discardPendingSecondFactor(String factorId);
 }

@@ -52,6 +52,11 @@ class FakeAuthRepository implements AuthRepository {
     uri: 'otpauth://totp/TalentFlash%20Argentina:persona?secret=JBSWY3DPEHPK3PXP',
   );
 
+  /// Altas encoladas: cada `enrollTotp` consume la primera. Sirve para probar
+  /// que un alta rehecha muestra un secreto **distinto** del anterior. Cuando
+  /// se vacía, se vuelve a [nextEnrollment].
+  final List<TotpEnrollment> queuedEnrollments = <TotpEnrollment>[];
+
   /// Vencimiento que se asigna al próximo desafío.
   DateTime nextChallengeExpiresAt = DateTime(2030);
 
@@ -179,6 +184,9 @@ class FakeAuthRepository implements AuthRepository {
     lastFriendlyName = friendlyName;
     await _awaitPendingSecondFactor('enrollTotp');
     _throwIf(nextEnrollFailure, () => nextEnrollFailure = null);
+    if (queuedEnrollments.isNotEmpty) {
+      return queuedEnrollments.removeAt(0);
+    }
     return nextEnrollment;
   }
 

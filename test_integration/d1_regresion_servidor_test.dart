@@ -37,6 +37,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:talentflash_argentina/features/authentication/data/jwt_claims.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_attempt_recorder.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_cleanup_policy.dart';
 import 'package:talentflash_argentina/features/authentication/data/session_scoped_http_client.dart';
 import 'package:talentflash_argentina/features/authentication/data/supabase_auth_repository.dart';
 import 'package:talentflash_argentina/features/authentication/providers/auth_providers.dart';
@@ -278,10 +280,21 @@ void main() {
         );
       }
 
+      // Composición REAL, la misma que arma `bootstrap.dart`: el recorder es
+      // el más interno y la política es una sola, compartida entre él y el
+      // repositorio. Este test dice reproducir producción, así que tiene que
+      // usar el cableado de producción; con el guard suelto sobre la red
+      // estaría probando otra cosa.
       final net = _GatedClient(IOClient());
+      final politica = SecondFactorCleanupPolicy();
+      // ignore: invalid_use_of_visible_for_testing_member
+      final recorder = SecondFactorAttemptRecorder.withInnerClient(
+        politica,
+        net,
+      );
       late final GoTrueClient auth;
       final guard = SessionScopedHttpClient(
-        net,
+        recorder,
         currentAccessToken: () => auth.currentSession?.accessToken,
       );
       auth = GoTrueClient(
@@ -290,7 +303,7 @@ void main() {
         httpClient: guard,
         autoRefreshToken: false,
       );
-      final repository = SupabaseAuthRepository(auth);
+      final repository = SupabaseAuthRepository(auth, politica);
 
       ProviderContainer pantalla() {
         final container = ProviderContainer(

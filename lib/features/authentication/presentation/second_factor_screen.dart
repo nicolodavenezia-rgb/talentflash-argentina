@@ -243,6 +243,16 @@ class _Enrollment extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(l10n.mfaEnrollIntro),
+        // El alta anterior venció y esta la reemplaza: hay que decirlo ANTES
+        // del QR, porque lo que la persona ya guardó en su autenticador dejó
+        // de servir y el código de esa entrada nunca va a ser aceptado.
+        if (state.restarted) ...[
+          const SizedBox(height: 16),
+          AuthMessageBanner.error(
+            title: l10n.mfaEnrollRestartedTitle,
+            message: l10n.mfaEnrollRestarted,
+          ),
+        ],
         const SizedBox(height: 16),
         _QrCode(uri: enrollment.uri),
         const SizedBox(height: 16),
@@ -415,6 +425,13 @@ class _CodeFormState extends ConsumerState<_CodeForm> {
   @override
   void didUpdateWidget(covariant _CodeForm oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.state.factorId != oldWidget.state.factorId) {
+      // Cambió el factor: lo que la persona había tipeado era para el
+      // anterior y contra este no va a servir nunca. Se borra, así no lo
+      // manda sin darse cuenta contra el QR nuevo y se come un rechazo que
+      // no explica nada.
+      _controller.clear();
+    }
     final failure = widget.state.failure;
     if (failure != null && !identical(failure, oldWidget.state.failure)) {
       // El error se anuncia por el cartel (live region) y el foco vuelve al

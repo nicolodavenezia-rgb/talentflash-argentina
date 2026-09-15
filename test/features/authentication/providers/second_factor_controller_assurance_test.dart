@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_attempt_recorder.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_cleanup_policy.dart';
 import 'package:talentflash_argentina/features/authentication/data/session_scoped_http_client.dart';
 import 'package:talentflash_argentina/features/authentication/data/supabase_auth_repository.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_failure.dart';
@@ -287,16 +289,22 @@ class _Harness {
 
   static _Harness build() {
     final h = _Harness._();
+    // Composición real de `bootstrap.dart`: recorder adentro del guard y una
+    // sola política, compartida con el repositorio.
+    final politica = SecondFactorCleanupPolicy();
     h.client = GoTrueClient(
       url: 'http://127.0.0.1:54321/auth/v1',
       autoRefreshToken: false,
       flowType: AuthFlowType.implicit,
       httpClient: SessionScopedHttpClient(
-        MockClient(h._route),
+        SecondFactorAttemptRecorder.withInnerClient(
+          politica,
+          MockClient(h._route),
+        ),
         currentAccessToken: () => h.client.currentSession?.accessToken,
       ),
     );
-    h.repository = SupabaseAuthRepository(h.client);
+    h.repository = SupabaseAuthRepository(h.client, politica);
     addTearDown(h.client.dispose);
     return h;
   }

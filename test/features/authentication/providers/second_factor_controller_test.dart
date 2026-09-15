@@ -77,19 +77,20 @@ void main() {
       expect(repository.calls, <String>[
         'listVerifiedSecondFactors',
         'enrollTotp',
-        'challengeSecondFactor:factor-pendiente',
-      ]);
+      ], reason: 'el desafío NO se pide en el alta: lo pide el envío');
       expect(repository.lastFriendlyName, friendlyName);
       final flow = state();
       expect(flow, isA<SecondFactorEnrolling>());
       flow as SecondFactorEnrolling;
       expect(flow.enrollment.secret, repository.nextEnrollment.secret);
       expect(
-        flow.challenge?.id,
-        'challenge-1',
+        flow.challenge,
+        isNull,
         reason:
-            'el desafío se pide con el alta: sin desafío el servidor borra el '
-            'factor pendiente a los cinco minutos',
+            'el desafío se pide recién al mandar el código. Así un alta '
+            'abandonada queda SIN desafío, que es la única forma en que el '
+            'servidor la recolecta: lo hace dentro del handler del alta '
+            'siguiente, no con un temporizador',
       );
       expect(flow.isSubmitting, isFalse);
     });
@@ -262,17 +263,14 @@ void main() {
       expect(flow.failure?.code, AuthFailureCode.mfaInvalidCode);
       expect(repository.calls, isNot(contains(startsWith('verify'))));
       expect(
-        repository.calls.where((c) => c.startsWith('challenge')).length,
-        1,
-        reason: 'solo el desafío del alta; el formato se rechaza en local',
+        repository.calls.where((c) => c.startsWith('challenge')),
+        isEmpty,
+        reason: 'el formato se rechaza en local: no se pide ni el desafío',
       );
     });
 
-    test('si el desafío del alta falla, el envío pide uno y sigue', () async {
+    test('el envío pide el desafío y sigue con la verificación', () async {
       await arrange();
-      repository.nextChallengeFailure = const AuthFailure(
-        AuthFailureCode.network,
-      );
 
       await controller().start(friendlyName: friendlyName);
       final flow = state();
@@ -285,6 +283,61 @@ void main() {
       expect(repository.lastVerifiedChallengeId, 'challenge-1');
       expect(state(), isA<SecondFactorVerified>());
     });
+
+    test(
+      'si el factor se recolectó mientras la persona se tomaba su tiempo, se '
+      'rehace el alta UNA vez y se avisa que el QR cambió',
+      () async {
+        await arrange();
+        // El alta rehecha tiene que traer un secreto propio: es lo que hace
+        // que el QR cambie de verdad.
+        repository.queuedEnrollments.add(repository.nextEnrollment);
+        repository.queuedEnrollments.add(
+          const TotpEnrollment(
+            factorId: 'factor-rehecho',
+            friendlyName: 'TalentFlash · 08/09/2026 14:40',
+            secret: 'KRSXG5CTMVRXEZLU',
+            uri:
+                'otpauth://totp/TalentFlash%20Argentina:persona'
+                '?secret=KRSXG5CTMVRXEZLU',
+          ),
+        );
+        await controller().start(friendlyName: friendlyName);
+        final primero = (state() as SecondFactorEnrolling).enrollment;
+        repository.nextChallengeFailure = const AuthFailure(
+          AuthFailureCode.mfaFactorNotFound,
+        );
+
+        await controller().submitCode('123456');
+
+        final flow = state();
+        expect(flow, isA<SecondFactorEnrolling>());
+        flow as SecondFactorEnrolling;
+        expect(
+          flow.restarted,
+          isTrue,
+          reason: 'la pantalla tiene que decir que el QR cambió',
+        );
+        expect(
+          flow.enrollment.secret,
+          isNot(primero.secret),
+          reason: 'NO se reutiliza el secreto anterior',
+        );
+        expect(flow.challenge, isNull);
+        expect(
+          repository.calls.where((c) => c.startsWith('verify')),
+          isEmpty,
+          reason:
+              'tampoco se reintenta el código: la persona tiene que escanear '
+              'el QR nuevo y mandar otro',
+        );
+        expect(
+          repository.calls.where((c) => c.startsWith('enrollTotp')).length,
+          2,
+          reason: 'exactamente un alta nueva, sin bucle',
+        );
+      },
+    );
 
     test('un código incorrecto conserva el alta y el desafío', () async {
       await arrange();
@@ -775,8 +828,8 @@ void main() {
 
   group('verificación en vuelo al salir de la pantalla', () {
     test(
-      'salir mientras el código viaja NO borra el factor que el servidor está '
-      'aceptando',
+      'salir mientras el código viaja NO pide el descarte del factor que el '
+      'servidor está aceptando, que es la barrera que hay que conservar',
       () async {
         await arrange();
         await controller().start(friendlyName: friendlyName);
@@ -802,9 +855,11 @@ void main() {
           repository.discardedFactorIds,
           isEmpty,
           reason:
-              'borrar el factor acá correría contra la verificación y podría '
-              'dejar la cuenta en aal2 sin autenticador, sin baja ni '
-              'recuperación posibles',
+              'esto se fija en la capa del controller: hoy el repositorio no '
+              'borra nada, pero la barrera tiene que estar igual. Si alguna '
+              'vez existe una baja usable, pedirla acá correría contra la '
+              'verificación y podría dejar la cuenta en aal2 sin '
+              'autenticador, sin baja ni recuperación posibles',
         );
 
         verificando.complete();
@@ -815,8 +870,8 @@ void main() {
     );
 
     test(
-      'un alta sin código enviado sí se descarta al salir (la regla anterior '
-      'no se debilita)',
+      'un alta sin código enviado sí PIDE el descarte al salir (el repositorio '
+      'hoy no borra, pero el controller tiene que seguir pidiéndolo)',
       () async {
         await arrange();
         await controller().start(friendlyName: friendlyName);

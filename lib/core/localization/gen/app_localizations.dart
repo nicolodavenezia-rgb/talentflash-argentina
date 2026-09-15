@@ -2362,6 +2362,18 @@ abstract class AppLocalizations {
   /// **'El segundo factor queda activo recién cuando ingresás un código válido. Si salís antes, no queda configurado.'**
   String get mfaEnrollPendingNote;
 
+  /// No description provided for @mfaEnrollRestartedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La configuración anterior venció'**
+  String get mfaEnrollRestartedTitle;
+
+  /// No description provided for @mfaEnrollRestarted.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasó demasiado tiempo y la configuración anterior venció. Este código QR es NUEVO: borrá la entrada anterior de tu app de autenticación y escaneá este. El código que tenías ya no sirve.'**
+  String get mfaEnrollRestarted;
+
   /// No description provided for @mfaLimitsNote.
   ///
   /// In es, this message translates to:

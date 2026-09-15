@@ -338,6 +338,16 @@ async function main() {
   ok(admin1Claims.app_metadata?.role === 'admin', `el JWT trae app_metadata.role = admin (llegó "${admin1Claims.app_metadata?.role}")`);
   ok(admin1Claims.aal === 'aal1', `una sesión de contraseña sola es aal1 (llegó "${admin1Claims.aal}")`);
 
+  // R2 (preparación) · Una SEGUNDA sesión de la misma cuenta, abierta antes de
+  // que exista ningún factor verificado. Más abajo se comprueba que la
+  // primera verificación la borra: es la mitad del contrato del servidor sobre
+  // la que se apoya `SecondFactorCleanupPolicy`.
+  const admin1Otra = await login(ADMIN_EMAIL);
+  ok(admin1Otra !== null, 'R2: se abre una segunda sesión de la misma cuenta');
+  if (!admin1Otra) throw new Error('sin la segunda sesión no se puede probar R2');
+  ok(claims(admin1Otra.token).session_id !== admin1Claims.session_id, 'R2: y es otra sesión, no otro token de la misma');
+  ok((await getUser(admin1Otra.token)).status === 200, 'R2: las dos sesiones conviven mientras no haya factor verificado');
+
   // C6 · Renovación legítima ANTES de verificar. Es la premisa de
   // `sessionIdentityOf`: si el refresco cambiara el `session_id`, la app
   // trataría cada refresco como un cambio de sesión. Se comprueba el estado
@@ -405,6 +415,27 @@ async function main() {
   const verifiedFactor = (good.json.user?.factors ?? []).find((f) => f.id === factorId);
   ok(verifiedFactor?.status === 'verified', `el factor quedó "verified" (llegó "${verifiedFactor?.status}")`);
 
+  // R2 · LA PRIMERA VERIFICACIÓN BORRA LAS DEMÁS SESIONES DE LA CUENTA.
+  //
+  // **No es una garantía de nada**, y la versión anterior de este comentario
+  // la vendía como «media garantía» de `SecondFactorCleanupPolicy`. No lo es:
+  // la garantía es que la app no manda bajas automáticas, y no depende de
+  // esto. R2 acota un caso vecino —si la verificación la hizo OTRA sesión,
+  // por ejemplo otro dispositivo con el secreto que se mostró en pantalla,
+  // esa sesión ajena deja de existir—, pero **no toca a la sesión que
+  // verificó**, que es justo la peligrosa en el caso central.
+  //
+  // Se fija igual, como contrato observado: describe el servidor contra el
+  // que se diseñaría cualquier baja futura, y si una versión de GoTrue deja
+  // de hacerlo hay que enterarse acá. Lo que se fija es la mitad que se ve
+  // desde este recorrido; que a una sesión distinta ya en `aal2` tampoco la
+  // toque está medido aparte, con una sonda, y no acá.
+  const otraDespues = await getUser(admin1Otra.token);
+  note(`R2: la otra sesión tras la primera verificación -> ${otraDespues.status}/${otraDespues.json?.error_code ?? ''}`);
+  ok(otraDespues.status !== 200, `R2: la sesión que NO verificó deja de servir (llegó ${otraDespues.status})`);
+  ok(otraDespues.json?.error_code === 'session_not_found', `R2: y el motivo es que el servidor la borró (llegó "${otraDespues.json?.error_code}")`);
+  ok((await getUser(admin2Token)).status === 200, 'R2: la sesión que SÍ verificó sigue viva');
+
   // C6 · Renovación legítima DESPUÉS de verificar. Si el refresco bajara el
   // nivel, la cola se cerraría sola a mitad de sesión sin que nadie tocara
   // nada. Separado de cualquier baja de factor a propósito: una baja SÍ
@@ -443,12 +474,25 @@ async function main() {
   const enrollAal1 = await enroll(admin3.token, `Segundo ${RUN_ID}`);
   ok(enrollAal1.status === 403 && enrollAal1.json?.error_code === 'insufficient_aal', `con un factor verificado y sesión aal1, dar de alta OTRO factor se rechaza con insufficient_aal (llegó ${enrollAal1.status}/${enrollAal1.json?.error_code})`);
 
-  // D1 · La regla del servidor sobre la que se apoya la corrección del
-  // cliente: con `aal1` la baja de un factor VERIFICADO se rechaza y el factor
-  // sobrevive. Por eso el repositorio solo manda una baja con la sesión en
-  // `aal1`: es el único nivel en el que el servidor garantiza que no puede
-  // destruir un factor verificado. Si una versión futura de GoTrue cambiara
-  // esto, la corrección quedaría coja y hay que enterarse acá.
+  // D1 · Con una sesión que el servidor tiene en `aal1` —`admin3` es un
+  // reingreso, o sea una sesión NUEVA— la baja de un factor VERIFICADO se
+  // rechaza y el factor sobrevive.
+  //
+  // OJO con lo que esto NO dice, porque la versión anterior de este comentario
+  // lo decía mal: NO dice que un token cuyo claim diga `aal1` esté protegido.
+  // El servidor resuelve por el nivel de la SESIÓN, no por el claim del token
+  // que le mandaron; ver la aserción D1-bis más abajo, donde un token viejo
+  // con claim `aal1` SÍ borra un factor verificado. Por eso la protección del
+  // cliente no puede apoyarse en el claim —y tampoco en este rechazo, que no
+  // es una baja condicional—: la da `SecondFactorCleanupPolicy`, y consiste
+  // en **no pedir ninguna baja automática**
+  // (`automaticUnenrollEnabled = false`).
+  //
+  // Esta aserción se conserva igual, como contrato observado del endpoint:
+  // describe con qué habría que diseñar una baja futura. Fijate que lo que
+  // se fija es «no fue 200 y el error_code es insufficient_aal», no el 422
+  // exacto: el número se anota en la nota de arriba y no se convierte en
+  // contrato.
   const unenrollAal1 = await unenroll(admin3.token, factorId);
   note(`D1: DELETE de un factor verificado con aal1 -> ${unenrollAal1.status}/${unenrollAal1.json?.error_code ?? ''}`);
   ok(unenrollAal1.status !== 200 && unenrollAal1.json?.error_code === 'insufficient_aal', `D1: con aal1 NO se puede dar de baja un factor verificado (llegó ${unenrollAal1.status}/${unenrollAal1.json?.error_code})`);
@@ -498,22 +542,30 @@ async function main() {
   const companyReview = await rpcReview(companyVerify.json.access_token);
   ok(companyReview.status !== 200 && companyReview.json?.code === '42501', `aal2 sin rol admin: resolver se rechaza con 42501 (llegó ${companyReview.status}/${companyReview.json?.code})`);
 
-  // D1 · La otra mitad del contrato, y la que explica por qué el cliente NO
-  // puede pedir una baja con aal2: el servidor la acepta y el factor
-  // desaparece de verdad. Va al final y sobre la cuenta de empresa, que ya no
-  // se usa para nada más, porque es destructivo.
-  const companyToken = companyVerify.json.access_token;
-  const unenrollAal2 = await unenroll(companyToken, companyEnroll.json.id);
-  note(`D1: DELETE de un factor verificado con aal2 -> ${unenrollAal2.status}/${unenrollAal2.json?.error_code ?? ''}`);
-  ok(unenrollAal2.status === 200, `D1: con aal2 el servidor ACEPTA dar de baja un factor verificado (llegó ${unenrollAal2.status})`);
-  // De nuevo: un 200 no alcanza, se vuelve a consultar el estado.
-  const afterDelete = await getUser(companyToken);
-  // Primero la respuesta tiene que ser válida. Si no, la ausencia del factor no
-  // demuestra nada: un 401 tampoco trae factores.
-  ok(isUserBody(afterDelete), `D1: la consulta posterior al borrado es un 200 con cuerpo de usuario (llegó ${afterDelete.status})`);
+  // D1-bis · EL HECHO QUE SOSTIENE TODO EL DISEÑO DEL CLIENTE, y el que
+  // desmintió la versión anterior: el servidor resuelve el `insufficient_aal`
+  // por el nivel de la SESIÓN, no por el claim `aal` del token que le
+  // mandaron. Se usa a propósito `company1.token`, el token ORIGINAL de esa
+  // misma sesión, emitido ANTES de verificar y cuyo claim sigue diciendo
+  // `aal1`. Es la ventana de D1: el servidor aceptó el código y el cliente
+  // conserva el token viejo porque la respuesta se perdió.
+  //
+  // Si esto dejara de ser 200, la protección del cliente se podría simplificar
+  // muchísimo, así que hay que enterarse acá. Va al final y sobre la cuenta de
+  // empresa, que ya no se usa para nada más, porque es destructivo.
+  const companyOldToken = company1.token;
+  ok(claims(companyOldToken).aal === 'aal1', `D1-bis: el token original de la empresa sigue diciendo aal1 (llegó "${claims(companyOldToken).aal}")`);
+  ok(claims(companyOldToken).session_id === claims(companyVerify.json.access_token).session_id, 'D1-bis: y es la MISMA sesión que el servidor ya subió a aal2');
+  const unenrollTokenViejo = await unenroll(companyOldToken, companyEnroll.json.id);
+  note(`D1-bis: DELETE de un factor verificado con el token viejo (claim aal1) -> ${unenrollTokenViejo.status}/${unenrollTokenViejo.json?.error_code ?? ''}`);
+  ok(unenrollTokenViejo.status === 200, `D1-bis: el servidor ACEPTA la baja aunque el claim del token diga aal1 (llegó ${unenrollTokenViejo.status})`);
+  // Un 200 no alcanza: se vuelve a consultar el estado, y la respuesta se
+  // valida antes de leerla (un 401 tampoco trae factores).
+  const afterDelete = await getUser(companyOldToken);
+  ok(isUserBody(afterDelete), `D1-bis: la consulta posterior al borrado es un 200 con cuerpo de usuario (llegó ${afterDelete.status})`);
   const factorsAfterDelete = factorsOf(afterDelete);
-  ok(factorsAfterDelete !== null && !factorsAfterDelete.some((f) => f.id === companyEnroll.json.id), `D1: y el factor DESAPARECE del servidor (quedaron ${factorsAfterDelete === null ? 'respuesta inválida' : factorsAfterDelete.length} factores)`);
-  note('D1: por eso el repositorio solo manda una baja con la sesión en aal1');
+  ok(factorsAfterDelete !== null && !factorsAfterDelete.some((f) => f.id === companyEnroll.json.id), `D1-bis: y el factor verificado DESAPARECIÓ de verdad (quedaron ${factorsAfterDelete === null ? 'respuesta inválida' : factorsAfterDelete.length} factores)`);
+  note('D1-bis: por eso el cliente no se apoya en el claim, sino en no pedir bajas que no pueda justificar');
 
   // 9. Limpieza de las cuentas sintéticas.
   const remaining = cleanup();

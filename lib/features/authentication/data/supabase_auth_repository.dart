@@ -9,6 +9,7 @@ import '../domain/second_factor.dart';
 import '../domain/session_assurance.dart';
 import 'auth_repository.dart';
 import 'jwt_claims.dart';
+import 'second_factor_cleanup_policy.dart';
 
 /// Implementación sobre Supabase Auth (GoTrue).
 ///
@@ -29,16 +30,41 @@ import 'jwt_claims.dart';
 ///   guardarla como sesión o emitir eventos por ella. Hace falta porque
 ///   `mfa.verify` guarda la sesión y notifica antes de devolver el control.
 ///
-/// Esas dos capas responden «¿sigue siendo la misma sesión?». Hay una tercera
-/// pregunta que la identidad de sesión **no puede** responder, porque una
-/// verificación legítima cambia el nivel sin cambiar de sesión: «¿esta sesión
-/// sigue estando en el nivel en el que esta operación tiene sentido?». De eso
-/// se ocupa [_canUnenroll], que impide mandar una baja de factor con un nivel
-/// distinto de `aal1`.
+/// Las dos capas contestan la **misma** pregunta, cada una en su punto:
+/// «¿sigue siendo la misma sesión?». Y hay una **segunda** pregunta que la
+/// identidad de sesión **no puede** contestar, porque una verificación
+/// legítima cambia el nivel sin cambiar de sesión: «¿esta operación
+/// destructiva todavía tiene sentido?».
+///
+/// Para las **bajas automáticas de factores** esa pregunta no se contesta:
+/// se evita. [SecondFactorCleanupPolicy] es donde está escrita la garantía, y
+/// la garantía es **no mandar ninguna baja automática**, porque el endpoint
+/// de GoTrue no permite borrar de forma condicional y atómica. Los dos
+/// caminos de limpieza de esta clase —la del alta y
+/// [discardPendingSecondFactor]— conservan su recorrido, pero **ninguno
+/// manda hoy un `DELETE`**. [_canUnenroll] sigue existiendo como segunda
+/// barrera y hoy queda cortocircuitado; nunca hay que apoyarse en él: lee el
+/// claim del token, y el servidor decide por el nivel de la sesión.
 class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this._auth);
+  /// [cleanup] es **obligatoria y tiene que ser la misma instancia** que usa
+  /// `SecondFactorAttemptRecorder` en el transporte. Con dos instancias, las
+  /// altas se anotarían en una y los intentos de verificación en la otra, y
+  /// la política vería un factor propio sin intentos: el defecto de D1-bis,
+  /// otra vez y en silencio. Por eso no hay valor por omisión.
+  SupabaseAuthRepository(this._auth, this._cleanup);
 
   final GoTrueClient _auth;
+
+  /// Quién puede darse de baja sola.
+  ///
+  /// **La misma instancia la comparten el transporte y este repositorio**
+  /// (se arma en `bootstrap.dart` y llega por `secondFactorCleanupPolicyProvider`):
+  /// el transporte anota cada pedido de verificación que sale, y acá se
+  /// consulta antes de cada baja. Vive lo que vive el cliente de Supabase, así
+  /// que sobrevive a que la pantalla de segundo factor se destruya y se vuelva
+  /// a crear —que es justo lo que una marca en el controller `autoDispose` no
+  /// hace— y se descarta al cerrar sesión o cambiar de cuenta.
+  final SecondFactorCleanupPolicy _cleanup;
 
   /// Emisor que muestra la app de autenticación junto a la cuenta.
   static const totpIssuer = 'TalentFlash Argentina';
@@ -125,13 +151,25 @@ class SupabaseAuthRepository implements AuthRepository {
       final scope = _requireSession();
       // Un alta interrumpida (pestaña cerrada, app matada, sesión perdida)
       // deja un factor pendiente que el servidor cuenta para el tope de
-      // factores y que choca por nombre. Antes de crear otro se descartan los
-      // pendientes de la cuenta según el SERVIDOR (`/user`), no según la copia
-      // del usuario que guarda la sesión, que es la foto del último login o
-      // refresco. Es best-effort: si uno no se puede borrar, el servidor dirá
-      // lo suyo en el enroll. Lo que NO se tolera es que la sesión cambie en
-      // el medio: cada paso vuelve a comprobar la sesión, así el POST de alta
-      // nunca sale con el token de otra cuenta aunque un DELETE haya tardado.
+      // factores y que choca por nombre. Este recorrido **existía** para
+      // darlos de baja antes de crear otro; hoy **no da de baja ninguno**,
+      // porque [SecondFactorCleanupPolicy.canAutoUnenroll] devuelve siempre
+      // `false`. Se conserva entero —la lectura, el filtro y las dos
+      // barreras— como la precondición que habría que volver a cumplir el
+      // día que exista una baja usable, y para que encender la constante no
+      // exija reconstruir nada. Quién recolecta los pendientes hoy: el
+      // servidor los barre solo si nunca pidieron desafío, y una
+      // verificación exitosa se lleva a todos los demás.
+      //
+      // La lectura sigue siendo del SERVIDOR (`/user`) y no de la copia del
+      // usuario que guarda la sesión, que es la foto del último login o
+      // refresco. Hoy su único consumidor es este bucle, así que **cuesta un
+      // `GET /user` que no cambia nada**: se paga a propósito, para no
+      // desarmar la precondición y para que la abstención se vea donde se
+      // decide, en vez de esconderla borrando el recorrido. Lo que NO se
+      // tolera es que la sesión cambie en el medio: cada paso vuelve a
+      // comprobar la sesión, así el POST de alta nunca sale con el token de
+      // otra cuenta aunque una espera haya tardado.
       final stale = await _serverFactors(scope);
       for (final factor in stale) {
         if (factor.factorType != FactorType.totp ||
@@ -139,23 +177,41 @@ class SupabaseAuthRepository implements AuthRepository {
           continue;
         }
         _ensureSameSession(scope);
-        // La lectura de arriba puede haber quedado vieja: mientras viajaba,
-        // el servidor pudo aceptar el código de ese mismo factor. El nivel de
-        // la sesión es la señal que lo delata, y se lee JUSTO acá, sin ningún
-        // `await` hasta la llamada al SDK ([_canUnenroll]).
+        // Acá se abstiene, siempre, y conviene ver por qué el `continue` no
+        // es una precaución más sino el único desenlace posible.
+        //
+        // La lectura de arriba pudo quedar vieja: mientras viajaba, el
+        // servidor pudo aceptar el código de ese mismo factor, y entonces
+        // esto ya no es un pendiente sino el segundo factor de la cuenta.
+        // Releer no arregla nada —la verificación puede entrar entre la
+        // relectura y el DELETE—, y el rechazo del servidor tampoco, porque
+        // no es una baja condicional. Sin forma de decidir sin carrera, no
+        // se manda ninguna baja: [SecondFactorCleanupPolicy.canAutoUnenroll]
+        // devuelve `false` para todo mientras `automaticUnenrollEnabled` esté
+        // apagado, así que **este `if` corta siempre y el `unenroll` de abajo
+        // no se ejecuta nunca**.
+        if (!_cleanup.canAutoUnenroll(factor.id)) {
+          // `continue` y no `break`: la condición se evalúa por factor, que
+          // es como tendría que volver a evaluarse si algún día se enciende.
+          continue;
+        }
+        // Inalcanzable hoy, por lo de arriba. Segunda barrera, subordinada:
+        // cuando la app YA se enteró de que su sesión subió de nivel,
+        // tampoco insiste. No sustituye a la política, y nunca sustituyó a
+        // la garantía: lee el claim del token y el servidor decide por el
+        // nivel de la sesión.
         if (!_canUnenroll()) {
-          // `continue` y no `break`: la condición se vuelve a evaluar para
-          // cada factor en vez de asumir que el nivel ya no va a cambiar. No
-          // se asume monotonía —el nivel de una sesión puede bajar, por
-          // ejemplo si un refresco lo recalcula tras perder el factor
-          // verificado— y así el comportamiento no depende de esa suposición.
           continue;
         }
         try {
           await _auth.mfa.unenroll(factor.id);
+          _cleanup.recordGone(factor.id);
         } on AuthException catch (error) {
           if (error.code == AuthFailureCode.staleSession.wireCode) {
             rethrow;
+          }
+          if (error.code == 'mfa_factor_not_found') {
+            _cleanup.recordGone(factor.id);
           }
           // Ya no existe o no se pudo: sigue el alta igual.
         }
@@ -185,6 +241,13 @@ class SupabaseAuthRepository implements AuthRepository {
           debugDetail: 'enroll: respuesta sin datos totp',
         );
       }
+      // El factor queda anotado como propio de esta instancia. Es una
+      // condición para poder darlo de baja sola, NO el motivo por el que eso
+      // sería seguro: el secreto se muestra en pantalla y cualquiera que lo
+      // copie puede verificar el factor. Hoy no habilita nada —no hay baja
+      // automática que habilitar—; se anota para no perder la precondición.
+      // Ver [SecondFactorCleanupPolicy].
+      _cleanup.recordEnrolled(response.id);
       // El SVG del QR que manda el servidor se descarta: el QR se dibuja en
       // el cliente a partir de la URI, así hay una sola copia del secreto
       // dando vueltas en memoria.
@@ -223,11 +286,24 @@ class SupabaseAuthRepository implements AuthRepository {
       // llega a la app por el mismo stream que cualquier otro evento. Si la
       // sesión cambió mientras la respuesta viajaba, el cliente HTTP la
       // convierte en `stale_session` y el SDK no guarda nada.
-      await _auth.mfa.verify(
-        factorId: factorId,
-        challengeId: challengeId,
-        code: code,
-      );
+      //
+      // El intento NO se anota acá. Lo anota el transporte
+      // ([SecondFactorAttemptRecorder]), que es el único punto que ve cada
+      // pedido que sale: acá se ve una invocación, y una invocación puede
+      // convertirse en varios pedidos si alguien intercala un cliente que
+      // reintente.
+      try {
+        await _auth.mfa.verify(
+          factorId: factorId,
+          challengeId: challengeId,
+          code: code,
+        );
+      } on AuthException catch (error) {
+        if (error.code == 'mfa_factor_not_found') {
+          _cleanup.recordGone(factorId);
+        }
+        rethrow;
+      }
     });
   }
 
@@ -235,24 +311,36 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> discardPendingSecondFactor(String factorId) {
     return _guard(() async {
       _requireSession();
-      // Mismo criterio que la limpieza del alta ([_canUnenroll]), y hace falta
-      // por un camino propio: acá no se mira el estado del factor, así que un
-      // factor que el servidor ya aceptó se descartaría igual. Si el cliente
-      // se enteró de la verificación —por el evento del SDK o por un refresco
-      // legítimo, que recalcula el nivel a partir de los factores vigentes y
-      // devuelve `aal2`—, el descarte ya no sale y el factor sobrevive. Si no
-      // se enteró, el claim sigue en `aal1` y esta comprobación no alcanza:
-      // ver el límite en [_canUnenroll]. Se lee el nivel justo antes de
-      // llamar al SDK.
+      // Misma abstención que la limpieza del alta, y por el mismo motivo:
+      // este camino tampoco mira el estado del factor, y mirarlo no
+      // serviría. El caso que lo hacía peligroso es el central de D1: la app
+      // mandó el código, el servidor lo aceptó y la respuesta se perdió. La
+      // app cree que el factor sigue pendiente, su token sigue diciendo
+      // `aal1`, y el servidor —que decide por el nivel de la SESIÓN, ya en
+      // `aal2`— aceptaba la baja y borraba el segundo factor recién
+      // configurado.
+      //
+      // Hoy no llega a pasar nada de eso: `canAutoUnenroll` devuelve `false`
+      // para todo, así que **el método sale acá sin mandar un solo `DELETE`**
+      // y salir en silencio es su comportamiento normal, no un error. Lo que
+      // el llamador pierde es la limpieza inmediata del pendiente; quién lo
+      // recolecta después está en [SecondFactorCleanupPolicy] y en
+      // SECURITY.md §2.
+      if (!_cleanup.canAutoUnenroll(factorId)) {
+        return;
+      }
+      // Inalcanzable hoy. Segunda barrera, subordinada: ver [_canUnenroll].
       if (!_canUnenroll()) {
         return;
       }
       try {
         await _auth.mfa.unenroll(factorId);
+        _cleanup.recordGone(factorId);
       } on AuthException catch (error) {
         // Ya no existe (lo venció el servidor o lo borró otra sesión): el
         // objetivo —que no quede un factor pendiente— está cumplido igual.
         if (error.code == 'mfa_factor_not_found') {
+          _cleanup.recordGone(factorId);
           return;
         }
         rethrow;
@@ -307,34 +395,35 @@ class SupabaseAuthRepository implements AuthRepository {
     return assuranceFromAccessToken(accessToken);
   }
 
-  /// Invariante que protege de borrar un factor **verificado** sin querer:
-  /// una baja de factor solo se manda con la sesión exactamente en `aal1`.
+  /// Segunda barrera de las bajas automáticas: no mandar una baja cuando la
+  /// app **ya se enteró** de que su sesión subió de nivel.
   ///
-  /// **Por qué exactamente `aal1` y no «distinto de `aal2`».** Con la sesión
-  /// en `aal1`, la baja de un factor verificado se rechaza con
-  /// `422 insufficient_aal` y el factor sobrevive; con `aal2`, el servidor la
-  /// acepta y lo borra. Las dos mitades son aserciones de `npm run mfa:test`
-  /// contra el GoTrue del stack local, y en las dos se vuelve a consultar el
-  /// estado después: un 200 no alcanza. Con [SessionAssurance.unknown]
-  /// no se puede afirmar ninguna de las dos, así que tampoco se manda: un
-  /// nivel ilegible nunca se interpreta como `aal1`.
+  /// **Hoy no se llega hasta acá.** La primera puerta
+  /// ([SecondFactorCleanupPolicy.canAutoUnenroll]) devuelve siempre `false`
+  /// porque la app no manda bajas automáticas, así que esto queda
+  /// cortocircuitado. Se conserva junto con el resto de la precondición, y
+  /// vuelve a tener efecto solo si alguna vez se enciende
+  /// `automaticUnenrollEnabled`.
   ///
-  /// **Qué cubre y qué no.** Esta comprobación lee el claim del token que el
-  /// cliente tiene en la mano; el servidor decide por el nivel de la
-  /// **sesión**, y no son lo mismo. Medido contra el GoTrue local: un DELETE
+  /// **Esto NO es la garantía, y no hay que tratarlo como si lo fuera.** Lee
+  /// el claim `aal` del token que el cliente tiene en la mano; el servidor
+  /// resuelve el `insufficient_aal` por el nivel de la **sesión**, que es otra
+  /// cosa. Medido contra el GoTrue local
+  /// (`test_integration/d1bis_limpieza_automatica_test.dart`): un `DELETE`
   /// hecho con un token cuyo claim todavía dice `aal1`, sobre una sesión que
-  /// el servidor ya subió a `aal2`, se acepta y borra el factor. Así que esto
-  /// cierra la ventana en la que la app **ya se enteró** de que subió de nivel
-  /// —la que reproduce `test_integration/d1_regresion_servidor_test.dart`— y
-  /// **no** cierra aquella en la que el servidor aceptó el código y la
-  /// respuesta nunca llegó: ahí el claim sigue en `aal1` y la baja prospera.
-  /// Cerrarla pide releer el estado del factor contra el servidor antes de
-  /// cada baja, y queda fuera de este cambio.
+  /// el servidor ya subió a `aal2`, responde 200 y borra el factor. O sea que
+  /// en la ventana central de D1 —el servidor aceptó el código y la respuesta
+  /// se perdió— este método devuelve `true` y deja pasar la baja.
+  ///
+  /// Lo que sí aporta: cuando la app observó el ascenso (por el evento del
+  /// SDK o por un refresco), abstenerse es gratis y correcto. Lo que da la
+  /// garantía es [SecondFactorCleanupPolicy], que se consulta antes.
+  ///
+  /// Con [SessionAssurance.unknown] tampoco se manda: un nivel ilegible nunca
+  /// se interpreta como `aal1`.
   ///
   /// **No** reemplaza a la identidad de sesión: [_ensureSameSession] sigue
-  /// comparando `session_id`, que es lo que distingue una sesión de otra. El
-  /// nivel no es identidad —una verificación legítima lo cambia dentro de la
-  /// misma sesión— sino una condición para ejecutar una operación destructiva.
+  /// comparando `session_id`, que es lo que distingue una sesión de otra.
   bool _canUnenroll() => _currentAssurance() == SessionAssurance.aal1;
 
   /// Corta una operación de varios pasos si la sesión que la inició

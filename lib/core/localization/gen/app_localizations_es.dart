@@ -1297,6 +1297,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'El segundo factor queda activo recién cuando ingresás un código válido. Si salís antes, no queda configurado.';
 
   @override
+  String get mfaEnrollRestartedTitle => 'La configuración anterior venció';
+
+  @override
+  String get mfaEnrollRestarted =>
+      'Pasó demasiado tiempo y la configuración anterior venció. Este código QR es NUEVO: borrá la entrada anterior de tu app de autenticación y escaneá este. El código que tenías ya no sirve.';
+
+  @override
   String get mfaLimitsNote =>
       'Guardá bien el acceso a tu app de autenticación: esta versión no permite recuperar, dar de baja ni reemplazar el autenticador desde la app.';
 

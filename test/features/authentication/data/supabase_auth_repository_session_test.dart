@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:talentflash_argentina/features/authentication/data/jwt_claims.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_attempt_recorder.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_cleanup_policy.dart';
 import 'package:talentflash_argentina/features/authentication/data/session_scoped_http_client.dart';
 import 'package:talentflash_argentina/features/authentication/data/supabase_auth_repository.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_failure.dart';
@@ -131,14 +133,31 @@ void main() {
       final h = _Harness.build();
       await h.signIn(_Account.a, pendingFactor: 'pendiente-a');
       final enrolling = h.repository.enrollTotp(friendlyName: 'nuevo');
-      await h.holdReached('/factors/pendiente-a');
+      // La espera del alta ahora es la LECTURA de factores: desde que la app
+      // dejó de mandar bajas automáticas, el `DELETE` ya no existe y no hay
+      // dónde retener. El punto que importa es el mismo: después de una
+      // espera, el alta no puede seguir con otra sesión.
+      await h.holdReached('/user');
 
       await h.repository.signOut();
       await h.signIn(_Account.b);
 
       h.release(
-        '/factors/pendiente-a',
-        http.Response(jsonEncode({'id': 'pendiente-a'}), 200),
+        '/user',
+        http.Response(
+          jsonEncode(
+            GoTrueFixtures.user(
+              appRole: 'admin',
+              id: _Account.a.id,
+              email: _Account.a.email,
+              factors: [
+                GoTrueFixtures.factor(id: 'pendiente-a', status: 'unverified'),
+              ],
+            ),
+          ),
+          200,
+          headers: const {'content-type': 'application/json'},
+        ),
       );
 
       await expectLater(enrolling, throwsA(_stale()));
@@ -155,8 +174,16 @@ void main() {
             .where((r) => r.url.path.contains('/factors'))
             .map(h.subjectOf)
             .toSet(),
-        {_Account.a.id},
+        isNot(contains(_Account.b.id)),
         reason: 'ninguna solicitud del flujo de A viaja con credenciales de B',
+      );
+      expect(
+        h.requests
+            .where((r) => r.url.path.endsWith('/user'))
+            .map(h.subjectOf)
+            .toSet(),
+        {_Account.a.id},
+        reason: 'la única solicitud del flujo salió con el token de A',
       );
     });
   });
@@ -202,11 +229,11 @@ void main() {
       final enrollment = await h.repository.enrollTotp(friendlyName: 'nuevo');
       expect(enrollment.factorId, 'factor-a');
       expect(
-        h.requests
-            .where((r) => r.method == 'DELETE')
-            .map((r) => r.url.pathSegments.last),
-        ['pendiente-a'],
-        reason: 'el pendiente viejo se limpia; el verificado no se toca',
+        h.requests.where((r) => r.method == 'DELETE'),
+        isEmpty,
+        reason:
+            'la app ya no manda bajas automáticas: el pendiente viejo queda, '
+            'y el alta sigue igual',
       );
       final challenge = await h.repository.challengeSecondFactor('factor-a');
       expect(challenge.id, 'challenge-a');
@@ -251,13 +278,26 @@ void main() {
       final h = _Harness.build(guarded: false);
       await h.signIn(_Account.a, pendingFactor: 'pendiente-a');
       final enrolling = h.repository.enrollTotp(friendlyName: 'nuevo');
-      await h.holdReached('/factors/pendiente-a');
+      await h.holdReached('/user');
 
       await h.repository.signOut();
       await h.signIn(_Account.b);
       h.release(
-        '/factors/pendiente-a',
-        http.Response(jsonEncode({'id': 'pendiente-a'}), 200),
+        '/user',
+        http.Response(
+          jsonEncode(
+            GoTrueFixtures.user(
+              appRole: 'admin',
+              id: _Account.a.id,
+              email: _Account.a.email,
+              factors: [
+                GoTrueFixtures.factor(id: 'pendiente-a', status: 'unverified'),
+              ],
+            ),
+          ),
+          200,
+          headers: const {'content-type': 'application/json'},
+        ),
       );
 
       await expectLater(enrolling, throwsA(_stale()));
@@ -270,7 +310,7 @@ void main() {
     });
 
     test(
-      'la limpieza de pendientes mira al servidor, no la copia de la sesión',
+      'el alta lee los factores del SERVIDOR, no la copia de la sesión',
       () async {
         final h = _Harness.build();
         await h.signIn(
@@ -286,11 +326,21 @@ void main() {
 
         await h.repository.enrollTotp(friendlyName: 'nuevo');
 
+        // Antes esto se comprobaba por el DELETE que salía. Ya no sale
+        // ninguno, así que lo que se fija es la lectura: el alta consulta
+        // `GET /user` y no se conforma con la copia del usuario que viaja en
+        // la sesión, que es la foto del último login o refresco.
         expect(
-          h.requests
-              .where((r) => r.method == 'DELETE')
-              .map((r) => r.url.pathSegments.last),
-          ['pendiente-a'],
+          h.requests.where(
+            (r) => r.method == 'GET' && r.url.path.endsWith('/user'),
+          ),
+          isNotEmpty,
+          reason: 'el estado de los factores se le pregunta al servidor',
+        );
+        expect(
+          h.requests.where((r) => r.method == 'DELETE'),
+          isEmpty,
+          reason: 'y no se manda ninguna baja automática',
         );
       },
     );
@@ -427,13 +477,24 @@ class _Harness {
   final _holds = <String, Completer<http.Response>>{};
   final _reached = <String, Completer<void>>{};
   final _logins = <_Account, int>{};
+
+  /// Política de limpieza del repositorio. Los pendientes que sembran los
+  /// tests son altas interrumpidas de ESTA misma app, así que se registran
+  /// como propias: es lo que haría el alta real.
+  final cleanup = SecondFactorCleanupPolicy();
+
   String? _pendingFactor;
   bool _pendingInSession = true;
   bool _expired = false;
 
   static _Harness build({bool guarded = _guardedByDefault}) {
     final h = _Harness._();
-    final inner = MockClient(h._route);
+    // El recorder va SIEMPRE, con guard o sin él: es el punto más interno y
+    // es lo que anota cada pedido de verificación que sale.
+    final inner = SecondFactorAttemptRecorder.withInnerClient(
+      h.cleanup,
+      MockClient(h._route),
+    );
     final httpClient = guarded
         ? SessionScopedHttpClient(
             inner,
@@ -446,7 +507,7 @@ class _Harness {
       flowType: AuthFlowType.implicit,
       httpClient: httpClient,
     );
-    h.repository = SupabaseAuthRepository(h.client);
+    h.repository = SupabaseAuthRepository(h.client, h.cleanup);
     final subscription = h.client.onAuthStateChange.listen(
       (state) => h.events.add(state.event),
       onError: (Object _) {},
@@ -469,6 +530,7 @@ class _Harness {
     bool expired = false,
   }) async {
     _pendingFactor = pendingFactor;
+    if (pendingFactor != null) cleanup.recordEnrolled(pendingFactor);
     _pendingInSession = !pendingOnlyOnServer;
     _expired = expired;
     await repository.signInWithEmail(

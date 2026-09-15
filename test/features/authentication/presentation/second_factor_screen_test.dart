@@ -86,6 +86,91 @@ void main() {
     return harness;
   }
 
+  group('el alta venció mientras la persona se tomaba su tiempo', () {
+    testWidgets(
+      'se rehace el alta, se ve el aviso, el QR cambia y el código anterior '
+      'no se manda contra el factor nuevo',
+      (tester) async {
+        // Es el costo conocido de pedir el desafío recién al mandar el
+        // código: el factor pudo haberlo recolectado el servidor. La pantalla
+        // tiene que decir que el QR cambió, no reutilizar nada, y no dejar el
+        // código viejo cargado.
+        final auth = FakeAuthRepository(
+          initialStatus: const AuthStatusSignedOut(),
+        );
+        auth.queuedEnrollments.addAll(const [
+          TotpEnrollment(
+            factorId: 'factor-pendiente',
+            friendlyName: 'TalentFlash · 08/09/2026 14:32',
+            secret: secret,
+            uri:
+                'otpauth://totp/TalentFlash%20Argentina:persona?secret=$secret',
+          ),
+          TotpEnrollment(
+            factorId: 'factor-rehecho',
+            friendlyName: 'TalentFlash · 08/09/2026 14:40',
+            secret: 'KRSXG5CTMVRXEZLU',
+            uri:
+                'otpauth://totp/TalentFlash%20Argentina:persona'
+                '?secret=KRSXG5CTMVRXEZLU',
+          ),
+        ]);
+        final harness = await abrirSegundoFactor(tester, auth: auth);
+        expect(find.text('JBSW Y3DP EHPK 3PXP'), findsOneWidget);
+
+        // El servidor ya no conoce el factor cuando se pide el desafío.
+        harness.authRepository.nextChallengeFailure = const AuthFailure(
+          AuthFailureCode.mfaFactorNotFound,
+        );
+        await tester.enterText(codeField(), '123456');
+        await ensureAndTap(tester, find.text('Activar segundo factor'));
+        await tester.pumpAndSettle();
+
+        expect(harness.location, '/admin/segundo-factor');
+        expect(
+          find.text('La configuración anterior venció'),
+          findsOneWidget,
+          reason: 'el aviso se ve, no solo existe en el estado',
+        );
+        expect(
+          textoVisible(tester),
+          contains('Este código QR es NUEVO'),
+          reason: 'y dice qué tiene que hacer la persona',
+        );
+        expect(
+          find.text('KRSX G5CT MVRX EZLU'),
+          findsOneWidget,
+          reason: 'la clave manual es la del factor nuevo',
+        );
+        expect(find.text('JBSW Y3DP EHPK 3PXP'), findsNothing);
+        expect(find.byType(QrImageView), findsOneWidget);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller?.text,
+          isEmpty,
+          reason:
+              'el código anterior era para el factor viejo: no puede quedar '
+              'cargado contra el nuevo',
+        );
+        expect(
+          harness.authRepository.calls.where((c) => c.startsWith('verify')),
+          isEmpty,
+          reason: 'no se mandó ningún código contra el factor nuevo',
+        );
+        expect(
+          harness.authRepository.calls.where((c) => c == 'enrollTotp').length,
+          2,
+          reason: 'exactamente un alta nueva: sin bucle',
+        );
+
+        // Y desde acá el recorrido normal termina bien con el QR nuevo.
+        await tester.enterText(codeField(), '123456');
+        await ensureAndTap(tester, find.text('Activar segundo factor'));
+        await tester.pumpAndSettle();
+        expect(harness.location, '/admin/verificaciones');
+      },
+    );
+  });
+
   group('alta (sin factor verificado)', () {
     testWidgets('muestra el QR, la clave manual y el campo de código', (
       tester,
@@ -118,8 +203,7 @@ void main() {
       expect(harness.authRepository.calls, <String>[
         'listVerifiedSecondFactors',
         'enrollTotp',
-        'challengeSecondFactor:factor-pendiente',
-      ]);
+      ], reason: 'el desafío se pide recién al mandar el código');
     });
 
     testWidgets('el QR y la clave tienen alternativa accesible', (

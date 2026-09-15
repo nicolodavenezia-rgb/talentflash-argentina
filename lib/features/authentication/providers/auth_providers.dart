@@ -4,16 +4,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/networking/supabase_client_provider.dart';
 import '../data/auth_repository.dart';
+import '../data/second_factor_cleanup_policy.dart';
 import '../data/supabase_auth_repository.dart';
 import '../domain/auth_status.dart';
 import '../domain/authenticated_user.dart';
 import '../domain/business_role.dart';
 import '../domain/session_assurance.dart';
 
+/// Política de bajas automáticas de segundo factor.
+///
+/// **La instancia la crea `bootstrap.dart` y la sobreescribe acá**, porque el
+/// transporte la necesita antes de que exista el `ProviderScope`: el
+/// `SecondFactorAttemptRecorder` anota cada pedido de verificación que sale y
+/// el repositorio consulta lo anotado antes de cada baja. Tienen que ser la
+/// **misma** instancia o la garantía no vale.
+///
+/// **Sin override no hay valor por omisión, y es a propósito.** Una segunda
+/// instancia no es «más conservadora»: es peligrosa. El repositorio es quien
+/// llama a `recordEnrolled`, así que la política que él tenga **sí** ve nacer
+/// los factores; los intentos, en cambio, los anota el transporte en la suya.
+/// Con dos instancias quedaría un factor propio con cero intentos anotados,
+/// que es exactamente `canAutoUnenroll == true` con una verificación en vuelo
+/// —el defecto de D1-bis, otra vez, y en silencio—. Mejor que estalle.
+final secondFactorCleanupPolicyProvider = Provider<SecondFactorCleanupPolicy>(
+  (ref) => throw StateError(
+    'secondFactorCleanupPolicyProvider no está sobreescrito. La instancia la '
+    'crea bootstrap.dart y la comparte con SecondFactorAttemptRecorder; el '
+    'repositorio tiene que recibir ESA, no otra.',
+  ),
+);
+
 /// Repositorio de autenticación. En tests se sobreescribe con un fake, de modo
 /// que ninguna prueba necesita un Supabase remoto ni el singleton del SDK.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return SupabaseAuthRepository(ref.watch(supabaseClientProvider).auth);
+  return SupabaseAuthRepository(
+    ref.watch(supabaseClientProvider).auth,
+    ref.watch(secondFactorCleanupPolicyProvider),
+  );
 });
 
 /// Estado de sesión de la app.

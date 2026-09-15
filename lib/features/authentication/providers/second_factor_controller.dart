@@ -88,12 +88,20 @@ sealed class SecondFactorCodeEntry extends SecondFactorFlow {
 final class SecondFactorEnrolling extends SecondFactorCodeEntry {
   SecondFactorEnrolling({
     required this.enrollment,
+    this.restarted = false,
     super.challenge,
     super.isSubmitting,
     super.failure,
   }) : super(factorId: enrollment.factorId);
 
   final TotpEnrollment enrollment;
+
+  /// El alta anterior venció del lado del servidor y esta la reemplaza.
+  ///
+  /// La pantalla tiene que decirlo: el QR **cambió**, y lo que la persona ya
+  /// guardó en su autenticador no sirve. Nunca se reutiliza el secreto ni el
+  /// código anteriores.
+  final bool restarted;
 
   @override
   SecondFactorEnrolling copyWith({
@@ -105,6 +113,7 @@ final class SecondFactorEnrolling extends SecondFactorCodeEntry {
   }) {
     return SecondFactorEnrolling(
       enrollment: enrollment,
+      restarted: restarted,
       challenge: clearChallenge ? null : (challenge ?? this.challenge),
       isSubmitting: isSubmitting ?? this.isSubmitting,
       failure: clearFailure ? null : (failure ?? this.failure),
@@ -162,11 +171,16 @@ final class SecondFactorChallenging extends SecondFactorCodeEntry {
 ///   (el provider es `autoDispose`).
 /// * Una respuesta tardía de un flujo anterior (otra cuenta, cancelado) no se
 ///   aplica: cada operación lleva el número de época en que arrancó.
-/// * Un alta interrumpida deja un factor pendiente en el servidor; se
-///   descarta al cancelar o al salir, siempre que la misma sesión siga viva
-///   (se relee del repositorio en ese instante, no de una copia guardada).
-///   La excepción es el factor cuyo código ya viaja: ese no se toca, porque
-///   el servidor puede estar aceptándolo justo entonces.
+/// * Un alta interrumpida deja un factor pendiente en el servidor. Al
+///   cancelar o al salir se **pide** descartarlo, siempre que la misma sesión
+///   siga viva (se relee del repositorio en ese instante, no de una copia
+///   guardada) y salvo que su código ya esté viajando. Pero **el pedido hoy
+///   no borra nada**: el repositorio se abstiene de mandar bajas automáticas
+///   (`SecondFactorCleanupPolicy`), así que el pendiente queda en el servidor
+///   y lo recolecta él —solo si nunca llegó a pedir un desafío, y por eso el
+///   desafío se pide recién al mandar el código—. Las dos condiciones de acá
+///   se conservan porque son parte de la precondición: el día que exista una
+///   baja usable tienen que seguir valiendo.
 class SecondFactorController extends Notifier<SecondFactorFlow> {
   static final _codePattern = RegExp(r'^\d{6}$');
 
@@ -179,15 +193,23 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   /// Factor creado por este flujo y todavía no verificado.
   String? _pendingFactorId;
 
-  /// Factor cuyo código ya viaja hacia el servidor. Un `unenroll` disparado
-  /// mientras esa verificación está en vuelo correría contra ella y podría
-  /// borrar un factor que el servidor acaba de aceptar, dejando a la cuenta
-  /// sin el segundo factor que la persona acaba de configurar y sin poder
-  /// operar la cola hasta que lo configure de nuevo (comprobado contra el
-  /// servidor: con **cero** factores verificados se puede volver a dar de alta
-  /// TOTP desde `aal1` y recuperar `aal2`; no se afirma nada sobre otros
-  /// escenarios de pérdida del autenticador, que no se probaron). Dentro de un
-  /// life-cycle no se puede leer `state`, así que `isSubmitting` se espeja acá.
+  /// Factor cuyo código ya viaja hacia el servidor.
+  ///
+  /// Un `unenroll` disparado mientras esa verificación está en vuelo correría
+  /// contra ella y podría borrar un factor que el servidor acaba de aceptar,
+  /// dejando a la cuenta sin el segundo factor que la persona acaba de
+  /// configurar y sin poder operar la cola hasta que lo configure de nuevo
+  /// (comprobado contra el servidor: con **cero** factores verificados se
+  /// puede volver a dar de alta TOTP desde `aal1` y recuperar `aal2`; no se
+  /// afirma nada sobre otros escenarios de pérdida del autenticador, que no
+  /// se probaron). Dentro de un life-cycle no se puede leer `state`, así que
+  /// `isSubmitting` se espeja acá.
+  ///
+  /// **Hoy ese `unenroll` no llega a salir**, porque el repositorio no manda
+  /// bajas automáticas. Esta marca dejó de ser lo que evita el daño y pasó a
+  /// ser la barrera de más arriba: se conserva porque el día que exista una
+  /// baja usable vuelve a hacer falta, y porque abstenerse antes es más
+  /// barato que abstenerse después.
   ///
   /// Este campo cubre el flujo **vivo**. El caso en el que la pantalla se
   /// destruye y se vuelve a crear lo cubre el repositorio, que no depende de
@@ -203,9 +225,11 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
     _repository = ref.watch(authRepositoryProvider);
     _now = ref.watch(clockProvider);
     ref.listen(authStatusProvider, (_, next) => _onSessionChanged(next));
-    // Al salir de la pantalla no queda ni el secreto en memoria ni un factor
-    // pendiente en el servidor. Solo se usan campos: dentro de un
-    // life-cycle no se puede leer `state` ni `ref`.
+    // Al salir de la pantalla no queda el secreto en memoria, y se pide
+    // descartar el factor pendiente. El pendiente en sí **puede quedar en el
+    // servidor**: el repositorio no manda bajas automáticas, así que el
+    // pedido no borra nada y lo recolecta GoTrue. Solo se usan campos:
+    // dentro de un life-cycle no se puede leer `state` ni `ref`.
     ref.onDispose(_discardOnDispose);
     return const SecondFactorIdle();
   }
@@ -250,17 +274,21 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
         }
         _pendingFactorId = enrollment.factorId;
         state = SecondFactorEnrolling(enrollment: enrollment);
-        // El desafío se pide ya, como en el flujo documentado (alta → desafío
-        // → verificación): GoTrue borra a los cinco minutos los factores
-        // pendientes que no tienen NINGÚN desafío, en cuanto cualquier cuenta
-        // hace un alta, y el QR quedaría muerto mientras la persona lo
-        // escanea con calma. Si el desafío vence antes de que mande el
-        // código, `submitCode` pide otro. Que falle acá no corta el alta.
-        final challenge = await _tryChallenge(enrollment.factorId);
-        if (!_isCurrent(epoch) || challenge == null) {
-          return;
-        }
-        _updateEntry((entry) => entry.copyWith(challenge: challenge));
+        // El desafío NO se pide acá: lo pide `submitCode` cuando la persona
+        // manda el código. Es deliberado y tiene una razón medida.
+        //
+        // GoTrue limpia los factores pendientes de una cuenta **dentro del
+        // handler del alta** —no hay ningún temporizador de fondo: un
+        // pendiente sigue ahí a los ocho minutos si nadie da de alta nada—, y
+        // solo borra los que **no tienen ningún desafío** y ya superaron el
+        // umbral (~5 min). Pidiendo el desafío en el alta, todo intento
+        // abandonado quedaba fuera de esa limpieza y se acumulaba contra el
+        // tope de 10 factores por cuenta, sin salida desde la app.
+        //
+        // El costo del cambio es acotado y está cubierto: si la persona tarda
+        // y el factor desaparece, `submitCode` lo detecta
+        // (`mfa_factor_not_found`), rehace el alta UNA vez y avisa que el QR
+        // cambió. Nunca se reutiliza el secreto ni el código anteriores.
       } else if (factors.length == 1) {
         state = SecondFactorChallenging(
           factor: factors.single,
@@ -371,9 +399,19 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
         return;
       }
       final failure = AuthFailure.from(error);
-      // Con el desafío vencido, rechazado (GoTrue lo ata a la IP con la que
-      // se creó) o el factor desaparecido, el siguiente envío tiene que
-      // arrancar de cero; un código incorrecto conserva el desafío.
+      // El factor ya no existe: lo recolectó el servidor mientras la persona
+      // se tomaba su tiempo (es el costo conocido de pedir el desafío recién
+      // acá). Se rehace el alta UNA vez —no se reintenta el código ni se
+      // reutiliza el secreto— y la pantalla avisa que el QR cambió. No hay
+      // bucle posible: cada reintento exige que la persona mande otro código.
+      if (failure.code == AuthFailureCode.mfaFactorNotFound &&
+          current is SecondFactorEnrolling) {
+        await _restartEnrollment(epoch: epoch, previo: current);
+        return;
+      }
+      // Con el desafío vencido o rechazado (GoTrue lo ata a la IP con la que
+      // se creó) el siguiente envío tiene que arrancar de cero; un código
+      // incorrecto conserva el desafío.
       final dropChallenge =
           failure.code == AuthFailureCode.mfaChallengeExpired ||
           failure.code == AuthFailureCode.mfaRejected ||
@@ -393,7 +431,8 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
   }
 
   /// Abandona el flujo: descarta el estado sensible y, si había un alta en
-  /// curso, el factor pendiente del servidor.
+  /// curso, **pide** descartar el factor pendiente del servidor —pedido que
+  /// hoy no manda ningún `DELETE`, ver [_discardOrphan]—.
   void cancel() {
     final pending = _pendingFactorId;
     final owner = _flowSession;
@@ -411,13 +450,40 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
 
   bool _isCurrent(int epoch) => ref.mounted && epoch == _epoch;
 
-  /// Desafío anticipado del alta: `null` si el servidor no lo dio (el envío
-  /// del código lo vuelve a intentar y ahí sí se muestra el error).
-  Future<SecondFactorChallenge?> _tryChallenge(String factorId) async {
+  /// Rehace un alta cuyo factor el servidor ya recolectó.
+  ///
+  /// Se llama **una vez por envío de código**, nunca en cadena: si el alta
+  /// nueva también fallara, se muestra el fallo y se corta. El secreto y el
+  /// código anteriores no se reutilizan; el QR que se dibuja es el nuevo, y
+  /// [SecondFactorEnrolling.restarted] hace que la pantalla lo diga.
+  Future<void> _restartEnrollment({
+    required int epoch,
+    required SecondFactorEnrolling previo,
+  }) async {
+    final owner = _flowSession;
     try {
-      return await _repository.challengeSecondFactor(factorId);
-    } on Object catch (_) {
-      return null;
+      final enrollment = await _repository.enrollTotp(
+        friendlyName: previo.enrollment.friendlyName,
+      );
+      if (!_isCurrent(epoch)) {
+        if (owner != null) {
+          _discardOrphan(enrollment.factorId, owner: owner);
+        }
+        return;
+      }
+      _pendingFactorId = enrollment.factorId;
+      state = SecondFactorEnrolling(enrollment: enrollment, restarted: true);
+    } on Object catch (error) {
+      if (!_isCurrent(epoch)) {
+        return;
+      }
+      _updateEntry(
+        (entry) => entry.copyWith(
+          isSubmitting: false,
+          failure: AuthFailure.from(error),
+          clearChallenge: true,
+        ),
+      );
     }
   }
 
@@ -484,21 +550,31 @@ class SecondFactorController extends Notifier<SecondFactorFlow> {
       // El código ya viaja: un alta con el código enviado no es un «alta
       // interrumpida». O la acepta el servidor —y borrarla dejaría a la cuenta
       // sin el segundo factor recién configurado, obligándola a configurarlo de
-      // nuevo para volver a operar la cola— o el factor pendiente lo vence
-      // GoTrue solo, y el próximo alta lo limpia.
+      // nuevo para volver a operar la cola— o no, y entonces queda un
+      // pendiente que recolecta GoTrue: en este camino el factor ya pidió un
+      // desafío, así que no lo alcanza la limpieza del alta y lo que lo barre
+      // es la próxima verificación exitosa.
       return;
     }
     _discardOrphan(pending, owner: owner);
   }
 
-  /// Borra un factor pendiente **solo** si la sesión sigue siendo la que lo
-  /// creó: el `unenroll` del SDK viaja con el bearer de la sesión VIGENTE, así
-  /// que con otra sesión el pedido saldría con un token ajeno.
+  /// Pide descartar un factor pendiente **solo** si la sesión sigue siendo la
+  /// que lo creó: el `unenroll` del SDK viajaría con el bearer de la sesión
+  /// VIGENTE, así que con otra sesión el pedido saldría con un token ajeno.
   ///
   /// La sesión se lee del repositorio en este mismo instante y no de un campo:
   /// el caso que hay que cubrir es justamente el dispose, donde el
   /// `ref.listen` ya está cerrado y cualquier copia guardada quedó congelada
   /// en la sesión anterior.
+  ///
+  /// **Nombre honesto: pide, no borra.** El repositorio no manda bajas
+  /// automáticas, así que `discardPendingSecondFactor` vuelve sin haber
+  /// tocado nada y el pendiente sigue en el servidor. Que este camino no
+  /// limpie no es un fallo silencioso: lo recolecta GoTrue si el factor
+  /// nunca pidió un desafío —que es el caso normal al cancelar o salir,
+  /// porque el desafío se pide recién al mandar el código— y, si lo pidió,
+  /// lo barre la próxima verificación exitosa.
   void _discardOrphan(String factorId, {required _SessionKey owner}) {
     if (_SessionKey.of(_repository.currentStatus) != owner) {
       return;

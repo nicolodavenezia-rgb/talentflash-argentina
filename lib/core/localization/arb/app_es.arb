@@ -589,6 +589,8 @@
   "mfaEnrollTitle": "Configurá tu autenticador",
   "mfaEnrollIntro": "Escaneá el código QR con una app de autenticación (por ejemplo Google Authenticator, Microsoft Authenticator o Aegis). Si no podés escanearlo, cargá la clave manual que sigue.",
   "mfaEnrollPendingNote": "El segundo factor queda activo recién cuando ingresás un código válido. Si salís antes, no queda configurado.",
+  "mfaEnrollRestartedTitle": "La configuración anterior venció",
+  "mfaEnrollRestarted": "Pasó demasiado tiempo y la configuración anterior venció. Este código QR es NUEVO: borrá la entrada anterior de tu app de autenticación y escaneá este. El código que tenías ya no sirve.",
   "mfaLimitsNote": "Guardá bien el acceso a tu app de autenticación: esta versión no permite recuperar, dar de baja ni reemplazar el autenticador desde la app.",
   "mfaQrSemantics": "Código QR para registrar TalentFlash en tu app de autenticación. Si no podés escanearlo, usá la clave manual que sigue.",
   "mfaManualKeyLabel": "Clave manual",
