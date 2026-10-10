@@ -554,7 +554,9 @@ Future<void> _cargarRoboto() async {
     fail('No están las fuentes de Material del SDK en $candidatas');
   }
   final fuentes = carpeta.listSync().whereType<File>().where((file) {
-    final nombre = file.uri.pathSegments.last;
+    // Sin distinguir mayúsculas: el fonts.zip de Flutter trae
+    // `Roboto-Regular.ttf`, pero el SDK de Windows los tiene en minúscula.
+    final nombre = file.uri.pathSegments.last.toLowerCase();
     return nombre.startsWith('roboto-') && nombre.endsWith('.ttf');
   }).toList();
   if (fuentes.isEmpty) {
