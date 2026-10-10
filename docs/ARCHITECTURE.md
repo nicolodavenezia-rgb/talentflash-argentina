@@ -149,8 +149,10 @@ features/legal/          # documentos legales versionados (T-020), lectura
 ```
 
 Los errores de PostgREST/RPC se traducen a `DataFailure`
-(`shared/models/data_failure.dart`, códigos 42501/TF018/TFDAT/TFCNS/23505 →
-enum) y la UI muestra siempre un texto del ARB. `ai_training` no existe en el
+(`shared/models/data_failure.dart`, códigos
+42501/TF018/TFDAT/TFCNS/23505/TFJOB → enum; `TFJOB`, de la migración `0032`,
+es `jobStateConflict`: la oferta no admite esa acción en el estado en que
+está) y la UI muestra siempre un texto del ARB. `ai_training` no existe en el
 código Dart (test de arquitectura): ninguna superficie puede otorgarlo.
 
 #### Capa de perfiles (Bloque D)

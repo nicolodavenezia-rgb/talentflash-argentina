@@ -1,6 +1,6 @@
 # TalentFlash Argentina — Modelo de Datos (PostgreSQL / Supabase)
 
-**Última actualización:** 2026-09-06
+**Última actualización:** 2026-10-10
 **Estado:** propuesta inicial — pendiente de aprobación del fundador
 
 > Fuente de verdad: el SPEC de producto (`SPEC_TALENTFLASH.md`); las referencias "SPEC §5" (ofertas) y "SPEC §8" (pagos) apuntan a ese documento. Documentos hermanos en `01_app/docs/` (SPEC §11): `PRODUCT.md`, `UX_FLOWS.md`, `ARCHITECTURE.md`, `PRIVACY.md`, `SECURITY.md`, `COST_DECISIONS.md`, `ROADMAP.md`.
@@ -342,6 +342,107 @@ create table saved_jobs (
   primary key (candidate_profile_id, job_id)
 );
 ```
+
+**Ciclo de vida, permisos y contenido de las ofertas (0032, T-030).** La
+tabla `jobs` existe desde 0007 y 0031 le puso la puerta de publicación; 0032
+le agrega todo lo demás. Aplica tres decisiones del fundador del 2026-10-10:
+**D1** (vencimiento de una oferta publicada a 60 días como máximo), **D2**
+(barrio obligatorio al publicar si la localidad tiene barrios cargados) y
+**D3** (el rol `viewer` no escribe ofertas).
+
+- **Quién escribe.** Solo `owner`, `admin` y `recruiter` de la empresa, a
+  través de `public.can_write_company_jobs(company_id)` (§5.2 y §5.5). El
+  `viewer` sigue viendo las ofertas de su empresa, pero un INSERT suyo termina
+  en 42501 y un UPDATE afecta cero filas.
+- **Estados para el cliente** (trigger `protect_job_lifecycle`, SECURITY
+  INVOKER, que solo actúa cuando `current_user` es `authenticated` o `anon`):
+  una oferta nace `draft` o `active` —nacer `active` exige empresa `approved`,
+  por la policy—; cualquier otro estado de alta es `TFJOB`. Después se permite
+  el mismo estado en `draft`/`active`/`paused` (edición de contenido) y los
+  pares `draft→active`, `active→paused`, `paused→active`, `active→closed`,
+  `paused→closed` y `expired→closed`; cualquier otro par es `TFJOB`. Pasar a
+  `expired` es 42501: lo hace solo el sistema (backend hoy, el cron de T-033
+  mañana). `expired` y `closed` ya no se editan (`TFJOB`): la única salida es
+  `expired→closed` sin tocar ninguna otra columna. Una oferta descartada no se
+  modifica más (`TFJOB`). Las RPC SECURITY DEFINER del proyecto, el seed,
+  `service_role` y `pg_cron` pasan de largo, porque para ellos `current_user`
+  no es `authenticated`.
+- **Quién pone cada columna.** `published_at` lo fija el servidor al nacer
+  `active` o en `draft→active`, y `paused→active` lo **conserva**: si pausar y
+  reanudar lo renovara, una empresa podría volver al tope del feed (ordenado
+  por `published_at desc`) cuando quisiera. `closed_at` lo fija el servidor en
+  cualquier `→closed`. `deleted_at` lo escribe solo `discard_job_draft`.
+  `created_at` y `updated_at` del alta los pone el servidor, que pisa lo que
+  mande el cliente. Si el cliente manda `published_at`, `closed_at` o
+  `deleted_at` en el alta, o cambia `id`, `published_at`, `closed_at` o
+  `deleted_at` en un UPDATE, recibe 42501. `company_id`, `created_by` y
+  `created_at` siguen inmutables para el cliente por `protect_job_write`
+  (0031), y en el alta `created_by` tiene que ser el propio caller.
+- **Contenido** (trigger `validate_job_content`, SECURITY DEFINER, en
+  **todos** los contextos —cliente, RPC, seed, `service_role`, cron—, errores
+  `TFDAT`). En UPDATE valida solo las columnas que cambiaron, para no trabar
+  filas escritas antes de una regla nueva; en INSERT valida todo. Reglas:
+  `title` de 1 a 120 caracteres, `description` de 1 a 4000 y
+  `schedule_detail` de 1 a 200, medidos después de recortarlos con
+  `private.job_trim` (§5.5), que saca de los bordes el mismo conjunto de
+  espacios que `String.trim()` de Dart —tabulación, saltos de línea, NBSP,
+  espacio ideográfico, BOM y el resto de los espacios Unicode— y no solo el
+  U+0020 que saca `btrim` (el texto se guarda recortado, y uno hecho solo de
+  esos espacios cuenta como vacío); `schedule_days` de 1 a 7 códigos
+  `lun`…`dom`, sin NULL ni repetidos; `salary_currency = 'ARS'`;
+  `salary_max ≤ 999.999.999`, que junto con los CHECK de 0007
+  (`salary_min ≥ 0`, `salary_max ≥ salary_min`) acota los dos montos;
+  `benefits` de hasta 15 ítems de 1 a 60 caracteres, cada uno con el mismo
+  recorte, sin NULL ni repetidos ignorando mayúsculas y espacios de los
+  bordes (la lista puede quedar vacía: su default es `'{}'`);
+  `vacancies ≤ 100` (el mínimo de 1 ya es CHECK);
+  localidad de la provincia elegida y, si hay barrio, barrio de esa localidad
+  (también en borrador); `sector_id` opcional, pero si viene tiene que existir
+  y estar activo; y `video_id` solo puede apuntar a un video no borrado con
+  `purpose = 'job_pitch'` cuyo dueño integra la empresa de la oferta. Esa
+  última regla cierra una fuga: la rama de video pitch de
+  `videos_company_select` publica la fila completa de cualquier video
+  referenciado por una oferta activa, así que colgar de una oferta el video
+  de un postulante lo exponía a cualquier sesión. No hay columna de
+  requisitos: van dentro de `description`.
+- **Requisitos para publicar** (`TFDAT`). Se exigen al entrar a `active` —alta
+  ya publicada, `draft→active` o reanudar una pausada— y al editar una oferta
+  activa en `salary_min`, `expires_at`, `localidad_id` o `barrio_id`:
+  `salary_min > 0`; `now() < expires_at ≤ now() + 1440 horas` (D1: 60 días de
+  24 h; el 60 vive en un solo lugar, `private.job_max_publication_days()`. El
+  tope se suma en horas y no en días porque sumar `days` a un `timestamptz` es
+  aritmética de calendario en el TimeZone de la sesión, que un cliente de
+  PostgREST elige con `Prefer: timezone`: con un cambio de horario en la
+  ventana, "60 días" son 1439 o 1441 h. En horas, el borde es el mismo
+  instante en cualquier zona y coincide con el `Duration(days: 60)` del
+  cliente); y, si la localidad tiene al menos un barrio en `geo_barrios`,
+  `barrio_id` no nulo (D2; con el
+  catálogo actual equivale a CABA, y alcanza sola a cualquier localidad a la
+  que se le carguen barrios). Un borrador no exige ninguno de los tres.
+- **Borradores y NOT NULL.** Un borrador no es una fila a medio llenar: las
+  columnas NOT NULL sin default rigen igual (si falta una, 23502), así que
+  "publicar sin sueldo" falla en borrador y publicada por la misma razón. Lo
+  único que el borrador posterga son los tres requisitos de publicación de
+  arriba. Esto precisa la frase del comienzo de esta sección ("la API valida
+  completitud recién al publicar"), y el comentario `obligatorio solo en
+  CABA/GBA (valida API)` de `barrio_id` en el SQL ilustrativo quedó
+  reemplazado por D2.
+- **Descartar.** El borrado es lógico y solo de borradores, con la RPC
+  `discard_job_draft` (§5.5). Una oferta que estuvo publicada se **cierra**,
+  no se borra, y `jobs` sigue sin policy de DELETE.
+- **Vencimiento.** Mientras no exista el cron de T-033, una oferta `active`
+  con `expires_at` pasado sigue `active` y RLS la sigue devolviendo (la policy
+  de lectura no mira `expires_at`). La app la oculta: el feed del candidato
+  filtra `expires_at > ahora` y el detalle la muestra como no disponible.
+  Todavía no hay índice sobre `jobs.expires_at`.
+- **Orden de los triggers.** Los BEFORE ROW de `jobs` corren por orden de
+  nombre: `protect_job_lifecycle`, `protect_job_write`, `set_updated_at`
+  (solo UPDATE) y `validate_job_content`, así que el validador ve las columnas
+  ya derivadas. El viejo `protect_job_update` (0018) ya no existe: su
+  cobertura quedó repartida entre `protect_job_lifecycle` (`id`,
+  `deleted_at`) y `protect_job_write` (`company_id`, `created_by`,
+  `created_at`), las dos sin el escape `not is_admin()` que 0031 había dejado
+  para T-030.
 
 ### 2.4 Mensajería
 
@@ -961,13 +1062,34 @@ create policy tr_select on transcripts for select
   using (exists (select 1 from videos v where v.id = transcripts.video_id)); -- RLS de videos ya filtró
   -- Nota: la subconsulta corre bajo las policies de videos ⇒ visible solo si el video es visible.
 
--- JOBS: ofertas activas visibles para cualquier autenticado; la empresa gestiona las suyas.
+-- JOBS: estado VIGENTE tras 0031 (puerta de publicación) y 0032 (T-030). La
+-- versión original de este bloque (0015) dejaba escribir a cualquier miembro y
+-- publicar a cualquier empresa; quedó superada.
+-- Lectura: una oferta activa y no descartada de una empresa que HOY puede
+-- publicar (company_can_publish: `approved` exacto y no borrada) la ve
+-- cualquiera —la policy no tiene TO, así que alcanza también a anon—; el
+-- equipo de la empresa, viewer incluido, ve todas las suyas (borradores y
+-- descartadas también: la app filtra deleted_at); admin ve todo. No mira
+-- expires_at: hasta el cron de T-033 una activa vencida sigue siendo legible.
 create policy jobs_public_select on jobs for select
-  using ((status = 'active' and deleted_at is null) or is_company_member(company_id) or is_admin());
-create policy jobs_company_write on jobs for insert
-  with check (is_company_member(company_id));
-create policy jobs_company_update on jobs for update
-  using (is_company_member(company_id));
+  using ((status = 'active' and deleted_at is null and company_can_publish(company_id))
+         or is_company_member(company_id) or is_admin());
+-- Escritura (D3, 0032): solo owner/admin/recruiter. El alta se firma con el
+-- caller y nacer o quedar `active` exige empresa que puede publicar. El
+-- with check del UPDATE va sobre la fila NUEVA: sin él heredaría el using y un
+-- borrador podría pasar a `active` sin verificación.
+create policy jobs_company_write on jobs for insert to authenticated
+  with check (can_write_company_jobs(company_id)
+              and created_by = auth.uid()
+              and (status <> 'active' or company_can_publish(company_id)));
+create policy jobs_company_update on jobs for update to authenticated
+  using (can_write_company_jobs(company_id))
+  with check (can_write_company_jobs(company_id)
+              and (status <> 'active' or company_can_publish(company_id)));
+-- Sin policy de DELETE: el borrado es lógico y solo de borradores
+-- (discard_job_draft, §5.5). Las transiciones de estado, las columnas que
+-- deriva el servidor y el contenido los cuidan los triggers
+-- protect_job_lifecycle, protect_job_write y validate_job_content (§2.3).
 
 -- JOB_APPLICATIONS: candidato crea/ve/retira lo suyo; la empresa ve/gestiona postulaciones a SUS ofertas.
 create policy app_candidate_insert on job_applications for insert
@@ -1182,6 +1304,46 @@ candidato (misma regla que la proyección) o admin; un path malformado devuelve
 Edge Function `avatar` (magic bytes, re-encoding sin EXIF, thumbnail; ver
 ARCHITECTURE.md §3.4) con el service role del runtime — jamás en el repo.
 
+### 5.5 Helpers y RPCs de ofertas (Bloque F, 0032)
+
+Convención de errores de `jobs` (el cliente traduce; el texto interno nunca
+llega a la pantalla): `42501` sin permiso (rol que no escribe, oferta de otra
+empresa, columna que deriva el servidor, pasaje a `expired`, publicar sin
+empresa verificada) · `TFJOB` **nuevo en 0032**: la oferta no admite esa
+acción en el estado en que está (transición no permitida, oferta descartada,
+o vencida/cerrada que se intenta editar) · `TFDAT` contenido inválido o
+requisitos de publicación incumplidos · `23502`/`23514` NOT NULL y CHECK de la
+tabla. En la app, `TFJOB` es `DataFailureCode.jobStateConflict`.
+
+- **`public.can_write_company_jobs(p_company_id)`** — booleano SECURITY
+  DEFINER: ¿el caller es `owner`, `admin` o `recruiter` de esa empresa? Mismo
+  criterio que `is_company_member` (no mira el `deleted_at` de la empresa) más
+  el filtro de rol (D3). La usan las policies de INSERT y UPDATE de `jobs`, y
+  la app la consulta como pista de UX para mostrar u ocultar las acciones de
+  escritura; la autoridad sigue siendo RLS. Responde solo sobre `auth.uid()`
+  y la puede ejecutar `authenticated`, no `anon`.
+- **`public.discard_job_draft(p_job_id)`** — borrado lógico de un borrador
+  propio (la D del CRUD). Sin sesión, oferta inexistente u oferta de una
+  empresa donde el caller no escribe dan el **mismo** 42501, para que el
+  endpoint no sirva para averiguar qué ids existen; si la oferta ya fue
+  descartada o no es un borrador, `TFJOB`. Toma la fila con `for update`, así
+  que un doble tap o un descarte cruzado con una publicación ve el estado que
+  dejó el primero. Ejecutable por `authenticated`, no por `anon`.
+- **`private.job_max_publication_days()`** — el máximo de días de D1 (60) en
+  un solo lugar; lo lee `validate_job_content`, que lo suma en horas exactas
+  (60 × 24 = 1440 h) para que el tope no dependa del TimeZone de la sesión.
+- **`private.job_trim(text)`** — el recorte de los textos de la oferta
+  (`title`, `description`, `schedule_detail` y cada beneficio): `btrim` con el
+  mismo conjunto de espacios que `String.trim()` de Dart (U+0009–U+000D,
+  U+0020, U+0085, U+00A0, U+1680, U+2000–U+200A, U+2028, U+2029, U+202F,
+  U+205F, U+3000 y U+FEFF), escrito una sola vez. Así el servidor y el cliente
+  recortan y miden igual. Inmutable y revocada a `public`, `anon` y
+  `authenticated`: solo la usa `validate_job_content`.
+- **`private.validate_job_content()`** y **`private.protect_job_lifecycle()`**
+  — las funciones de los triggers descritos en §2.3. La segunda es
+  autocontenida a propósito: corre con los permisos del cliente, que no tiene
+  USAGE sobre `private`, así que no lee tablas ni llama helpers.
+
 ---
 
 ## 6. Tests RLS con pgTAP (`supabase/tests`)
@@ -1224,6 +1386,11 @@ Convención: cada policy tiene al menos **un test positivo (puede) y uno negativ
 > - `018_publication_gate_test.sql`
 >
 > Y el comando que las corre en local y en CI es **`npm run db:test`** (`node scripts/run-db-tests.mjs`), no `supabase test db`. Ese último existe en `package.json` como `db:test:supabase`, pero no es el que usa el job `database` del workflow. Las carreras entre transacciones no van en pgTAP —cada archivo corre dentro de UNA transacción— sino en `npm run db:concurrency` (`scripts/db-concurrency-test.mjs`).
+
+> **Agregado el 2026-10-10 (T-030, migración `0032`).** La lista de arriba es la del 2026-09-06 y no se reescribe. Desde T-030 la suite tiene **20 archivos** y **600 aserciones** (suma de los `plan(N)`; eran 437 en 19 archivos):
+>
+> - `019_job_offer_lifecycle_test.sql` — **163 aserciones**. Roles (owner, admin y recruiter escriben; el viewer no inserta ni actualiza pero lee), la matriz completa de transiciones del cliente (los 25 pares de estados y los 5 estados de alta), las columnas que deriva el servidor (también `updated_at` en el alta, aunque el cliente mande otra), el descarte de borradores, cada regla de contenido con su negativo y su borde positivo —incluidos los textos hechos solo de tabulaciones, saltos de línea o espacios Unicode, un título con esos espacios en los bordes que se guarda recortado, el video ajeno y el video vivo de un miembro de la empresa que no es `job_pitch`—, los requisitos de publicación —sueldo 0, vencimiento pasado, más de 60 días, CABA sin barrio y sus positivos— y la visibilidad para candidato, `anon`, la empresa dueña y otra empresa. Su sección K prueba que el tope de D1 son 1440 h exactas en tres TimeZone de sesión: Buenos Aires, Madrid y una zona POSIX armada por el test con un cambio de horario dentro de los próximos 60 días, que detecta una vuelta a la suma en días de calendario cualquiera sea la fecha en que corre la suite. Como un UPDATE que RLS filtra no da error, cada UPDATE positivo cuenta su fila (`with … returning`) o tiene una post-condición que lee lo que escribió. Usa el namespace de UUID `95000000-…` y sus propios helpers, porque los de `018` mueren con su `rollback`.
+> - `018_publication_gate_test.sql` cambió **solo fixtures**, con el mismo `plan(56)` y las mismas aserciones: su helper de alta agrega un `barrio_id` de la localidad (CABA), porque con D2 una oferta `active` sin barrio moriría en el validador antes de llegar a la puerta que ese archivo prueba; el video pitch que cuelga de la oferta pasa a ser un `job_pitch` creado por el propio test, porque el que usaba —el primer video `ready` del seed— es la presentación de un candidato, justo la fuga que `0032` cierra; y antes de publicar el borrador del seed (`job_draft`) le renueva el vencimiento a `now() + 30 días` como backend, porque ese borrador conserva el `expires_at` que le dio el seed al sembrar y, con D1, en una base sembrada hace más de 30 días la publicación moría con `TFDAT` por la edad del seed y no por la puerta que el archivo prueba.
 
 > **Nota (Bloque D):** los ejemplos de abajo son anteriores a la migración
 > `0023`. En la suite real (`supabase/tests/database/`), el test "empresa
@@ -1382,6 +1549,7 @@ Matriz mínima a cubrir (una fila = un test): candidato ve/edita lo suyo · cand
 30. `0030_verification_hardening.sql` — Bloque E (T-028), salido de la auditoría adversarial de 0028/0029: revoca `TRUNCATE`, `TRIGGER` y `REFERENCES` a `anon`/`authenticated` en todo `public` (los tres sobreviven al grant en bloque de 0018 y los dos primeros **saltean RLS**: TRUNCATE no la evalúa y TRIGGER deja colgar un trigger propio que corre dentro de las RPC SECURITY DEFINER, reabriendo el escape que 0028 cerró); empareja `can_read_company_document` con el camino de escritura filtrando `deleted_at`; y pone `for update` sobre `company_profiles` en las dos RPC que la escriben, en el mismo orden (empresa → solicitud), para cerrar la ventana entre la lectura del estado y su escritura. Límite documentado: en `storage.objects`/`storage.buckets` esos privilegios NO se pueden revocar desde una migración (las tablas son de `supabase_storage_admin`, `postgres` no es superusuario ni miembro); lo acota que PostgREST expone solo `public` y `graphql_public`.
 
 31. `0031_membership_gate_and_publication.sql` — Bloque E, cierre de los cuatro agujeros que quedaron abiertos tras la auditoría del PR #3. (a) **La membresía deja de tener puerta trasera:** se elimina la policy `cm_manage` y se revoca `INSERT` sobre `company_members` a `anon`/`authenticated`. Hasta acá un owner o admin podía hacer `POST /rest/v1/company_members` sobre su propia empresa y sumar a cualquier cuenta, dejando la invitación de un solo uso de `0027` como un camino opcional y más incómodo que el atajo. Se cierra por partida doble (sin policy Y sin privilegio) a propósito: cada mitad sola sería reversible por un `grant` o una policy futura. Las tres puertas legítimas son `create_company_with_owner`, `complete_company_onboarding` y `accept_company_invitation`, todas SECURITY DEFINER. (b) **Todas las altas de membresía de una cuenta se serializan** con `private.lock_membership_slot(uuid)`, un `for update` sobre la fila de `public.profiles`. El `for update` de `0027` tomaba la fila de la INVITACIÓN, que serializa dos canjes del mismo código pero no dos códigos distintos dirigidos a la misma persona: las dos transacciones leían "cero membresías" y las dos insertaban. Orden de locks en las tres funciones: `profiles` primero, después lo que toque. `create_company_with_owner` y `complete_company_onboarding` pasan además a mirar CUALQUIER membresía viva y no solo la de rol `owner` (una cuenta `recruiter` de otra empresa se colaba y creaba una segunda). (c) **`private.caller_company()` distingue "ninguna empresa" (`TFEMP`) de "más de una" (`TFMUL`)**: con el mismo sqlstate el cliente solo podía separarlas leyendo el texto del mensaje. (d) **`public.company_can_publish` queda conectada** a `jobs_company_write`, `jobs_company_update`, `jobs_public_select` y a la rama de video pitch de `videos_company_select`, más el trigger `private.protect_job_write` que vuelve inmutables `company_id`, `created_by` y `created_at` desde el cliente (`with check` no puede comparar contra la fila vieja). Una empresa sin verificar crea y edita borradores; solo una `approved` inserta o promueve a `active`; y una oferta activa deja de ser pública —ella y su video— en el instante en que su empresa pierde la aprobación, sin ningún job de despublicación. (e) **Orden global de locks**, salido de la auditoria adversarial de esta misma migracion: `company_profiles` SIEMPRE antes que `profiles`, y cuando hacen falta dos filas de `profiles` se toman en orden de uuid (`least`/`greatest`). Hubo DOS ciclos reales, los dos reproducidos: (i) el `insert into company_members` lleva `invited_by`, asi que toma un `for key share` sobre la fila de `profiles` del INVITADOR al final de la transaccion — con dos canjes cruzados (X invito a Y, Y invito a X, y a los dos los dieron de baja despues de invitar, todo con RPC de la app) daba `deadlock detected`; (ii) `request_company_verification` (0030) toma `company_profiles` con `for update` y despues necesita la fila de `profiles` del owner por la FK `submitted_by`, asi que se cruzaba con el canje cuando el invitador era el owner — el caso normal. Excepcion segura y documentada: `create_company_with_owner` y `complete_company_onboarding` toman `profiles` y recien despues INSERTAN su `company_profiles`; la fila de empresa es nueva y de la propia transaccion, asi que nadie mas puede tenerla ni quererla. Tests: pgTAP `018` (56 aserciones) y `scripts/db-concurrency-test.mjs` (20 comprobaciones con dos sesiones reales, cuatro carreras; sin el lock la cuenta termina en dos empresas, y sin el orden canonico el canje cruzado termina en 40P01).
-32. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos, con estados de onboarding coherentes con la derivación).
+32. `0032_job_offer_lifecycle.sql` — Bloque F (T-030), CRUD de ofertas del lado del servidor, con las decisiones del fundador del 2026-10-10 (D1, D2 y D3; detalle en §2.3). Agrega `public.can_write_company_jobs` y recrea sobre ella `jobs_company_write` y `jobs_company_update` (solo owner/admin/recruiter; `jobs_public_select` no se toca); el trigger `validate_job_content` (SECURITY DEFINER, todos los contextos, `TFDAT`) con las reglas de contenido (los textos se recortan con `private.job_trim`, el conjunto de espacios de `String.trim()` de Dart), los requisitos de publicación —sueldo mayor a cero, vencimiento en `(now(), now() + 1440 h]` (60 días de 24 h vía `private.job_max_publication_days()`, sumados en horas para que el tope no dependa del TimeZone de la sesión) y barrio si la localidad tiene barrios— y la regla de `video_id` que cierra la fuga de `videos_company_select`; el trigger `protect_job_lifecycle` (SECURITY INVOKER, solo para el cliente) con la máquina de estados, el SQLSTATE nuevo `TFJOB` y la derivación de `published_at`/`closed_at`; y la RPC `discard_job_draft`. Elimina `protect_job_update` y `private.protect_job_update()` (0018), que tenía el escape `not is_admin()` y gateaba con `auth.role()`. Queda afuera a propósito: límite por plan (T-031), video de oferta (T-032), vencimiento y renovación por `pg_cron` (T-033), compartir (T-034) y el feed con ranking (T-035). Test: pgTAP `019` (163 aserciones).
+33. Seeds de desarrollo en `supabase/seed/seed.sql` (datos de ejemplo no productivos, con estados de onboarding coherentes con la derivación).
 
 Regla: ninguna migración mezcla DDL de tablas con policies; RLS siempre al final del bloque para que los tests pgTAP corran contra el estado completo.

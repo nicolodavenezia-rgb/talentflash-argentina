@@ -8,6 +8,94 @@
 > comprobarlo contra GitHub con los comandos de la
 > [§6 «Cómo comprobar este documento»](#6-cómo-comprobar-este-documento). Las
 > reglas de trabajo, que no caducan, están en [AI_WORKFLOW.md](AI_WORKFLOW.md).
+>
+> **Entrada agregada el 2026-10-10:** la
+> [§0](#0-entrada-del-2026-10-10-t-030-en-una-rama-local) registra el trabajo
+> de T-030. Las secciones 1 a 7 siguen siendo la foto del 2026-09-06 y no se
+> reescribieron.
+
+---
+
+## 0. Entrada del 2026-10-10: T-030 en una rama local
+
+**Dónde está.** En la rama `feature/roadmap-completion`, creada desde
+`origin/main` = **`6d9c173`** (el merge del PR #4, según la copia local de
+`origin`; no se volvió a comprobar contra GitHub). Al escribir esta entrada el
+trabajo estaba en el árbol de trabajo, la rama no existía en `origin` y **la CI
+no había corrido sobre él**: ninguno de los números de abajo es un resultado de
+CI, y no se pueden presentar como tal.
+
+**Qué entrega T-030** (detalle y desvíos deliberados en
+[ROADMAP.md](ROADMAP.md), fila T-030; reglas de datos en
+[DATA_MODEL.md](DATA_MODEL.md) §2.3 y §5.5):
+
+- **Servidor — migración `0032_job_offer_lifecycle.sql`.** Escriben ofertas
+  solo `owner`, `admin` y `recruiter` (`public.can_write_company_jobs`, sobre
+  la que se recrean `jobs_company_write` y `jobs_company_update`); el `viewer`
+  las ve pero no las toca. Máquina de estados para el cliente
+  (`protect_job_lifecycle`) con el SQLSTATE nuevo `TFJOB`; `vencida` la pone
+  solo el sistema. `published_at` y `closed_at` los deriva el servidor.
+  Validación de contenido en todos los contextos (`validate_job_content`,
+  `TFDAT`; los textos se recortan con `private.job_trim`, los mismos espacios
+  que `String.trim()` de Dart), con los requisitos para publicar (el tope de
+  D1 son 1440 h exactas, sin depender de la zona horaria de la sesión) y con
+  `video_id` limitado a un pitch de alguien de la empresa, que cierra la fuga
+  de `videos_company_select`. Borrado lógico de borradores con la RPC
+  `discard_job_draft`. Se elimina `protect_job_update` (0018) y con él el
+  escape `not is_admin()` que 0031 había dejado para T-030.
+- **App — `lib/features/jobs/`.** `/empresa/ofertas`, `/empresa/ofertas/nueva`
+  y `/empresa/ofertas/:id/editar` para la empresa; `/candidato/feed` (lista
+  mínima por recencia, paginación keyset de 20) y `/candidato/ofertas/:id`
+  para el candidato. Código de fallo nuevo `DataFailureCode.jobStateConflict`
+  para `TFJOB`.
+
+**Decisiones del fundador del 2026-10-10 que aplica:** D1, vencimiento de una
+oferta publicada a 60 días como máximo; D2, barrio obligatorio al publicar si
+la localidad tiene barrios cargados (hoy, CABA); D3, el `viewer` no escribe
+ofertas.
+
+**Números nuevos, todos locales:**
+
+| Qué | Valor | Cómo se obtuvo |
+|---|---|---|
+| Migraciones | 32 (`0001`–`0032`) | archivos de `supabase/migrations/` |
+| pgTAP | **600 aserciones en 20 archivos** (`000`–`019`); `019_job_offer_lifecycle_test.sql` aporta 163 y `018` sigue en 56 | `npm run db:test` en local el 2026-10-10, después de `npm run db:reset`: 600 `ok`, ningún `not ok` ni «Looks like», «20 archivos aprobados»; coincide con la suma de los `plan(N)` |
+| Flutter | **776 pruebas**, todas en verde; `flutter analyze` sin hallazgos y `dart format` sin cambios | `flutter test`, con las correcciones de todas las rondas de revisión incluidas (números medidos en local el 2026-10-10) |
+| Resto de las suites | `db:lint` sin errores; `db:concurrency` 20/20; `functions:test` 19/19; `storage:test` 27/27 | corridas en local el 2026-10-10; `storage:test` necesitó levantar antes el contenedor del edge runtime, un detalle del entorno y no de T-030 |
+
+Contra la foto del 2026-09-06 (439 pruebas Flutter, 437 aserciones pgTAP en
+19 archivos, en CI), lo nuevo es `019` (163 aserciones), las 330 pruebas de
+`test/features/jobs/` (contadas con
+`flutter test test/features/jobs --reporter json`) y 7 de las rutas de
+ofertas en `test/core/routing/auth_redirect_test.dart` (439 + 330 + 7 = 776).
+`018_publication_gate_test.sql` cambió **solo fixtures** (mismo `plan(56)`,
+mismas aserciones): su helper agrega un barrio por D2; el video pitch pasó a
+ser un `job_pitch` creado por el test, porque el del seed era la presentación
+de un candidato; y antes de publicar el borrador del seed (`job_draft`) le
+renueva el vencimiento como backend, porque con D1 una base sembrada hace más
+de 30 días lo dejaba vencido y la prueba moría por la edad del seed y no por
+la puerta de publicación.
+
+**Qué deja desactualizado de la foto.** Para esta rama, ya no valen: el
+esquema «hasta la migración `0031`» y la suite de 19 archivos de la §1, el
+«Sigue siendo de T-030 (y no está hecho)» de la §3 y el ítem T-030 de la §5.
+Sigue pendiente, y es de otras tareas: el límite por plan (T-031), el video de
+oferta (T-032), el vencimiento automático por `pg_cron` (T-033: hasta entonces
+una oferta con el vencimiento pasado sigue `active` y legible por RLS, y la app
+la oculta del lado del cliente), compartir (T-034), y el feed con ranking,
+búsqueda y filtros (T-035, T-037, T-038), incluido el cursor firmado que pide
+[SECURITY.md](SECURITY.md) §6: el de la lista actual es opaco para la UI pero
+no está firmado.
+
+**Limitaciones conocidas de T-030**, además del vencimiento sin cron y del
+cursor sin firmar del párrafo anterior:
+
+- Con el texto al 200 % en un teléfono de 360 dp, Material todavía corta
+  algunas etiquetas flotantes de los campos y el título de la barra superior;
+  falta una decisión de diseño: etiquetas arriba de los campos o textos más
+  cortos.
+- La ventana de 60 días de D1 y el «hoy» del formulario se calculan en la UI
+  con el reloj del dispositivo; quien decide es el servidor.
 
 ---
 

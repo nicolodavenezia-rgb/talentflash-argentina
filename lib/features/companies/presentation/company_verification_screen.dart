@@ -318,6 +318,9 @@ String _failureMessage(AppLocalizations l10n, Object? error) {
     DataFailureCode.staleConsent => l10n.dataFailureStaleConsent,
     DataFailureCode.duplicate => l10n.dataFailureDuplicate,
     DataFailureCode.network => l10n.dataFailureNetwork,
+    // TFJOB solo sale de escrituras de ofertas: acá no puede llegar y, si
+    // llegara, el texto de ofertas ("ya te mostramos cómo quedó") mentiría.
+    DataFailureCode.jobStateConflict ||
     DataFailureCode.unknown => l10n.dataFailureUnknown,
   };
 }

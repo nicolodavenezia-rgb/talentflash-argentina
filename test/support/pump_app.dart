@@ -8,6 +8,7 @@ import 'package:talentflash_argentina/core/routing/app_router.dart';
 import 'package:talentflash_argentina/features/authentication/providers/auth_providers.dart';
 import 'package:talentflash_argentina/features/companies/providers/company_verification_providers.dart';
 import 'package:talentflash_argentina/features/consents/providers/consents_providers.dart';
+import 'package:talentflash_argentina/features/jobs/providers/job_offers_providers.dart';
 import 'package:talentflash_argentina/features/legal/providers/legal_providers.dart';
 import 'package:talentflash_argentina/features/notifications/providers/notification_prefs_providers.dart';
 import 'package:talentflash_argentina/features/onboarding/providers/onboarding_providers.dart';
@@ -15,6 +16,7 @@ import 'package:talentflash_argentina/features/profiles/providers/profile_provid
 
 import 'fake_auth_repository.dart';
 import 'fake_company_verification_repository.dart';
+import 'fake_job_offers_repository.dart';
 import 'fake_onboarding_repositories.dart';
 import 'fake_profile_repositories.dart';
 
@@ -42,6 +44,7 @@ class TalentFlashHarness {
     this.avatarPicker,
     this.companyVerificationRepository,
     this.constanciaPicker,
+    this.jobOffersRepository,
   );
 
   final ProviderContainer container;
@@ -56,6 +59,7 @@ class TalentFlashHarness {
   final FakeAvatarImagePicker avatarPicker;
   final FakeCompanyVerificationRepository companyVerificationRepository;
   final FakeConstanciaPicker constanciaPicker;
+  final FakeJobOffersRepository jobOffersRepository;
 
   GoRouter get router => container.read(appRouterProvider);
 
@@ -70,10 +74,17 @@ class TalentFlashHarness {
 /// Por defecto la cuenta simulada ya completó el onboarding y tiene los
 /// consentimientos obligatorios vigentes, así los tests de auth del Bloque B
 /// conservan su semántica ("una cuenta lista entra directo a su shell").
+///
+/// [riverpodRetry] en true deja el reintento por defecto de Riverpod, como
+/// en producción (`bootstrap.dart` usa un `ProviderScope` sin `retry`): un
+/// provider que falla con una `Exception` queda cargando mientras se
+/// reintenta, unos 38 segundos en total. Sirve para probar lo que la
+/// pantalla muestra en esa ventana, que con el reintento apagado no existe.
 Future<TalentFlashHarness> pumpTalentFlashApp(
   WidgetTester tester, {
   required FakeAuthRepository authRepository,
   AppEntryPoint entryPoint = AppEntryPoint.chooser,
+  bool riverpodRetry = false,
   FakeOnboardingRepository? onboardingRepository,
   FakeConsentsRepository? consentsRepository,
   FakeCatalogRepository? catalogRepository,
@@ -84,6 +95,7 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
   FakeAvatarImagePicker? avatarPicker,
   FakeCompanyVerificationRepository? companyVerificationRepository,
   FakeConstanciaPicker? constanciaPicker,
+  FakeJobOffersRepository? jobOffersRepository,
 }) async {
   addTearDown(authRepository.dispose);
   final onboarding = onboardingRepository ?? FakeOnboardingRepository();
@@ -99,11 +111,13 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
   final verification =
       companyVerificationRepository ?? FakeCompanyVerificationRepository();
   final constancia = constanciaPicker ?? FakeConstanciaPicker();
+  final jobOffers = jobOffersRepository ?? FakeJobOffersRepository();
   final container = ProviderContainer.test(
     // Riverpod 3 reintenta con backoff los providers que fallan; en tests eso
     // vuelve no determinista cualquier escenario de error (el fake consume el
-    // fallo y el reintento "se cura" solo). Acá los errores son finales.
-    retry: (retryCount, error) => null,
+    // fallo y el reintento "se cura" solo). Acá los errores son finales,
+    // salvo que el test pida el reintento de producción ([riverpodRetry]).
+    retry: riverpodRetry ? null : (retryCount, error) => null,
     overrides: [
       envConfigProvider.overrideWithValue(testEnvConfig),
       appEntryPointProvider.overrideWithValue(entryPoint),
@@ -118,6 +132,12 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
       avatarImagePickerProvider.overrideWithValue(picker),
       companyVerificationRepositoryProvider.overrideWithValue(verification),
       constanciaPickerProvider.overrideWithValue(constancia),
+      // Sin este override, cualquier pantalla de ofertas caería en el
+      // repositorio real y en `Supabase.instance`.
+      jobOffersRepositoryProvider.overrideWithValue(jobOffers),
+      // "Ahora" fijo: la ventana de publicación (D1) no depende de la fecha
+      // en que corre la suite.
+      jobClockProvider.overrideWithValue(() => testJobNow),
     ],
   );
   await tester.pumpWidget(
@@ -139,5 +159,6 @@ Future<TalentFlashHarness> pumpTalentFlashApp(
     picker,
     verification,
     constancia,
+    jobOffers,
   );
 }

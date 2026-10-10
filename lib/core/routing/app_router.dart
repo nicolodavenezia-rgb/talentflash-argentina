@@ -12,6 +12,10 @@ import '../../features/authentication/presentation/sign_up_screen.dart';
 import '../../features/authentication/providers/auth_providers.dart';
 import '../../features/companies/presentation/company_home_screen.dart';
 import '../../features/companies/presentation/company_verification_screen.dart';
+import '../../features/jobs/presentation/candidate_feed_screen.dart';
+import '../../features/jobs/presentation/company_jobs_screen.dart';
+import '../../features/jobs/presentation/job_offer_detail_screen.dart';
+import '../../features/jobs/presentation/job_offer_form_screen.dart';
 import '../../features/legal/domain/legal_document.dart';
 import '../../features/legal/presentation/legal_document_screen.dart';
 import '../../features/moderation/presentation/admin_home_screen.dart';
@@ -112,6 +116,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CandidateProfileEditScreen(),
       ),
       GoRoute(
+        path: AppRoute.candidateFeed.path,
+        name: AppRoute.candidateFeed.name,
+        builder: (context, state) => const CandidateFeedScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.candidateJobDetail.path,
+        name: AppRoute.candidateJobDetail.name,
+        builder: (context, state) =>
+            JobOfferDetailScreen(jobId: state.pathParameters['id'] ?? ''),
+      ),
+      GoRoute(
         path: AppRoute.companyCandidateDetail.path,
         name: AppRoute.companyCandidateDetail.name,
         builder: (context, state) => CompanyCandidateScreen(
@@ -127,6 +142,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.companyVerification.path,
         name: AppRoute.companyVerification.name,
         builder: (context, state) => const CompanyVerificationScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.companyJobs.path,
+        name: AppRoute.companyJobs.name,
+        builder: (context, state) => const CompanyJobsScreen(),
+      ),
+      // La ruta literal va antes que la que lleva `:id`.
+      GoRoute(
+        path: AppRoute.companyJobNew.path,
+        name: AppRoute.companyJobNew.name,
+        builder: (context, state) => JobOfferFormScreen(
+          // Cada alta (vacía o duplicando otra oferta) es un formulario nuevo.
+          key: ValueKey(state.uri.toString()),
+          duplicateOfId: state.uri.queryParameters[JobQueryParams.duplicateOf],
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.companyJobEdit.path,
+        name: AppRoute.companyJobEdit.name,
+        builder: (context, state) => JobOfferFormScreen(
+          key: ValueKey(state.uri.toString()),
+          jobId: state.pathParameters['id'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoute.candidateOnboarding.path,

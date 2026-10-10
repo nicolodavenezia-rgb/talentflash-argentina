@@ -6,7 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// el contrato de errores de las migraciones:
 /// `42501` → [notAllowed] · `TF018` → [underage] · `TFDAT` → [invalidData] ·
 /// `TFCNS` → [staleConsent] · `23505` → [duplicate] · `TFCUI` → [invalidCuit] ·
-/// `TFMFA` → [secondFactorRequired] · `TFMUL` → [ambiguousCompany].
+/// `TFMFA` → [secondFactorRequired] · `TFMUL` → [ambiguousCompany] ·
+/// `TFJOB` → [jobStateConflict].
 enum DataFailureCode {
   /// Sin permiso: rol equivocado, sesión ausente o columna protegida.
   notAllowed,
@@ -38,6 +39,13 @@ enum DataFailureCode {
   /// nivel de autenticación.
   secondFactorRequired,
 
+  /// La oferta no admite esa acción en el estado en que está AHORA (`TFJOB`,
+  /// migración 0032): otra persona del equipo la pausó o la cerró, venció, o
+  /// fue descartada. No es falta de permiso ni un dato inválido: la acción
+  /// tenía sentido con lo que la pantalla mostraba y dejó de tenerlo, así que
+  /// la UI recarga la oferta y lo explica.
+  jobStateConflict,
+
   /// Problema de red o timeout.
   network,
 
@@ -65,6 +73,7 @@ class DataFailure implements Exception {
         'TFCUI' => DataFailureCode.invalidCuit,
         'TFMFA' => DataFailureCode.secondFactorRequired,
         'TFMUL' => DataFailureCode.ambiguousCompany,
+        'TFJOB' => DataFailureCode.jobStateConflict,
         '23505' => DataFailureCode.duplicate,
         // FKs y checks violados equivalen a datos inválidos del cliente.
         '23503' || '23514' || '23502' => DataFailureCode.invalidData,

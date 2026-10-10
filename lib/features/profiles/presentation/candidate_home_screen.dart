@@ -7,7 +7,7 @@ import '../../authentication/presentation/widgets/signed_in_scaffold.dart';
 
 /// Shell del candidato. Ruta privada: solo la alcanza una sesión con rol
 /// `candidate` (el guard es UX; la autorización real es RLS).
-/// El feed de ofertas llega en el Bloque G del ROADMAP.
+/// El orden del feed por zona y compatibilidad llega en el Bloque G.
 class CandidateHomeScreen extends StatelessWidget {
   const CandidateHomeScreen({super.key});
 
@@ -18,6 +18,13 @@ class CandidateHomeScreen extends StatelessWidget {
       title: l10n.candidateHomeTitle,
       placeholder: l10n.candidateHomePlaceholder,
       children: [
+        // Ofertas publicadas (T-030).
+        FilledButton.icon(
+          onPressed: () => context.goNamed(AppRoute.candidateFeed.name),
+          icon: const Icon(Icons.work_outline),
+          label: Text(l10n.jobsFeedTitle),
+        ),
+        const SizedBox(height: 12),
         // Entrada accesible al perfil (Bloque D, T-021).
         FilledButton.icon(
           onPressed: () => context.goNamed(AppRoute.candidateProfile.name),

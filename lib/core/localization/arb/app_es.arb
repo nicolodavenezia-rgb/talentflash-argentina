@@ -33,9 +33,9 @@
     "description": "Enlace de la bienvenida hacia el login"
   },
   "candidateHomeTitle": "Inicio — Candidato",
-  "candidateHomePlaceholder": "Acá va a estar tu feed de ofertas con salario siempre visible (Bloque G del ROADMAP). Por ahora este es el punto de entrada del candidato.",
+  "candidateHomePlaceholder": "Desde acá entrás a las ofertas publicadas, siempre con el sueldo a la vista, y a tu perfil. El orden por zona y compatibilidad llega en el Bloque G del ROADMAP.",
   "companyHomeTitle": "Inicio — Empresa",
-  "companyHomePlaceholder": "Acá van a estar tus búsquedas, ofertas y candidatos (Bloque G del ROADMAP). Por ahora este es el punto de entrada de la empresa.",
+  "companyHomePlaceholder": "Desde acá gestionás tus ofertas y la verificación de tu empresa. Los candidatos llegan en el Bloque G y las postulaciones en el Bloque H del ROADMAP.",
   "adminHomeTitle": "Inicio — Administración",
   "adminHomePlaceholder": "El panel de moderación y administración llega en el Bloque P del ROADMAP. Tu cuenta tiene rol de administración, así que no te llevamos a un shell de candidato ni de empresa.",
   "signedInAs": "Sesión iniciada como {email}",
@@ -521,6 +521,10 @@
   "@dataFailureAmbiguousCompany": {
     "description": "TFMUL (0031): la cuenta integra más de una empresa y la lectura falla cerrada en vez de elegir una"
   },
+  "dataFailureJobStateConflict": "La oferta cambió de estado mientras la tenías abierta. Ya te mostramos cómo quedó: revisala y volvé a intentarlo.",
+  "@dataFailureJobStateConflict": {
+    "description": "TFJOB (0032): transición de estado de oferta no permitida (otra persona del equipo la cambió, venció o fue descartada). Solo lo muestran Mis ofertas y el formulario de oferta, que ya recargan la oferta solos: por eso no pide actualizar"
+  },
   "companyVerifiedBadgeLabel": "Empresa verificada",
   "@companyVerifiedBadgeLabel": {
     "description": "Texto del distintivo de empresa verificada (T-029)"
@@ -611,5 +615,435 @@
   "adminVerificationsDocumentTitle": "Constancia de ARCA",
   "adminVerificationsDocumentHelp": "Copiá este enlace y abrilo en el navegador. Vence en 5 minutos: si expira, volvé a pedirlo desde acá.",
   "adminVerificationsDocumentError": "No pudimos generar el enlace a la constancia. Reintentá en unos minutos.",
-  "adminVerificationsDocumentClose": "Cerrar"
+  "adminVerificationsDocumentClose": "Cerrar",
+  "jobsCompanyTitle": "Mis ofertas",
+  "@jobsCompanyTitle": {
+    "description": "Título de la lista de ofertas de la empresa (T-030) y del acceso desde su inicio"
+  },
+  "jobsFeedTitle": "Ofertas de trabajo",
+  "@jobsFeedTitle": {
+    "description": "Título del feed de ofertas del candidato (T-030) y del acceso desde su inicio"
+  },
+  "jobsNewOffer": "Nueva oferta",
+  "jobsEmptyTitle": "Todavía no creaste ofertas",
+  "jobsEmptyBody": "Cuando crees una, la vas a ver acá con su estado.",
+  "jobsEmptyReadOnlyBody": "Cuando tu empresa cree ofertas, las vas a ver acá.",
+  "jobsEmptyAction": "Crear mi primera oferta",
+  "jobsLoadErrorTitle": "No pudimos cargar tus ofertas",
+  "jobsListStale": "La lista no se actualizó y puede no estar al día: tocá \"Actualizar\" arriba para reintentar.",
+  "@jobsListStale": {
+    "description": "Aviso de Mis ofertas cuando falla una recarga con la lista ya cargada. Si la recarga la pidió la persona (botón Actualizar), va en un SnackBar sin acción; si fue automática (tras una acción, un guardado del formulario o al volver a la pantalla), solo se anuncia al lector de pantalla, para no tapar el resultado que está a la vista. Se reintenta con el botón Actualizar de la barra superior"
+  },
+  "jobsCompanyRefresh": "Actualizar",
+  "@jobsCompanyRefresh": {
+    "description": "Rótulo (tooltip) del botón de la barra de Mis ofertas que vuelve a pedir la lista; siempre disponible"
+  },
+  "jobsCompanyRefreshStale": "Actualizar: la lista puede no estar al día",
+  "@jobsCompanyRefreshStale": {
+    "description": "Rótulo del botón Actualizar de Mis ofertas cuando la última recarga falló con la lista ya cargada (el ícono pasa a uno de advertencia)"
+  },
+  "jobsCompanyRefreshing": "Actualizando tus ofertas",
+  "@jobsCompanyRefreshing": {
+    "description": "Rótulo del botón Actualizar de Mis ofertas mientras la recarga está en vuelo"
+  },
+  "jobsErrorTitle": "No pudimos completar la acción",
+  "jobsUnverifiedBanner": "Tu empresa todavía no está verificada. Podés preparar ofertas y guardarlas como borrador; vas a poder publicarlas cuando la verifiquemos.",
+  "jobsGoToVerification": "Ir a la verificación",
+  "jobsReadOnlyBanner": "Tu rol en la empresa te deja ver las ofertas, pero no crearlas ni modificarlas. Si lo necesitás, pedíselo a quien administra la cuenta de la empresa.",
+  "@jobsReadOnlyBanner": {
+    "description": "Rol viewer (D3 de T-030): ve las ofertas de su empresa pero no las escribe"
+  },
+  "jobsPermissionsError": "No pudimos comprobar si tu cuenta puede gestionar ofertas, así que por ahora no te mostramos esas acciones.",
+  "jobsFailureNotAllowed": "Tu cuenta no puede hacer esta acción. Para publicar, tu empresa tiene que estar verificada y tu rol tiene que permitir gestionar ofertas.",
+  "jobsFailureInvalidData": "No pudimos guardar: hay datos que no cumplen las reglas de la oferta. Revisá los campos y probá de nuevo.",
+  "jobsFailurePublishRules": "Para publicarla, el sueldo mínimo tiene que ser mayor que 0, el vencimiento tiene que estar dentro de los próximos 60 días y, si la localidad tiene barrios, hay que elegir uno. Editala para corregirlo.",
+  "jobsPublishNeedsVerification": "Para publicar, tu empresa tiene que estar verificada.",
+  "jobStatusDraft": "Borrador",
+  "jobStatusActive": "Activa",
+  "jobStatusPaused": "Pausada",
+  "jobStatusExpired": "Vencida",
+  "jobStatusClosed": "Cerrada",
+  "jobStatusUnknown": "Estado desconocido",
+  "jobStatusSemantics": "Estado: {status}",
+  "@jobStatusSemantics": {
+    "description": "Etiqueta para el lector de pantalla del estado de una oferta: el estado nunca se comunica solo con color",
+    "placeholders": {
+      "status": {
+        "type": "String",
+        "example": "Activa"
+      }
+    }
+  },
+  "jobExpiresOn": "Vence el {date}",
+  "@jobExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "9 de noviembre de 2026"
+      }
+    }
+  },
+  "jobExpiredOn": "Venció el {date}: ya no se muestra a los candidatos.",
+  "@jobExpiredOn": {
+    "description": "Oferta todavía activa cuyo vencimiento ya pasó (el cron de T-033 todavía no la marcó vencida)",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "9 de noviembre de 2026"
+      }
+    }
+  },
+  "jobExpiredOnShort": "Venció el {date}",
+  "@jobExpiredOnShort": {
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "9 de noviembre de 2026"
+      }
+    }
+  },
+  "jobPlaceUnavailable": "No pudimos cargar el nombre de la ubicación.",
+  "jobPublishBlockedUnverified": "Vas a poder publicar cuando verifiquemos tu empresa. Mientras tanto, guardá la oferta como borrador.",
+  "jobActionEdit": "Editar",
+  "jobActionPublish": "Publicar",
+  "jobActionPause": "Pausar",
+  "jobActionResume": "Reanudar",
+  "jobActionClose": "Cerrar",
+  "jobActionDiscard": "Descartar borrador",
+  "jobActionDuplicate": "Duplicar",
+  "jobActionSemantics": "{action}: {title}",
+  "@jobActionSemantics": {
+    "description": "Etiqueta accesible de cada acción de la lista, para que el lector diga sobre qué oferta actúa",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "Pausar"
+      },
+      "title": {
+        "type": "String",
+        "example": "Mozo/a de salón"
+      }
+    }
+  },
+  "jobDialogCancel": "Cancelar",
+  "jobCloseDialogTitle": "¿Cerrar la oferta?",
+  "jobCloseDialogBody": "La oferta deja de verse para los candidatos y no se puede volver a abrir. Si más adelante necesitás publicarla de nuevo, podés duplicarla.",
+  "jobCloseDialogConfirm": "Cerrar oferta",
+  "jobDiscardDialogTitle": "¿Descartar el borrador?",
+  "jobDiscardDialogBody": "El borrador se quita de tu lista y no se puede recuperar.",
+  "jobDiscardDialogConfirm": "Descartar",
+  "jobOutcomePublished": "Oferta publicada.",
+  "jobOutcomePaused": "Oferta pausada: los candidatos ya no la ven.",
+  "jobOutcomeResumed": "Oferta reanudada.",
+  "jobOutcomeClosed": "Oferta cerrada.",
+  "jobOutcomeDiscarded": "Borrador descartado.",
+  "jobOutcomeDraftSaved": "Borrador guardado.",
+  "jobOutcomeChangesSaved": "Cambios guardados.",
+  "jobFormNewTitle": "Nueva oferta",
+  "jobFormEditTitle": "Editar oferta",
+  "jobFormIntro": "Todos los campos son obligatorios salvo los que dicen \"opcional\", también para guardar un borrador. Para publicar, además, el sueldo mínimo tiene que ser mayor que 0, el vencimiento tiene que estar dentro de los próximos 60 días y, si la localidad tiene barrios, hay que elegir uno.",
+  "jobFormDuplicateNote": "Copiamos el contenido de \"{title}\". Elegí una fecha de vencimiento nueva antes de guardar.",
+  "@jobFormDuplicateNote": {
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Mozo/a de salón"
+      }
+    }
+  },
+  "jobFormErrorsTitle": "Revisá los campos marcados",
+  "jobFormErrorsBody": "Hay datos que faltan o que no son válidos. Cada campo explica qué corregir.",
+  "jobSectionPosition": "Puesto y descripción",
+  "jobSectionSalary": "Sueldo",
+  "jobSectionContract": "Contrato y jornada",
+  "jobSectionSchedule": "Días y horario",
+  "jobSectionWorkMode": "Modalidad",
+  "jobSectionLocation": "Ubicación",
+  "jobSectionSector": "Sector",
+  "jobSectionExperience": "Experiencia",
+  "jobSectionAvailability": "Disponibilidad",
+  "jobSectionBenefits": "Beneficios",
+  "jobSectionVacancies": "Vacantes",
+  "jobSectionExpiry": "Vencimiento",
+  "jobSectionDescription": "Descripción y requisitos",
+  "jobSectionMore": "Más datos",
+  "jobTitleLabel": "Puesto",
+  "jobTitleHint": "Por ejemplo: Mozo/a de salón",
+  "jobDescriptionLabel": "Descripción y requisitos",
+  "jobDescriptionHelp": "Contá las tareas y todo lo que pedís para el puesto: experiencia, conocimientos, documentación u otros requisitos.",
+  "jobSalaryMinLabel": "Sueldo mínimo",
+  "jobSalaryMaxLabel": "Sueldo máximo",
+  "jobSalaryHelp": "En pesos argentinos y sin centavos. Para un sueldo fijo, poné el mismo monto en los dos campos. El sueldo siempre se muestra en la oferta.",
+  "jobSalaryPeriodLabel": "Período del sueldo",
+  "jobSalaryPeriodMonthly": "Mensual",
+  "jobSalaryPeriodYearly": "Anual",
+  "jobSalaryPeriodHourly": "Por hora",
+  "jobSalaryPerMonth": "por mes",
+  "jobSalaryPerYear": "por año",
+  "jobSalaryPerHour": "por hora",
+  "jobSalaryRange": "ARS {min} a {max}",
+  "@jobSalaryRange": {
+    "placeholders": {
+      "min": {
+        "type": "String",
+        "example": "900.000"
+      },
+      "max": {
+        "type": "String",
+        "example": "1.100.000"
+      }
+    }
+  },
+  "jobSalarySingle": "ARS {amount}",
+  "@jobSalarySingle": {
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "900.000"
+      }
+    }
+  },
+  "jobSalaryWithPeriod": "{amount} {period}",
+  "@jobSalaryWithPeriod": {
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "ARS 900.000 a 1.100.000"
+      },
+      "period": {
+        "type": "String",
+        "example": "por mes"
+      }
+    }
+  },
+  "jobContractTypeLabel": "Modalidad de contratación",
+  "jobContractRelacionDependencia": "Relación de dependencia",
+  "jobContractMonotributo": "Monotributo",
+  "jobContractPlazoFijo": "Plazo fijo",
+  "jobContractTemporal": "Temporal",
+  "jobContractPasantia": "Pasantía",
+  "jobContractFreelance": "Freelance",
+  "jobJornadaLabel": "Jornada",
+  "jobJornadaFullTime": "Jornada completa",
+  "jobJornadaPartTime": "Jornada parcial",
+  "jobJornadaPorTurnos": "Por turnos",
+  "jobJornadaFinDeSemana": "Fines de semana",
+  "jobJornadaPorHoras": "Por horas",
+  "jobScheduleDaysLabel": "Días de trabajo",
+  "jobScheduleDetailLabel": "Horario",
+  "jobScheduleDetailHint": "Por ejemplo: 9 a 18 hs, viernes hasta las 15",
+  "jobWorkModeLabel": "Modalidad de trabajo",
+  "jobNeighborhoodHelp": "Obligatorio para publicar en esta localidad.",
+  "jobSectorLabel": "Sector o rubro (opcional)",
+  "jobSectorNone": "Sin especificar",
+  "jobSectorUnavailable": "El sector que tenía la oferta ya no está disponible. Elegí otro o dejalo sin especificar.",
+  "@jobSectorUnavailable": {
+    "description": "La oferta (editada o duplicada) tenía un sector que ya no está activo: el formulario lo quita para que lo que se ve sea lo que se guarda"
+  },
+  "jobExperienceLabel": "Experiencia requerida",
+  "jobAvailabilityLabel": "Disponibilidad requerida",
+  "jobBenefitAddLabel": "Agregar beneficio",
+  "jobBenefitsHelp": "Opcional. Hasta {maxItems} beneficios de hasta {maxLength} caracteres cada uno; por ejemplo, comida incluida o propinas.",
+  "@jobBenefitsHelp": {
+    "placeholders": {
+      "maxItems": {
+        "type": "int",
+        "example": "15"
+      },
+      "maxLength": {
+        "type": "int",
+        "example": "60"
+      }
+    }
+  },
+  "jobBenefitsCount": "{count} de {max} beneficios",
+  "@jobBenefitsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      },
+      "max": {
+        "type": "int",
+        "example": "15"
+      }
+    }
+  },
+  "jobBenefitsNone": "No se informaron beneficios.",
+  "jobVacanciesLabel": "Cantidad de vacantes",
+  "jobVacanciesHelp": "Entre {min} y {max}.",
+  "@jobVacanciesHelp": {
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "1"
+      },
+      "max": {
+        "type": "int",
+        "example": "100"
+      }
+    }
+  },
+  "jobVacanciesValue": "{count, plural, =1{1 vacante} other{{count} vacantes}}",
+  "@jobVacanciesValue": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "jobExpiryLabel": "Fecha de vencimiento",
+  "jobExpiryHint": "Elegí una fecha",
+  "jobExpiryHelp": "Para publicar, hasta {days} días desde hoy. Ese día la oferta deja de mostrarse.",
+  "@jobExpiryHelp": {
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "60"
+      }
+    }
+  },
+  "jobExpiryPick": "Elegir la fecha de vencimiento",
+  "jobSaveDraft": "Guardar borrador",
+  "jobPublish": "Publicar",
+  "jobSaveChanges": "Guardar cambios",
+  "jobPreview": "Vista previa",
+  "jobPreviewNote": "Así va a ver la oferta un candidato.",
+  "jobPreviewCompanyName": "Tu empresa",
+  "@jobPreviewCompanyName": {
+    "description": "Nombre provisorio de la empresa en la vista previa de una oferta nueva, solo si no se pudo leer el nombre real de la empresa (company_profiles)"
+  },
+  "jobEditActiveNeedsVerification": "Para modificar una oferta publicada, tu empresa tiene que estar verificada. Desde Mis ofertas podés pausarla o cerrarla.",
+  "jobLeaveTitle": "¿Salir sin guardar?",
+  "jobLeaveBody": "Tenés cambios sin guardar en la oferta. Si salís ahora, se pierden.",
+  "jobLeaveConfirm": "Salir sin guardar",
+  "jobLeaveCancel": "Seguir editando",
+  "jobNotFoundTitle": "No encontramos esa oferta",
+  "jobNotFoundBody": "Puede haber sido descartada o el enlace ya no es válido.",
+  "jobLoadError": "No pudimos cargar la oferta. Revisá tu conexión y reintentá.",
+  "jobBackToList": "Volver a Mis ofertas",
+  "jobNotEditableTitle": "Esta oferta ya no se puede editar",
+  "jobNotEditableBody": "Una oferta vencida o cerrada queda como historial. Si querés volver a publicarla, duplicala y elegí una fecha nueva.",
+  "jobErrorTextEmpty": "Completá este campo.",
+  "jobErrorTextTooLong": "Admite hasta {max} caracteres.",
+  "@jobErrorTextTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int",
+        "example": "120"
+      }
+    }
+  },
+  "jobErrorDaysEmpty": "Elegí al menos un día.",
+  "jobErrorDaysDuplicated": "Hay días repetidos.",
+  "jobErrorSalaryMissing": "Ingresá el monto.",
+  "jobErrorSalaryFormat": "Ingresá solo números, en pesos y sin centavos (por ejemplo, 350000 o 350.000).",
+  "jobErrorSalaryNegative": "El monto no puede ser negativo.",
+  "jobErrorSalaryTooHigh": "El monto no puede superar {max}.",
+  "@jobErrorSalaryTooHigh": {
+    "placeholders": {
+      "max": {
+        "type": "String",
+        "example": "999.999.999"
+      }
+    }
+  },
+  "jobErrorSalaryNotPositive": "Para publicar, el sueldo mínimo tiene que ser mayor que 0.",
+  "jobErrorSalaryBelowMin": "El máximo no puede ser menor que el mínimo.",
+  "jobErrorBenefitEmpty": "Escribí el beneficio antes de agregarlo.",
+  "jobErrorBenefitTooLong": "Cada beneficio admite hasta {max} caracteres.",
+  "@jobErrorBenefitTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int",
+        "example": "60"
+      }
+    }
+  },
+  "jobErrorBenefitDuplicated": "Ese beneficio ya está en la lista.",
+  "jobErrorBenefitTooMany": "Podés cargar hasta {max} beneficios.",
+  "@jobErrorBenefitTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "int",
+        "example": "15"
+      }
+    }
+  },
+  "jobErrorVacanciesMissing": "Ingresá la cantidad de vacantes.",
+  "jobErrorVacanciesOutOfRange": "Tiene que ser un número entero entre {min} y {max}.",
+  "@jobErrorVacanciesOutOfRange": {
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "1"
+      },
+      "max": {
+        "type": "int",
+        "example": "100"
+      }
+    }
+  },
+  "jobErrorExpiryMissing": "Elegí la fecha de vencimiento.",
+  "jobErrorExpiryNotInFuture": "Para publicar, el vencimiento tiene que ser posterior a hoy.",
+  "jobErrorExpiryBeyondWindow": "Para publicar, el vencimiento puede estar como máximo a {days} días de hoy.",
+  "@jobErrorExpiryBeyondWindow": {
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "60"
+      }
+    }
+  },
+  "jobErrorNeighborhoodRequired": "Elegí el barrio: es obligatorio para publicar en esta localidad.",
+  "jobValueMissing": "Sin completar",
+  "jobCompanyUnknown": "Empresa sin nombre disponible",
+  "jobsFeedEmpty": "Todavía no hay ofertas publicadas.",
+  "jobsFeedEmptyHint": "Volvé a mirar en un rato: las ofertas nuevas aparecen primero.",
+  "jobsFeedRefresh": "Actualizar",
+  "jobsFeedRefreshing": "Actualizando ofertas",
+  "@jobsFeedRefreshing": {
+    "description": "Rótulo del botón Actualizar del feed mientras la recarga está en vuelo"
+  },
+  "jobsFeedRefreshFailed": "Las ofertas no se actualizaron. {motivo}",
+  "@jobsFeedRefreshFailed": {
+    "description": "SnackBar del feed cuando falla una recarga (botón Actualizar o deslizar) y se siguen viendo las ofertas de antes",
+    "placeholders": {
+      "motivo": {
+        "type": "String",
+        "example": "No pudimos conectarnos. Revisá tu conexión y reintentá."
+      }
+    }
+  },
+  "jobsFeedUpToDate": "Las ofertas ya están al día.",
+  "@jobsFeedUpToDate": {
+    "description": "SnackBar corto del feed cuando una recarga sale bien después de una que había fallado: reemplaza el aviso del fallo, que ya no es cierto"
+  },
+  "jobsFeedLoadErrorTitle": "No pudimos cargar las ofertas",
+  "jobsFeedLoadMore": "Cargar más ofertas",
+  "jobsFeedLoadingMore": "Cargando más ofertas",
+  "jobsFeedEnd": "No hay más ofertas por ahora.",
+  "jobsFeedCount": "{count, plural, =1{Mostrando 1 oferta} other{Mostrando {count} ofertas}}",
+  "@jobsFeedCount": {
+    "description": "Cantidad de ofertas cargadas, anunciada por el lector al cambiar (UX_FLOWS §20)",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "20"
+      }
+    }
+  },
+  "jobCardOpenHint": "ver el detalle de la oferta",
+  "@jobCardOpenHint": {
+    "description": "Pista del lector de pantalla para la acción de tocar una tarjeta de oferta"
+  },
+  "jobDetailTitle": "Detalle de la oferta",
+  "jobNotAvailableTitle": "Esta oferta no está disponible",
+  "jobNotAvailableBody": "Puede haber vencido, estar pausada o el enlace ya no es válido.",
+  "jobBackToFeed": "Volver a las ofertas",
+  "jobApplyComingSoon": "Todavía no podés postularte desde la app: esa función llega en una próxima etapa.",
+  "@jobApplyComingSoon": {
+    "description": "Aviso honesto en el detalle de la oferta: no hay botón Postularme hasta T-040"
+  }
 }

@@ -2,7 +2,7 @@
 
 Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
 
-- `migrations/` — 31 migraciones SQL versionadas (0001–0031), generadas desde
+- `migrations/` — 32 migraciones SQL versionadas (0001–0032), generadas desde
   `docs/DATA_MODEL.md` (fuente de verdad). Regla: ningún cambio de esquema por
   dashboard; siempre migración versionada (T-005). La `0019` (Bloque B, T-015)
   sincroniza `profiles.role` con el claim `app_metadata.role` del JWT. Las del
@@ -40,7 +40,16 @@ Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
   por invitación, bootstrap u onboarding —sin policy y sin privilegio de
   `INSERT`—, las tres puertas serializadas sobre `profiles` con
   `private.lock_membership_slot`, y `company_can_publish` conectada a las
-  policies de `jobs` y a la rama de video de `videos_company_select`).
+  policies de `jobs` y a la rama de video de `videos_company_select`). La del
+  Bloque F: `0032` (CRUD de ofertas, T-030, con las decisiones del fundador del
+  2026-10-10: escriben solo `owner`/`admin`/`recruiter` vía
+  `can_write_company_jobs`; máquina de estados para el cliente con el SQLSTATE
+  nuevo `TFJOB` y `published_at`/`closed_at` derivados por el servidor;
+  validación de contenido en todos los contextos con los requisitos para
+  publicar —sueldo mayor a cero, vencimiento a 60 días como máximo y barrio si
+  la localidad tiene barrios—; `video_id` limitado a un pitch de la empresa;
+  descarte lógico de borradores con `discard_job_draft`; y fin de
+  `protect_job_update`, de 0018).
 - `functions/` — Edge Functions (catálogo en ARCHITECTURE.md §3.4). Existe
   `avatar/` (Bloque D, T-022): valida JWT + rol candidato y magic bytes,
   re-encodea la imagen sin EXIF, genera el thumbnail 128×128 y escribe el
@@ -53,7 +62,9 @@ Estructura (ARCHITECTURE.md §3, DATA_MODEL.md §8):
   endurecimiento de los helpers RLS del Bloque D (`013`), dígito verificador
   del CUIT con casos reales (`014`), empresa y equipo (`015`), invitaciones de
   un solo uso (`016`), verificación manual con su guarda de segundo factor
-  (`017`) y puerta de publicación de ofertas (`018`). Ojo:
+  (`017`), puerta de publicación de ofertas (`018`) y ciclo de vida de la
+  oferta: roles, transiciones, columnas derivadas, descarte, contenido y
+  requisitos para publicar (`019`). Ojo:
   `001_rls_test.sql` fue endurecido en el Bloque D — el test "empresa
   verificada ve perfil publicado" se **invirtió** deliberadamente a "la
   empresa ya no lee la fila cruda" (T-024).

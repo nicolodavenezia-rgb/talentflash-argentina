@@ -44,6 +44,16 @@ select 'geo_prov',
 union all
 select 'geo_loc',
        (select l.id from public.geo_localidades l order by l.id limit 1)
+-- Un barrio de ESA localidad. La primera por id es CABA, que tiene barrios
+-- cargados, y desde 0032 (D2) una oferta `active` en una localidad con barrios
+-- necesita el suyo: sin esto, las inserciones `active` de abajo morirían con
+-- TFDAT en el validador antes de llegar a la puerta de publicación que este
+-- archivo prueba, y los negativos pasarían por el motivo equivocado.
+union all
+select 'geo_barrio',
+       (select b.id from public.geo_barrios b
+        where b.localidad_id = (select l.id from public.geo_localidades l order by l.id limit 1)
+        order by b.id limit 1)
 on conflict (identifier) do update set id = excluded.id;
 
 -- `p_staff_otra` integra company_ok como recruiter: es la cuenta que prueba
@@ -65,13 +75,13 @@ language sql immutable as $$
       company_id, created_by, title, description,
       salary_min, salary_max, contract_type, jornada,
       schedule_days, schedule_detail, work_mode,
-      provincia_id, localidad_id, experience, availability,
+      provincia_id, localidad_id, barrio_id, experience, availability,
       expires_at, status)
     values (
       tests.get_uuid(%L), %s, 'Oferta de prueba', 'Descripción de prueba',
       100000, 200000, 'relacion_dependencia', 'full_time',
       array['lun','mar','mie','jue','vie'], '9 a 18 hs', 'presencial',
-      tests.get_uuid('geo_prov'), tests.get_uuid('geo_loc'),
+      tests.get_uuid('geo_prov'), tests.get_uuid('geo_loc'), tests.get_uuid('geo_barrio'),
       'sin_experiencia', 'inmediata',
       now() + interval '30 days', %L::public.job_status)
   $f$, p_company_key, p_created_by_expr, p_status);
@@ -198,6 +208,20 @@ update public.company_profiles
 -- C. Empresa `approved`: sí publica
 -- ===========================================================================
 
+-- `job_draft` es una oferta del seed que 000_setup pasó a borrador, y conserva
+-- el `expires_at` que le dio el seed: `now() + 30 días` al momento de sembrar.
+-- Desde 0032 (D1) publicar exige un vencimiento futuro y a no más de 60 días,
+-- así que en una base local sembrada hace más de 30 días el POSITIVO de abajo
+-- moriría con TFDAT por la edad del seed, no por la puerta de publicación que
+-- prueba este archivo. Se renueva como backend: `protect_job_lifecycle` mira
+-- `current_user` y deja pasar; `protect_job_write` mira el JWT (los claims
+-- siguen puestos después de `reset role`), pero solo objeta cambios de
+-- company_id, created_by o created_at; y el validador no pide nada de D1 a un
+-- borrador.
+reset role;
+update public.jobs set expires_at = now() + interval '30 days'
+where id = tests.get_uuid('job_draft');
+
 select tests.authenticate_as('user_empresa_ok');
 
 select lives_ok(
@@ -307,11 +331,20 @@ select throws_ok(
 
 -- El video pitch de la oferta, para probar la rama de `videos_company_select`
 -- que lo hacía visible a todos por estar la oferta `active`.
+--
+-- Es un `job_pitch` del owner de company_ok, creado acá. Antes se tomaba el
+-- primer video `ready` del seed, que es la PRESENTACIÓN de un candidato: colgar
+-- ese video de una oferta es justamente la fuga que 0032 cierra, y desde
+-- entonces `validate_job_content` lo rechaza también como backend. Las
+-- aserciones de esta sección no cambian: siguen probando la misma rama.
 reset role;
+with pitch as (
+  insert into public.videos (owner_profile_id, purpose, status, duration_seconds)
+  values (tests.get_uuid('user_empresa_ok'), 'job_pitch', 'ready', 30)
+  returning id
+)
 insert into tests.identifiers (identifier, id)
-select 'video_pitch', v.id from public.videos v
-where v.status = 'ready' and v.deleted_at is null
-order by v.id limit 1
+select 'video_pitch', pitch.id from pitch
 on conflict (identifier) do update set id = excluded.id;
 
 update public.jobs set video_id = tests.get_uuid('video_pitch')

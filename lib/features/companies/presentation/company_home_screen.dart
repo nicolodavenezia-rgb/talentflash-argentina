@@ -10,7 +10,8 @@ import 'widgets/verified_company_badge.dart';
 
 /// Shell de la empresa. Ruta privada: solo la alcanza una sesión con rol
 /// `company` (el guard es UX; la autorización real es RLS).
-/// El panel de ofertas y candidatos llega en el Bloque G del ROADMAP.
+/// Los candidatos llegan en el Bloque G y las postulaciones en el Bloque H del
+/// ROADMAP.
 class CompanyHomeScreen extends ConsumerWidget {
   const CompanyHomeScreen({super.key});
 
@@ -27,6 +28,13 @@ class CompanyHomeScreen extends ConsumerWidget {
       children: [
         VerifiedCompanyBadge(status: status),
         const SizedBox(height: 16),
+        // Ofertas de la empresa (T-030).
+        FilledButton.icon(
+          onPressed: () => context.goNamed(AppRoute.companyJobs.name),
+          icon: const Icon(Icons.work_outline),
+          label: Text(l10n.jobsCompanyTitle),
+        ),
+        const SizedBox(height: 12),
         // Entrada al circuito de verificación (T-028).
         FilledButton.icon(
           onPressed: () => context.goNamed(AppRoute.companyVerification.name),

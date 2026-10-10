@@ -3,8 +3,8 @@ import '../../features/authentication/domain/business_role.dart';
 /// Catálogo único de rutas: nombre (el propio `name` del enum) y path.
 ///
 /// Se navega **siempre por nombre**; los paths siguen la nomenclatura en
-/// español de `UX_FLOWS.md` §1.1. Las sub-rutas de cada shell (`/candidato/feed`,
-/// `/empresa/ofertas`, …) llegan con sus bloques del ROADMAP.
+/// español de `UX_FLOWS.md` §1.1. Las sub-rutas de cada shell llegan con sus
+/// bloques del ROADMAP (las de ofertas, con T-030).
 enum AppRoute {
   /// Splash de restauración de sesión: se muestra mientras no se sabe si hay
   /// sesión, para no parpadear contenido privado ni el login equivocado.
@@ -29,6 +29,12 @@ enum AppRoute {
   candidateProfile('/candidato/perfil', BusinessRole.candidate),
   candidateProfileEdit('/candidato/perfil/editar', BusinessRole.candidate),
 
+  /// Ofertas publicadas para el candidato (T-030): lista con paginación
+  /// keyset y detalle por id. Qué oferta es visible lo decide RLS (activa,
+  /// no descartada, de empresa verificada); el rol acá es solo UX.
+  candidateFeed('/candidato/feed', BusinessRole.candidate),
+  candidateJobDetail('/candidato/ofertas/:id', BusinessRole.candidate),
+
   /// Vista limitada de un candidato para la empresa (T-024). El `:id` es el
   /// candidate_profile_id; la autorización real la decide el servidor
   /// (proyección fail-closed), el rol acá es solo UX.
@@ -36,6 +42,13 @@ enum AppRoute {
 
   /// Verificación de la empresa: constancia de ARCA y estado (T-028).
   companyVerification('/empresa/verificacion', BusinessRole.company),
+
+  /// Ofertas de la empresa (T-030): lista, alta y edición. Quién escribe y
+  /// quién publica lo deciden las policies de `jobs` (0032: owner, admin o
+  /// recruiter; publicar exige empresa verificada).
+  companyJobs('/empresa/ofertas', BusinessRole.company),
+  companyJobNew('/empresa/ofertas/nueva', BusinessRole.company),
+  companyJobEdit('/empresa/ofertas/:id/editar', BusinessRole.company),
 
   /// Wizards de onboarding (Bloque C). Mientras el onboarding no está
   /// completo, el guard 4 (UX_FLOWS.md §1.5) convierte estas rutas en la
@@ -174,4 +187,12 @@ abstract final class AuthQueryParams {
 
   static const candidateHint = 'candidato';
   static const companyHint = 'empresa';
+}
+
+/// Query params de las rutas de ofertas (T-030).
+abstract final class JobQueryParams {
+  /// `/empresa/ofertas/nueva?duplicar=<id>`: el alta arranca con el contenido
+  /// de esa oferta (acción "Duplicar"). Viaja en la URL y no en memoria para
+  /// que el formulario se pueda recargar sin perder de qué oferta sale.
+  static const duplicateOf = 'duplicar';
 }

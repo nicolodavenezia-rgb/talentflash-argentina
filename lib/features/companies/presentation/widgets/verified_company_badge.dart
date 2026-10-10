@@ -33,9 +33,16 @@ class VerifiedCompanyBadge extends StatelessWidget {
   /// En modo compacto se dibuja más chico, para listas y tarjetas.
   final bool compact;
 
+  /// La regla del distintivo, en un solo lugar: ¿corresponde para [status]?
+  /// La usan también las tarjetas que arman su propia etiqueta accesible
+  /// (la de oferta, T-030) para no anunciar "verificada" con un criterio
+  /// distinto del que dibuja el chip.
+  static bool appliesTo(CompanyVerificationStatus? status) =>
+      status == CompanyVerificationStatus.approved;
+
   @override
   Widget build(BuildContext context) {
-    if (status != CompanyVerificationStatus.approved) {
+    if (!appliesTo(status)) {
       return const SizedBox.shrink();
     }
     final l10n = AppLocalizations.of(context);

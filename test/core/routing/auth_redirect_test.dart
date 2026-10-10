@@ -332,8 +332,13 @@ void main() {
         AppRoute.companyHome,
         AppRoute.candidateProfile,
         AppRoute.candidateProfileEdit,
+        AppRoute.candidateFeed,
+        AppRoute.candidateJobDetail,
         AppRoute.companyCandidateDetail,
         AppRoute.companyVerification,
+        AppRoute.companyJobs,
+        AppRoute.companyJobNew,
+        AppRoute.companyJobEdit,
         AppRoute.candidateOnboarding,
         AppRoute.companyOnboarding,
         AppRoute.candidateReconsent,
@@ -402,6 +407,94 @@ void main() {
       expect(
         redirect(company, detail, onboarding: onboardingReconsent),
         '/empresa/consentimientos',
+      );
+    });
+  });
+
+  group('rutas de ofertas (T-030)', () {
+    final candidate = signedInAs(BusinessRole.candidate);
+    final company = signedInAs(BusinessRole.company);
+    final admin = signedInAs(BusinessRole.admin);
+    const jobId = '95000000-0000-4000-8000-000000000001';
+    const companyRoutes = [
+      '/empresa/ofertas',
+      '/empresa/ofertas/nueva',
+      '/empresa/ofertas/$jobId/editar',
+    ];
+    const candidateRoutes = ['/candidato/feed', '/candidato/ofertas/$jobId'];
+
+    test('los paths siguen UX_FLOWS §1.2/§1.3', () {
+      expect(AppRoute.companyJobs.path, '/empresa/ofertas');
+      expect(AppRoute.companyJobNew.path, '/empresa/ofertas/nueva');
+      expect(AppRoute.companyJobEdit.path, '/empresa/ofertas/:id/editar');
+      expect(AppRoute.candidateFeed.path, '/candidato/feed');
+      expect(AppRoute.candidateJobDetail.path, '/candidato/ofertas/:id');
+    });
+
+    test('la ruta literal de alta no cae en el patrón de edición', () {
+      expect(
+        AppRoute.forPath('/empresa/ofertas/nueva'),
+        AppRoute.companyJobNew,
+      );
+      expect(
+        AppRoute.forPath('/empresa/ofertas/$jobId/editar'),
+        AppRoute.companyJobEdit,
+      );
+      expect(
+        AppRoute.forPath('/candidato/ofertas/$jobId'),
+        AppRoute.candidateJobDetail,
+      );
+      // Sin el sufijo `/editar` no hay ruta de empresa para un id.
+      expect(AppRoute.forPath('/empresa/ofertas/$jobId'), isNull);
+    });
+
+    test('las de empresa exigen sesión de empresa', () {
+      for (final path in companyRoutes) {
+        expect(
+          redirect(const AuthStatusSignedOut(), path),
+          '/auth/login?destino=${Uri.encodeComponent(path)}',
+          reason: path,
+        );
+        expect(redirect(company, path), isNull, reason: path);
+        // Cruce de shells: el candidato vuelve a su propio inicio.
+        expect(redirect(candidate, path), '/candidato', reason: path);
+      }
+    });
+
+    test('las de candidato exigen sesión de candidato', () {
+      for (final path in candidateRoutes) {
+        expect(
+          redirect(const AuthStatusSignedOut(), path),
+          '/auth/login?destino=${Uri.encodeComponent(path)}',
+          reason: path,
+        );
+        expect(redirect(candidate, path), isNull, reason: path);
+        expect(redirect(company, path), '/empresa', reason: path);
+      }
+    });
+
+    test('admin no entra a los shells de ofertas: vuelve a su panel', () {
+      expect(redirect(admin, '/empresa/ofertas'), '/admin');
+      expect(redirect(admin, '/candidato/feed'), '/admin');
+    });
+
+    test('el alta duplicando conserva su query param en el login', () {
+      const path = '/empresa/ofertas/nueva?duplicar=$jobId';
+      expect(redirect(company, path), isNull);
+      expect(
+        redirect(const AuthStatusSignedOut(), path),
+        '/auth/login?destino=${Uri.encodeComponent(path)}',
+      );
+    });
+
+    test('con onboarding pendiente, las ofertas también mandan al wizard', () {
+      expect(
+        redirect(company, '/empresa/ofertas', onboarding: onboardingPending),
+        '/empresa/onboarding',
+      );
+      expect(
+        redirect(candidate, '/candidato/feed', onboarding: onboardingPending),
+        '/candidato/onboarding',
       );
     });
   });
