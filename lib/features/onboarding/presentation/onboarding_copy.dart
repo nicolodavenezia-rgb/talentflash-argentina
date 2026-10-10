@@ -21,6 +21,9 @@ abstract final class OnboardingCopy {
         DataFailureCode.secondFactorRequired => l10n.dataFailureSecondFactor,
         DataFailureCode.ambiguousCompany => l10n.dataFailureAmbiguousCompany,
         DataFailureCode.network => l10n.dataFailureNetwork,
+        // TFJOB solo sale de escrituras de ofertas: acá no puede llegar y, si
+        // llegara, el texto de ofertas ("ya te mostramos cómo quedó") mentiría.
+        DataFailureCode.jobStateConflict ||
         DataFailureCode.unknown => l10n.dataFailureUnknown,
       };
 

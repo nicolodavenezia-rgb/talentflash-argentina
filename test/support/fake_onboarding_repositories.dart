@@ -212,6 +212,12 @@ class FakeOnboardingRepository implements OnboardingRepository {
 /// Catálogos fijos para tests: dos provincias, localidades en cascada y
 /// barrios solo en CABA (para probar la regla de barrio obligatorio).
 class FakeCatalogRepository implements CatalogRepository {
+  /// [inactiveSectorIds] simula sectores desactivados: el catálogo real solo
+  /// devuelve los activos (`is_active = true`), así que no aparecen.
+  FakeCatalogRepository({this.inactiveSectorIds = const {}});
+
+  final Set<String> inactiveSectorIds;
+
   static const cabaProvinceId = 'prov-caba';
   static const baProvinceId = 'prov-ba';
   static const cabaLocalityId = 'loc-caba';
@@ -269,13 +275,17 @@ class FakeCatalogRepository implements CatalogRepository {
   Future<List<Sector>> fetchSectors() async {
     calls.add('fetchSectors');
     _throwIfProgrammed();
-    return const [
+    const sectors = [
       Sector(
         id: gastronomiaSectorId,
         code: 'gastronomia_hoteleria',
         name: 'Gastronomía y hotelería',
       ),
       Sector(id: comercioSectorId, code: 'comercio', name: 'Comercio'),
+    ];
+    return [
+      for (final sector in sectors)
+        if (!inactiveSectorIds.contains(sector.id)) sector,
     ];
   }
 

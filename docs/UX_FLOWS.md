@@ -66,6 +66,29 @@ estado honesto de la presentación) y `/candidato/perfil/editar` (formulario
 completo) están **implementadas**, con entrada "Mi perfil" desde el home del
 candidato. El resto de las sub-rutas llega con sus bloques.
 
+*Estado (Bloque F, T-030, 2026-10-10):* `/candidato/feed` y
+`/candidato/ofertas/:id` están **implementadas en versión mínima**, con
+entrada "Ofertas de trabajo" desde el home del candidato (la bottom navigation
+de 5 ítems todavía no existe). El feed es una lista de ofertas publicadas por
+recencia, con "Cargar más" (un botón, no scroll infinito: se alcanza con
+teclado y lector) y paginación keyset de 20. Se actualiza con el gesto de
+deslizar o con el botón "Actualizar" de la barra superior, que mientras
+recarga muestra un indicador de progreso con el rótulo "Actualizando ofertas"
+pero sigue habilitado, para no perder el foco del teclado; apretarlo de nuevo
+no hace nada. Si una recarga falla, lo avisa un SnackBar, esté donde esté la
+persona en la lista, y la primera recarga que sale bien después de un fallo
+avisa "Las ofertas ya están al día.". Si cargar la página siguiente falla, el
+error aparece al final de la lista, justo arriba del botón para reintentar (y
+lo anuncia el lector de pantalla), no al principio fuera de la vista. Mientras
+la lista se vuelve a construir, el pie muestra un indicador de progreso en vez
+de un "Cargar más" que no haría nada. Todavía no tiene la compatibilidad
+explicable, el ranking ni las acciones de guardar y postularse de §6.1 (T-035,
+T-083 y T-040). El detalle muestra la oferta completa, con el distintivo
+solo si la empresa está
+verificada y los beneficios como renglones que se cortan en varias líneas (no
+como chips), y, si la oferta no existe, no está activa o ya pasó su
+vencimiento, una única pantalla de "no disponible".
+
 ### 1.3 Shell empresa (`/empresa/...`) — bottom navigation de 5 ítems
 
 | Tab | Ruta | Pantalla raíz |
@@ -77,6 +100,17 @@ candidato. El resto de las sub-rutas llega con sus bloques.
 | Empresa | `/empresa/cuenta` | Perfil de empresa, verificación CUIT, plan y facturación, equipo |
 
 Sub-rutas destacadas: `/empresa/ofertas/nueva` (asistente IA, §5), `/empresa/ofertas/:id/editar`, `/empresa/candidatos/:id` (perfil de candidato — **implementada en el Bloque D**: renderiza solo la proyección limitada de §6.2), `/empresa/verificacion` (§3.2).
+
+*Estado (Bloque F, T-030, 2026-10-10):* `/empresa/ofertas`,
+`/empresa/ofertas/nueva` y `/empresa/ofertas/:id/editar` están
+**implementadas**, con entrada "Mis ofertas" desde el home de la empresa (la
+bottom navigation de 5 ítems todavía no existe). La lista muestra los cinco
+estados y ofrece solo las acciones que cada uno admite, con el resultado de
+cada una —también el fallo— en un SnackBar apenas termina; "Duplicar" abre
+`/empresa/ofertas/nueva?duplicar=<id>`. La barra superior tiene un botón
+"Actualizar" que nunca se deshabilita y que dice si está recargando o si la
+última recarga falló (detalle en §5.2). El alta es el "Formulario completo"
+de §5: el camino con asistente IA es T-060. Detalle en §5.
 
 ### 1.4 Shell admin (`/admin/...`) — solo Web, roles `M` y `A`
 
@@ -265,7 +299,84 @@ stateDiagram-v2
 
 ### 5.2 Campos obligatorios (SPEC §5 — sin excepciones)
 
-Sueldo o rango salarial (en ARS) · modalidad contractual · relación de dependencia o monotributo · jornada completa o parcial · días y horarios · presencial/híbrido/remoto · provincia · localidad · barrio (cuando aplique: obligatorio si localidad = CABA, **propuesta a validar**) · experiencia requerida · disponibilidad · beneficios · fecha de vencimiento.
+Sueldo o rango salarial (en ARS) · modalidad contractual · relación de dependencia o monotributo · jornada completa o parcial · días y horarios · presencial/híbrido/remoto · provincia · localidad · barrio (cuando aplique: obligatorio al publicar si la localidad tiene barrios cargados —con el catálogo actual equivale a CABA—; en borrador es opcional; **decisión del fundador del 2026-10-10**, D2) · experiencia requerida · disponibilidad · beneficios · fecha de vencimiento.
+
+*Estado (Bloque F, T-030, 2026-10-10):* implementado el camino **manual**
+(formulario completo, por secciones, con validación campo a campo y foco en el
+primer error) con **vista previa** armada con el mismo componente del detalle
+que ve el candidato y con el nombre real de la empresa (el de la oferta que se
+edita o se duplica y, en un alta nueva, el de la propia empresa; "Tu empresa"
+queda solo como reemplazo si esa lectura falla), `Guardar borrador` y
+`Publicar`. Después de publicar: editar, pausar, reanudar, cerrar y duplicar;
+un borrador además se puede descartar.
+
+- **Formulario:** la guía de la descripción y la de los beneficios van como
+  texto arriba de su campo, no como ayuda debajo; el botón `Agregar` queda
+  debajo del campo de beneficio, y cada beneficio agregado es un renglón que
+  se corta en varias líneas si hace falta, con su botón "Quitar", en vez de un
+  chip. Los desplegables crecen con el valor elegido (un nombre largo como
+  "Ciudad Autónoma de Buenos Aires" se parte en renglones en vez de cortarse)
+  y los errores y ayudas de cada campo se muestran enteros, hasta cinco
+  renglones. Los contadores y los topes de puesto, descripción y detalle de
+  horario —y el tope del beneficio, que no muestra contador— cuentan code
+  points, como `length()` de Postgres en el servidor, y no grafemas: un emoji
+  compuesto cuenta todo lo que mide, y el contador ya no muestra dentro del
+  límite un texto que el campo marca como demasiado largo. El tope nunca
+  borra texto que la persona ya tenía y no seleccionó: lo que se escribe o se
+  pega y no entra se recorta por grafemas enteros (un emoji nunca queda
+  partido), y con el teclado componiendo una palabra sigue la política de
+  cada plataforma, la misma del `maxLength` de Flutter (Android y Windows
+  recortan enseguida; iOS, macOS, Linux y Web, al terminar la composición).
+  Si el sector de la oferta (al editar o duplicar) ya no está activo, el
+  formulario lo quita y lo explica debajo del desplegable hasta que se elige
+  otra opción, para que lo que se ve sea lo que se guarda.
+- **Resultado de las acciones en "Mis ofertas":** éxito o fallo de publicar,
+  reanudar, pausar, cerrar o descartar aparece apenas termina la acción en un
+  SnackBar, que se ve aunque la oferta esté abajo en la lista; un fallo queda
+  8 segundos en pantalla. No espera a la recarga que sigue a la acción: la
+  tarjeta ya muestra el resultado que confirmó el servidor.
+- **"Actualizar" en "Mis ofertas":** el botón de la barra superior nunca se
+  deshabilita (así no pierde el foco del teclado) y tiene tres estados: el
+  normal, "Actualizar"; mientras recarga, un indicador de progreso con el
+  rótulo "Actualizando tus ofertas" (apretarlo de nuevo no hace nada); y,
+  después de una recarga que falló con la lista a la vista, un ícono de
+  advertencia con el rótulo "Actualizar: la lista puede no estar al día".
+- **Recargas que fallan en "Mis ofertas":** si falla una recarga automática
+  (la que sigue a una acción o a un guardado del formulario, o la que se
+  reintenta sola al volver a la pantalla), no aparece ningún aviso visual: se
+  anuncia al lector de pantalla y lo muestra el ícono de "Actualizar", así
+  nunca tapa otro mensaje, como el "Cambios guardados." del formulario. Si
+  falla una recarga que pidió la persona con "Actualizar", un SnackBar lo
+  avisa cada vez; una recarga posterior que sale bien lo saca y salir de la
+  pantalla lo cierra. Sin lista (falló la primera carga), lo dice un cartel en
+  el cuerpo con su "Reintentar". La lista de la empresa no usa el reintento
+  automático de Riverpod: un fallo se informa enseguida y reintentar queda en
+  manos de la persona. Nada se inserta arriba de la lista, así el contenido
+  no salta.
+
+Las reglas las impone el servidor (migración `0032`) y la app solo las
+refleja:
+
+- **Estados:** `borrador → activa → (pausada ⇄ activa) → cerrada`, y
+  `vencida` solo la pone el sistema; una vencida solo se puede cerrar y una
+  cerrada ya no cambia.
+- **Vencimiento (decisión del fundador del 2026-10-10, D1):** al publicar, la
+  fecha tiene que ser futura y estar **a 60 días como máximo**. El selector de
+  la app abre en +30 días y no deja elegir fuera de ese rango. Mientras no
+  exista el vencimiento automático (T-033), una oferta con la fecha pasada
+  sigue activa en la base, la app la saca del feed y la lista de la empresa lo
+  advierte.
+- **Quién la gestiona (decisión del fundador del 2026-10-10, D3):** crean,
+  editan, publican, pausan, cierran y descartan los roles `owner`, `admin` y
+  `recruiter`; el `viewer` ve las ofertas de su empresa sin ninguna acción.
+- **Empresa sin verificar:** prepara borradores, pero `Publicar` y
+  `Reanudar` aparecen deshabilitados con el motivo y un acceso a la
+  verificación (§3.2).
+- **Todavía no:** el asistente IA (T-060), el cupo de ofertas activas del plan
+  (T-031) y la re-notificación a postulantes por cambios sustanciales (no hay
+  postulaciones hasta T-040). Los requisitos del puesto no tienen campo
+  propio: van en "Descripción y requisitos". `beneficios` puede quedar como
+  lista vacía.
 
 ---
 
@@ -567,6 +678,6 @@ Base transversal (todas las pantallas): contraste AA, objetivos táctiles ≥ 48
 ## Preguntas abiertas para el fundador
 
 1. Plazos y límites marcados **(propuesta a validar)**: SLA de verificación (48 h) y de moderación, gracia de eliminación (30 días), límites anti-spam (20 postulaciones/día, 3 reemplazos de video/día), expiración de invitaciones (14 días), validez de la exportación (7 días).
-2. ¿Barrio obligatorio solo para CABA o también para partidos del GBA con dataset disponible?
+2. ¿Barrio obligatorio solo para CABA o también para partidos del GBA con dataset disponible? *(Para **ofertas**, resuelta por el fundador el 2026-10-10 (D2): el barrio es obligatorio al publicar en cualquier localidad que tenga barrios cargados en el catálogo, así que un partido del GBA queda alcanzado el día que se carguen los suyos; hoy equivale a CABA. Es la misma regla que ya aplica el onboarding de candidato (§2.1). Los filtros de §7 son otra cuestión y siguen como están.)*
 3. ¿Las búsquedas guardadas con alertas entran al MVP o quedan para Crecimiento (`ROADMAP.md` fase 6)?
 4. ¿Adjuntos en chat (p. ej. CV en PDF) en MVP o post-MVP?

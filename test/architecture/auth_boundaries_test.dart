@@ -63,6 +63,7 @@ void main() {
       'lib/features/companies/data/supabase_company_access_repository.dart',
       'lib/features/companies/data/supabase_company_verification_repository.dart',
       'lib/features/consents/data/supabase_consents_repository.dart',
+      'lib/features/jobs/data/supabase_job_offers_repository.dart',
       'lib/features/legal/data/supabase_legal_repository.dart',
       'lib/features/notifications/data/supabase_notification_prefs_repository.dart',
       'lib/features/onboarding/data/supabase_catalog_repository.dart',

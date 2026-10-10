@@ -336,6 +336,9 @@ String _failureMessage(AppLocalizations l10n, Object? error) {
   return switch (failure.code) {
     DataFailureCode.secondFactorRequired => l10n.dataFailureSecondFactor,
     DataFailureCode.ambiguousCompany => l10n.dataFailureAmbiguousCompany,
+    // TFJOB solo sale de escrituras de ofertas: acá no puede llegar y, si
+    // llegara, el texto de ofertas ("ya te mostramos cómo quedó") mentiría.
+    DataFailureCode.jobStateConflict => l10n.dataFailureUnknown,
     DataFailureCode.notAllowed => l10n.dataFailureNotAllowed,
     DataFailureCode.invalidCuit => l10n.dataFailureInvalidCuit,
     DataFailureCode.invalidData ||

@@ -50,14 +50,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get candidateHomePlaceholder =>
-      'Acá va a estar tu feed de ofertas con salario siempre visible (Bloque G del ROADMAP). Por ahora este es el punto de entrada del candidato.';
+      'Desde acá entrás a las ofertas publicadas, siempre con el sueldo a la vista, y a tu perfil. El orden por zona y compatibilidad llega en el Bloque G del ROADMAP.';
 
   @override
   String get companyHomeTitle => 'Inicio — Empresa';
 
   @override
   String get companyHomePlaceholder =>
-      'Acá van a estar tus búsquedas, ofertas y candidatos (Bloque G del ROADMAP). Por ahora este es el punto de entrada de la empresa.';
+      'Desde acá gestionás tus ofertas y la verificación de tu empresa. Los candidatos llegan en el Bloque G y las postulaciones en el Bloque H del ROADMAP.';
 
   @override
   String get adminHomeTitle => 'Inicio — Administración';
@@ -1152,6 +1152,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.';
 
   @override
+  String get dataFailureJobStateConflict =>
+      'La oferta cambió de estado mientras la tenías abierta. Ya te mostramos cómo quedó: revisala y volvé a intentarlo.';
+
+  @override
   String get companyVerifiedBadgeLabel => 'Empresa verificada';
 
   @override
@@ -1322,4 +1326,641 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adminVerificationsDocumentClose => 'Cerrar';
+
+  @override
+  String get jobsCompanyTitle => 'Mis ofertas';
+
+  @override
+  String get jobsFeedTitle => 'Ofertas de trabajo';
+
+  @override
+  String get jobsNewOffer => 'Nueva oferta';
+
+  @override
+  String get jobsEmptyTitle => 'Todavía no creaste ofertas';
+
+  @override
+  String get jobsEmptyBody =>
+      'Cuando crees una, la vas a ver acá con su estado.';
+
+  @override
+  String get jobsEmptyReadOnlyBody =>
+      'Cuando tu empresa cree ofertas, las vas a ver acá.';
+
+  @override
+  String get jobsEmptyAction => 'Crear mi primera oferta';
+
+  @override
+  String get jobsLoadErrorTitle => 'No pudimos cargar tus ofertas';
+
+  @override
+  String get jobsListStale =>
+      'La lista no se actualizó y puede no estar al día: tocá \"Actualizar\" arriba para reintentar.';
+
+  @override
+  String get jobsCompanyRefresh => 'Actualizar';
+
+  @override
+  String get jobsCompanyRefreshStale =>
+      'Actualizar: la lista puede no estar al día';
+
+  @override
+  String get jobsCompanyRefreshing => 'Actualizando tus ofertas';
+
+  @override
+  String get jobsErrorTitle => 'No pudimos completar la acción';
+
+  @override
+  String get jobsUnverifiedBanner =>
+      'Tu empresa todavía no está verificada. Podés preparar ofertas y guardarlas como borrador; vas a poder publicarlas cuando la verifiquemos.';
+
+  @override
+  String get jobsGoToVerification => 'Ir a la verificación';
+
+  @override
+  String get jobsReadOnlyBanner =>
+      'Tu rol en la empresa te deja ver las ofertas, pero no crearlas ni modificarlas. Si lo necesitás, pedíselo a quien administra la cuenta de la empresa.';
+
+  @override
+  String get jobsPermissionsError =>
+      'No pudimos comprobar si tu cuenta puede gestionar ofertas, así que por ahora no te mostramos esas acciones.';
+
+  @override
+  String get jobsFailureNotAllowed =>
+      'Tu cuenta no puede hacer esta acción. Para publicar, tu empresa tiene que estar verificada y tu rol tiene que permitir gestionar ofertas.';
+
+  @override
+  String get jobsFailureInvalidData =>
+      'No pudimos guardar: hay datos que no cumplen las reglas de la oferta. Revisá los campos y probá de nuevo.';
+
+  @override
+  String get jobsFailurePublishRules =>
+      'Para publicarla, el sueldo mínimo tiene que ser mayor que 0, el vencimiento tiene que estar dentro de los próximos 60 días y, si la localidad tiene barrios, hay que elegir uno. Editala para corregirlo.';
+
+  @override
+  String get jobsPublishNeedsVerification =>
+      'Para publicar, tu empresa tiene que estar verificada.';
+
+  @override
+  String get jobStatusDraft => 'Borrador';
+
+  @override
+  String get jobStatusActive => 'Activa';
+
+  @override
+  String get jobStatusPaused => 'Pausada';
+
+  @override
+  String get jobStatusExpired => 'Vencida';
+
+  @override
+  String get jobStatusClosed => 'Cerrada';
+
+  @override
+  String get jobStatusUnknown => 'Estado desconocido';
+
+  @override
+  String jobStatusSemantics(String status) {
+    return 'Estado: $status';
+  }
+
+  @override
+  String jobExpiresOn(String date) {
+    return 'Vence el $date';
+  }
+
+  @override
+  String jobExpiredOn(String date) {
+    return 'Venció el $date: ya no se muestra a los candidatos.';
+  }
+
+  @override
+  String jobExpiredOnShort(String date) {
+    return 'Venció el $date';
+  }
+
+  @override
+  String get jobPlaceUnavailable =>
+      'No pudimos cargar el nombre de la ubicación.';
+
+  @override
+  String get jobPublishBlockedUnverified =>
+      'Vas a poder publicar cuando verifiquemos tu empresa. Mientras tanto, guardá la oferta como borrador.';
+
+  @override
+  String get jobActionEdit => 'Editar';
+
+  @override
+  String get jobActionPublish => 'Publicar';
+
+  @override
+  String get jobActionPause => 'Pausar';
+
+  @override
+  String get jobActionResume => 'Reanudar';
+
+  @override
+  String get jobActionClose => 'Cerrar';
+
+  @override
+  String get jobActionDiscard => 'Descartar borrador';
+
+  @override
+  String get jobActionDuplicate => 'Duplicar';
+
+  @override
+  String jobActionSemantics(String action, String title) {
+    return '$action: $title';
+  }
+
+  @override
+  String get jobDialogCancel => 'Cancelar';
+
+  @override
+  String get jobCloseDialogTitle => '¿Cerrar la oferta?';
+
+  @override
+  String get jobCloseDialogBody =>
+      'La oferta deja de verse para los candidatos y no se puede volver a abrir. Si más adelante necesitás publicarla de nuevo, podés duplicarla.';
+
+  @override
+  String get jobCloseDialogConfirm => 'Cerrar oferta';
+
+  @override
+  String get jobDiscardDialogTitle => '¿Descartar el borrador?';
+
+  @override
+  String get jobDiscardDialogBody =>
+      'El borrador se quita de tu lista y no se puede recuperar.';
+
+  @override
+  String get jobDiscardDialogConfirm => 'Descartar';
+
+  @override
+  String get jobOutcomePublished => 'Oferta publicada.';
+
+  @override
+  String get jobOutcomePaused => 'Oferta pausada: los candidatos ya no la ven.';
+
+  @override
+  String get jobOutcomeResumed => 'Oferta reanudada.';
+
+  @override
+  String get jobOutcomeClosed => 'Oferta cerrada.';
+
+  @override
+  String get jobOutcomeDiscarded => 'Borrador descartado.';
+
+  @override
+  String get jobOutcomeDraftSaved => 'Borrador guardado.';
+
+  @override
+  String get jobOutcomeChangesSaved => 'Cambios guardados.';
+
+  @override
+  String get jobFormNewTitle => 'Nueva oferta';
+
+  @override
+  String get jobFormEditTitle => 'Editar oferta';
+
+  @override
+  String get jobFormIntro =>
+      'Todos los campos son obligatorios salvo los que dicen \"opcional\", también para guardar un borrador. Para publicar, además, el sueldo mínimo tiene que ser mayor que 0, el vencimiento tiene que estar dentro de los próximos 60 días y, si la localidad tiene barrios, hay que elegir uno.';
+
+  @override
+  String jobFormDuplicateNote(String title) {
+    return 'Copiamos el contenido de \"$title\". Elegí una fecha de vencimiento nueva antes de guardar.';
+  }
+
+  @override
+  String get jobFormErrorsTitle => 'Revisá los campos marcados';
+
+  @override
+  String get jobFormErrorsBody =>
+      'Hay datos que faltan o que no son válidos. Cada campo explica qué corregir.';
+
+  @override
+  String get jobSectionPosition => 'Puesto y descripción';
+
+  @override
+  String get jobSectionSalary => 'Sueldo';
+
+  @override
+  String get jobSectionContract => 'Contrato y jornada';
+
+  @override
+  String get jobSectionSchedule => 'Días y horario';
+
+  @override
+  String get jobSectionWorkMode => 'Modalidad';
+
+  @override
+  String get jobSectionLocation => 'Ubicación';
+
+  @override
+  String get jobSectionSector => 'Sector';
+
+  @override
+  String get jobSectionExperience => 'Experiencia';
+
+  @override
+  String get jobSectionAvailability => 'Disponibilidad';
+
+  @override
+  String get jobSectionBenefits => 'Beneficios';
+
+  @override
+  String get jobSectionVacancies => 'Vacantes';
+
+  @override
+  String get jobSectionExpiry => 'Vencimiento';
+
+  @override
+  String get jobSectionDescription => 'Descripción y requisitos';
+
+  @override
+  String get jobSectionMore => 'Más datos';
+
+  @override
+  String get jobTitleLabel => 'Puesto';
+
+  @override
+  String get jobTitleHint => 'Por ejemplo: Mozo/a de salón';
+
+  @override
+  String get jobDescriptionLabel => 'Descripción y requisitos';
+
+  @override
+  String get jobDescriptionHelp =>
+      'Contá las tareas y todo lo que pedís para el puesto: experiencia, conocimientos, documentación u otros requisitos.';
+
+  @override
+  String get jobSalaryMinLabel => 'Sueldo mínimo';
+
+  @override
+  String get jobSalaryMaxLabel => 'Sueldo máximo';
+
+  @override
+  String get jobSalaryHelp =>
+      'En pesos argentinos y sin centavos. Para un sueldo fijo, poné el mismo monto en los dos campos. El sueldo siempre se muestra en la oferta.';
+
+  @override
+  String get jobSalaryPeriodLabel => 'Período del sueldo';
+
+  @override
+  String get jobSalaryPeriodMonthly => 'Mensual';
+
+  @override
+  String get jobSalaryPeriodYearly => 'Anual';
+
+  @override
+  String get jobSalaryPeriodHourly => 'Por hora';
+
+  @override
+  String get jobSalaryPerMonth => 'por mes';
+
+  @override
+  String get jobSalaryPerYear => 'por año';
+
+  @override
+  String get jobSalaryPerHour => 'por hora';
+
+  @override
+  String jobSalaryRange(String min, String max) {
+    return 'ARS $min a $max';
+  }
+
+  @override
+  String jobSalarySingle(String amount) {
+    return 'ARS $amount';
+  }
+
+  @override
+  String jobSalaryWithPeriod(String amount, String period) {
+    return '$amount $period';
+  }
+
+  @override
+  String get jobContractTypeLabel => 'Modalidad de contratación';
+
+  @override
+  String get jobContractRelacionDependencia => 'Relación de dependencia';
+
+  @override
+  String get jobContractMonotributo => 'Monotributo';
+
+  @override
+  String get jobContractPlazoFijo => 'Plazo fijo';
+
+  @override
+  String get jobContractTemporal => 'Temporal';
+
+  @override
+  String get jobContractPasantia => 'Pasantía';
+
+  @override
+  String get jobContractFreelance => 'Freelance';
+
+  @override
+  String get jobJornadaLabel => 'Jornada';
+
+  @override
+  String get jobJornadaFullTime => 'Jornada completa';
+
+  @override
+  String get jobJornadaPartTime => 'Jornada parcial';
+
+  @override
+  String get jobJornadaPorTurnos => 'Por turnos';
+
+  @override
+  String get jobJornadaFinDeSemana => 'Fines de semana';
+
+  @override
+  String get jobJornadaPorHoras => 'Por horas';
+
+  @override
+  String get jobScheduleDaysLabel => 'Días de trabajo';
+
+  @override
+  String get jobScheduleDetailLabel => 'Horario';
+
+  @override
+  String get jobScheduleDetailHint =>
+      'Por ejemplo: 9 a 18 hs, viernes hasta las 15';
+
+  @override
+  String get jobWorkModeLabel => 'Modalidad de trabajo';
+
+  @override
+  String get jobNeighborhoodHelp =>
+      'Obligatorio para publicar en esta localidad.';
+
+  @override
+  String get jobSectorLabel => 'Sector o rubro (opcional)';
+
+  @override
+  String get jobSectorNone => 'Sin especificar';
+
+  @override
+  String get jobSectorUnavailable =>
+      'El sector que tenía la oferta ya no está disponible. Elegí otro o dejalo sin especificar.';
+
+  @override
+  String get jobExperienceLabel => 'Experiencia requerida';
+
+  @override
+  String get jobAvailabilityLabel => 'Disponibilidad requerida';
+
+  @override
+  String get jobBenefitAddLabel => 'Agregar beneficio';
+
+  @override
+  String jobBenefitsHelp(int maxItems, int maxLength) {
+    return 'Opcional. Hasta $maxItems beneficios de hasta $maxLength caracteres cada uno; por ejemplo, comida incluida o propinas.';
+  }
+
+  @override
+  String jobBenefitsCount(int count, int max) {
+    return '$count de $max beneficios';
+  }
+
+  @override
+  String get jobBenefitsNone => 'No se informaron beneficios.';
+
+  @override
+  String get jobVacanciesLabel => 'Cantidad de vacantes';
+
+  @override
+  String jobVacanciesHelp(int min, int max) {
+    return 'Entre $min y $max.';
+  }
+
+  @override
+  String jobVacanciesValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count vacantes',
+      one: '1 vacante',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get jobExpiryLabel => 'Fecha de vencimiento';
+
+  @override
+  String get jobExpiryHint => 'Elegí una fecha';
+
+  @override
+  String jobExpiryHelp(int days) {
+    return 'Para publicar, hasta $days días desde hoy. Ese día la oferta deja de mostrarse.';
+  }
+
+  @override
+  String get jobExpiryPick => 'Elegir la fecha de vencimiento';
+
+  @override
+  String get jobSaveDraft => 'Guardar borrador';
+
+  @override
+  String get jobPublish => 'Publicar';
+
+  @override
+  String get jobSaveChanges => 'Guardar cambios';
+
+  @override
+  String get jobPreview => 'Vista previa';
+
+  @override
+  String get jobPreviewNote => 'Así va a ver la oferta un candidato.';
+
+  @override
+  String get jobPreviewCompanyName => 'Tu empresa';
+
+  @override
+  String get jobEditActiveNeedsVerification =>
+      'Para modificar una oferta publicada, tu empresa tiene que estar verificada. Desde Mis ofertas podés pausarla o cerrarla.';
+
+  @override
+  String get jobLeaveTitle => '¿Salir sin guardar?';
+
+  @override
+  String get jobLeaveBody =>
+      'Tenés cambios sin guardar en la oferta. Si salís ahora, se pierden.';
+
+  @override
+  String get jobLeaveConfirm => 'Salir sin guardar';
+
+  @override
+  String get jobLeaveCancel => 'Seguir editando';
+
+  @override
+  String get jobNotFoundTitle => 'No encontramos esa oferta';
+
+  @override
+  String get jobNotFoundBody =>
+      'Puede haber sido descartada o el enlace ya no es válido.';
+
+  @override
+  String get jobLoadError =>
+      'No pudimos cargar la oferta. Revisá tu conexión y reintentá.';
+
+  @override
+  String get jobBackToList => 'Volver a Mis ofertas';
+
+  @override
+  String get jobNotEditableTitle => 'Esta oferta ya no se puede editar';
+
+  @override
+  String get jobNotEditableBody =>
+      'Una oferta vencida o cerrada queda como historial. Si querés volver a publicarla, duplicala y elegí una fecha nueva.';
+
+  @override
+  String get jobErrorTextEmpty => 'Completá este campo.';
+
+  @override
+  String jobErrorTextTooLong(int max) {
+    return 'Admite hasta $max caracteres.';
+  }
+
+  @override
+  String get jobErrorDaysEmpty => 'Elegí al menos un día.';
+
+  @override
+  String get jobErrorDaysDuplicated => 'Hay días repetidos.';
+
+  @override
+  String get jobErrorSalaryMissing => 'Ingresá el monto.';
+
+  @override
+  String get jobErrorSalaryFormat =>
+      'Ingresá solo números, en pesos y sin centavos (por ejemplo, 350000 o 350.000).';
+
+  @override
+  String get jobErrorSalaryNegative => 'El monto no puede ser negativo.';
+
+  @override
+  String jobErrorSalaryTooHigh(String max) {
+    return 'El monto no puede superar $max.';
+  }
+
+  @override
+  String get jobErrorSalaryNotPositive =>
+      'Para publicar, el sueldo mínimo tiene que ser mayor que 0.';
+
+  @override
+  String get jobErrorSalaryBelowMin =>
+      'El máximo no puede ser menor que el mínimo.';
+
+  @override
+  String get jobErrorBenefitEmpty => 'Escribí el beneficio antes de agregarlo.';
+
+  @override
+  String jobErrorBenefitTooLong(int max) {
+    return 'Cada beneficio admite hasta $max caracteres.';
+  }
+
+  @override
+  String get jobErrorBenefitDuplicated => 'Ese beneficio ya está en la lista.';
+
+  @override
+  String jobErrorBenefitTooMany(int max) {
+    return 'Podés cargar hasta $max beneficios.';
+  }
+
+  @override
+  String get jobErrorVacanciesMissing => 'Ingresá la cantidad de vacantes.';
+
+  @override
+  String jobErrorVacanciesOutOfRange(int min, int max) {
+    return 'Tiene que ser un número entero entre $min y $max.';
+  }
+
+  @override
+  String get jobErrorExpiryMissing => 'Elegí la fecha de vencimiento.';
+
+  @override
+  String get jobErrorExpiryNotInFuture =>
+      'Para publicar, el vencimiento tiene que ser posterior a hoy.';
+
+  @override
+  String jobErrorExpiryBeyondWindow(int days) {
+    return 'Para publicar, el vencimiento puede estar como máximo a $days días de hoy.';
+  }
+
+  @override
+  String get jobErrorNeighborhoodRequired =>
+      'Elegí el barrio: es obligatorio para publicar en esta localidad.';
+
+  @override
+  String get jobValueMissing => 'Sin completar';
+
+  @override
+  String get jobCompanyUnknown => 'Empresa sin nombre disponible';
+
+  @override
+  String get jobsFeedEmpty => 'Todavía no hay ofertas publicadas.';
+
+  @override
+  String get jobsFeedEmptyHint =>
+      'Volvé a mirar en un rato: las ofertas nuevas aparecen primero.';
+
+  @override
+  String get jobsFeedRefresh => 'Actualizar';
+
+  @override
+  String get jobsFeedRefreshing => 'Actualizando ofertas';
+
+  @override
+  String jobsFeedRefreshFailed(String motivo) {
+    return 'Las ofertas no se actualizaron. $motivo';
+  }
+
+  @override
+  String get jobsFeedUpToDate => 'Las ofertas ya están al día.';
+
+  @override
+  String get jobsFeedLoadErrorTitle => 'No pudimos cargar las ofertas';
+
+  @override
+  String get jobsFeedLoadMore => 'Cargar más ofertas';
+
+  @override
+  String get jobsFeedLoadingMore => 'Cargando más ofertas';
+
+  @override
+  String get jobsFeedEnd => 'No hay más ofertas por ahora.';
+
+  @override
+  String jobsFeedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mostrando $count ofertas',
+      one: 'Mostrando 1 oferta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get jobCardOpenHint => 'ver el detalle de la oferta';
+
+  @override
+  String get jobDetailTitle => 'Detalle de la oferta';
+
+  @override
+  String get jobNotAvailableTitle => 'Esta oferta no está disponible';
+
+  @override
+  String get jobNotAvailableBody =>
+      'Puede haber vencido, estar pausada o el enlace ya no es válido.';
+
+  @override
+  String get jobBackToFeed => 'Volver a las ofertas';
+
+  @override
+  String get jobApplyComingSoon =>
+      'Todavía no podés postularte desde la app: esa función llega en una próxima etapa.';
 }

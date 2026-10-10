@@ -48,14 +48,30 @@ borradores pero no ofertas `active`, y una oferta activa deja de ser pública en
 el mismo momento en que su empresa pierde la aprobación (evidencia: test pgTAP
 `018`). La misma migración deja el alta de miembros **solo** por invitación de
 un solo uso, bootstrap u onboarding, y serializa las tres puertas sobre la fila
-de `profiles` de la cuenta. Sigue siendo de T-030 la oferta en sí: el CRUD
-completo, las transiciones `paused`/`expired`/`closed`, el formulario y las
-reglas salariales.
+de `profiles` de la cuenta. La oferta en sí llegó con T-030 (ver abajo).
+
+Del **Bloque F — Ofertas**, T-030 está hecho en local (migración `0032`, con
+las decisiones del fundador del 2026-10-10): CRUD de ofertas en el que
+escriben solo `owner`, `admin` y `recruiter` —el `viewer` ve pero no escribe—,
+una máquina de estados que el cliente no puede saltear (borrador, activa,
+pausada, cerrada, y vencida solo por el sistema), fechas de publicación y
+cierre derivadas por el servidor, validación de contenido server-side y
+requisitos para publicar: sueldo mayor a cero, vencimiento a 60 días como
+máximo y barrio cuando la localidad tiene barrios cargados (hoy, CABA). En la
+app, `/empresa/ofertas` (lista, alta, edición, publicar, pausar, reanudar,
+cerrar, descartar borrador y duplicar) y, para el candidato, una lista mínima de
+ofertas publicadas en `/candidato/feed` con su detalle en
+`/candidato/ofertas/:id`. El feed de verdad —ranking por zona y categoría,
+búsqueda y filtros— sigue siendo del Bloque G (T-035, T-037, T-038), y el
+resto del Bloque F también está pendiente: límite por plan (T-031), video de
+oferta (T-032), vencimiento automático por `pg_cron` (T-033; hasta entonces la
+app oculta del lado del cliente las ofertas con el vencimiento pasado) y
+compartir (T-034).
 
 Todavía **no** están hechos (y no se simulan en la UI): Google y Apple (T-012),
 la pantalla in-app de cambio de contraseña, que depende del enlace profundo
 (T-013), CAPTCHA, la verificación real de CUIT contra ARCA (T-027/T-028),
-FCM/APNs y cualquier proyecto remoto.
+postularse a una oferta (T-040), FCM/APNs y cualquier proyecto remoto.
 
 Del segundo factor hay una mitad y falta la otra, y conviene no confundirlas. La
 **exigencia** existe y es server-side: revisar una verificación de empresa pide
@@ -227,14 +243,15 @@ lib/
 ├── core/           # config (flavors), localization (ARB es-AR), routing,
 │                   # security, theme, networking
 ├── features/       # feature-first: authentication, onboarding, consents,
-│                   # legal, notifications, profiles, companies, moderation…
+│                   # legal, notifications, profiles, companies, jobs,
+│                   # moderation…
 └── shared/         # widgets/modelos compartidos (fallos tipados, banners)
 supabase/
-├── migrations/     # 0001–0031 — esquema completo + RLS deny-by-default
+├── migrations/     # 0001–0032 — esquema completo + RLS deny-by-default
 ├── tests/database/ # pgTAP (RLS + RPCs de onboarding + ledger de consents
 │                   # + perfiles, proyección para empresas y storage de avatares
 │                   # + CUIT, empresa y equipo, invitaciones, verificación
-│                   # manual y puerta de publicación de ofertas)
+│                   # manual, puerta de publicación y ciclo de vida de ofertas)
 ├── seed/           # seed de desarrollo (T-008; estados de onboarding reales)
 └── functions/      # Edge Functions (avatar — T-022; el resto llega con sus bloques)
 docs/               # los 8 documentos técnicos (fuente de verdad) + método de

@@ -169,7 +169,7 @@ abstract class AppLocalizations {
   /// No description provided for @candidateHomePlaceholder.
   ///
   /// In es, this message translates to:
-  /// **'Acá va a estar tu feed de ofertas con salario siempre visible (Bloque G del ROADMAP). Por ahora este es el punto de entrada del candidato.'**
+  /// **'Desde acá entrás a las ofertas publicadas, siempre con el sueldo a la vista, y a tu perfil. El orden por zona y compatibilidad llega en el Bloque G del ROADMAP.'**
   String get candidateHomePlaceholder;
 
   /// No description provided for @companyHomeTitle.
@@ -181,7 +181,7 @@ abstract class AppLocalizations {
   /// No description provided for @companyHomePlaceholder.
   ///
   /// In es, this message translates to:
-  /// **'Acá van a estar tus búsquedas, ofertas y candidatos (Bloque G del ROADMAP). Por ahora este es el punto de entrada de la empresa.'**
+  /// **'Desde acá gestionás tus ofertas y la verificación de tu empresa. Los candidatos llegan en el Bloque G y las postulaciones en el Bloque H del ROADMAP.'**
   String get companyHomePlaceholder;
 
   /// No description provided for @adminHomeTitle.
@@ -2116,6 +2116,12 @@ abstract class AppLocalizations {
   /// **'Tu cuenta figura en más de una empresa. Escribinos para que lo resolvamos: no podemos elegir una por vos.'**
   String get dataFailureAmbiguousCompany;
 
+  /// TFJOB (0032): transición de estado de oferta no permitida (otra persona del equipo la cambió, venció o fue descartada). Solo lo muestran Mis ofertas y el formulario de oferta, que ya recargan la oferta solos: por eso no pide actualizar
+  ///
+  /// In es, this message translates to:
+  /// **'La oferta cambió de estado mientras la tenías abierta. Ya te mostramos cómo quedó: revisala y volvé a intentarlo.'**
+  String get dataFailureJobStateConflict;
+
   /// Texto del distintivo de empresa verificada (T-029)
   ///
   /// In es, this message translates to:
@@ -2409,6 +2415,1098 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cerrar'**
   String get adminVerificationsDocumentClose;
+
+  /// Título de la lista de ofertas de la empresa (T-030) y del acceso desde su inicio
+  ///
+  /// In es, this message translates to:
+  /// **'Mis ofertas'**
+  String get jobsCompanyTitle;
+
+  /// Título del feed de ofertas del candidato (T-030) y del acceso desde su inicio
+  ///
+  /// In es, this message translates to:
+  /// **'Ofertas de trabajo'**
+  String get jobsFeedTitle;
+
+  /// No description provided for @jobsNewOffer.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva oferta'**
+  String get jobsNewOffer;
+
+  /// No description provided for @jobsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no creaste ofertas'**
+  String get jobsEmptyTitle;
+
+  /// No description provided for @jobsEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando crees una, la vas a ver acá con su estado.'**
+  String get jobsEmptyBody;
+
+  /// No description provided for @jobsEmptyReadOnlyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuando tu empresa cree ofertas, las vas a ver acá.'**
+  String get jobsEmptyReadOnlyBody;
+
+  /// No description provided for @jobsEmptyAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear mi primera oferta'**
+  String get jobsEmptyAction;
+
+  /// No description provided for @jobsLoadErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar tus ofertas'**
+  String get jobsLoadErrorTitle;
+
+  /// Aviso de Mis ofertas cuando falla una recarga con la lista ya cargada. Si la recarga la pidió la persona (botón Actualizar), va en un SnackBar sin acción; si fue automática (tras una acción, un guardado del formulario o al volver a la pantalla), solo se anuncia al lector de pantalla, para no tapar el resultado que está a la vista. Se reintenta con el botón Actualizar de la barra superior
+  ///
+  /// In es, this message translates to:
+  /// **'La lista no se actualizó y puede no estar al día: tocá \"Actualizar\" arriba para reintentar.'**
+  String get jobsListStale;
+
+  /// Rótulo (tooltip) del botón de la barra de Mis ofertas que vuelve a pedir la lista; siempre disponible
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar'**
+  String get jobsCompanyRefresh;
+
+  /// Rótulo del botón Actualizar de Mis ofertas cuando la última recarga falló con la lista ya cargada (el ícono pasa a uno de advertencia)
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar: la lista puede no estar al día'**
+  String get jobsCompanyRefreshStale;
+
+  /// Rótulo del botón Actualizar de Mis ofertas mientras la recarga está en vuelo
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizando tus ofertas'**
+  String get jobsCompanyRefreshing;
+
+  /// No description provided for @jobsErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos completar la acción'**
+  String get jobsErrorTitle;
+
+  /// No description provided for @jobsUnverifiedBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu empresa todavía no está verificada. Podés preparar ofertas y guardarlas como borrador; vas a poder publicarlas cuando la verifiquemos.'**
+  String get jobsUnverifiedBanner;
+
+  /// No description provided for @jobsGoToVerification.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a la verificación'**
+  String get jobsGoToVerification;
+
+  /// Rol viewer (D3 de T-030): ve las ofertas de su empresa pero no las escribe
+  ///
+  /// In es, this message translates to:
+  /// **'Tu rol en la empresa te deja ver las ofertas, pero no crearlas ni modificarlas. Si lo necesitás, pedíselo a quien administra la cuenta de la empresa.'**
+  String get jobsReadOnlyBanner;
+
+  /// No description provided for @jobsPermissionsError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos comprobar si tu cuenta puede gestionar ofertas, así que por ahora no te mostramos esas acciones.'**
+  String get jobsPermissionsError;
+
+  /// No description provided for @jobsFailureNotAllowed.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta no puede hacer esta acción. Para publicar, tu empresa tiene que estar verificada y tu rol tiene que permitir gestionar ofertas.'**
+  String get jobsFailureNotAllowed;
+
+  /// No description provided for @jobsFailureInvalidData.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos guardar: hay datos que no cumplen las reglas de la oferta. Revisá los campos y probá de nuevo.'**
+  String get jobsFailureInvalidData;
+
+  /// No description provided for @jobsFailurePublishRules.
+  ///
+  /// In es, this message translates to:
+  /// **'Para publicarla, el sueldo mínimo tiene que ser mayor que 0, el vencimiento tiene que estar dentro de los próximos 60 días y, si la localidad tiene barrios, hay que elegir uno. Editala para corregirlo.'**
+  String get jobsFailurePublishRules;
+
+  /// No description provided for @jobsPublishNeedsVerification.
+  ///
+  /// In es, this message translates to:
+  /// **'Para publicar, tu empresa tiene que estar verificada.'**
+  String get jobsPublishNeedsVerification;
+
+  /// No description provided for @jobStatusDraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrador'**
+  String get jobStatusDraft;
+
+  /// No description provided for @jobStatusActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Activa'**
+  String get jobStatusActive;
+
+  /// No description provided for @jobStatusPaused.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausada'**
+  String get jobStatusPaused;
+
+  /// No description provided for @jobStatusExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Vencida'**
+  String get jobStatusExpired;
+
+  /// No description provided for @jobStatusClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrada'**
+  String get jobStatusClosed;
+
+  /// No description provided for @jobStatusUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Estado desconocido'**
+  String get jobStatusUnknown;
+
+  /// Etiqueta para el lector de pantalla del estado de una oferta: el estado nunca se comunica solo con color
+  ///
+  /// In es, this message translates to:
+  /// **'Estado: {status}'**
+  String jobStatusSemantics(String status);
+
+  /// No description provided for @jobExpiresOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence el {date}'**
+  String jobExpiresOn(String date);
+
+  /// Oferta todavía activa cuyo vencimiento ya pasó (el cron de T-033 todavía no la marcó vencida)
+  ///
+  /// In es, this message translates to:
+  /// **'Venció el {date}: ya no se muestra a los candidatos.'**
+  String jobExpiredOn(String date);
+
+  /// No description provided for @jobExpiredOnShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Venció el {date}'**
+  String jobExpiredOnShort(String date);
+
+  /// No description provided for @jobPlaceUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar el nombre de la ubicación.'**
+  String get jobPlaceUnavailable;
+
+  /// No description provided for @jobPublishBlockedUnverified.
+  ///
+  /// In es, this message translates to:
+  /// **'Vas a poder publicar cuando verifiquemos tu empresa. Mientras tanto, guardá la oferta como borrador.'**
+  String get jobPublishBlockedUnverified;
+
+  /// No description provided for @jobActionEdit.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar'**
+  String get jobActionEdit;
+
+  /// No description provided for @jobActionPublish.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicar'**
+  String get jobActionPublish;
+
+  /// No description provided for @jobActionPause.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get jobActionPause;
+
+  /// No description provided for @jobActionResume.
+  ///
+  /// In es, this message translates to:
+  /// **'Reanudar'**
+  String get jobActionResume;
+
+  /// No description provided for @jobActionClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get jobActionClose;
+
+  /// No description provided for @jobActionDiscard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar borrador'**
+  String get jobActionDiscard;
+
+  /// No description provided for @jobActionDuplicate.
+  ///
+  /// In es, this message translates to:
+  /// **'Duplicar'**
+  String get jobActionDuplicate;
+
+  /// Etiqueta accesible de cada acción de la lista, para que el lector diga sobre qué oferta actúa
+  ///
+  /// In es, this message translates to:
+  /// **'{action}: {title}'**
+  String jobActionSemantics(String action, String title);
+
+  /// No description provided for @jobDialogCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get jobDialogCancel;
+
+  /// No description provided for @jobCloseDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cerrar la oferta?'**
+  String get jobCloseDialogTitle;
+
+  /// No description provided for @jobCloseDialogBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La oferta deja de verse para los candidatos y no se puede volver a abrir. Si más adelante necesitás publicarla de nuevo, podés duplicarla.'**
+  String get jobCloseDialogBody;
+
+  /// No description provided for @jobCloseDialogConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar oferta'**
+  String get jobCloseDialogConfirm;
+
+  /// No description provided for @jobDiscardDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar el borrador?'**
+  String get jobDiscardDialogTitle;
+
+  /// No description provided for @jobDiscardDialogBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El borrador se quita de tu lista y no se puede recuperar.'**
+  String get jobDiscardDialogBody;
+
+  /// No description provided for @jobDiscardDialogConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get jobDiscardDialogConfirm;
+
+  /// No description provided for @jobOutcomePublished.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta publicada.'**
+  String get jobOutcomePublished;
+
+  /// No description provided for @jobOutcomePaused.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta pausada: los candidatos ya no la ven.'**
+  String get jobOutcomePaused;
+
+  /// No description provided for @jobOutcomeResumed.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta reanudada.'**
+  String get jobOutcomeResumed;
+
+  /// No description provided for @jobOutcomeClosed.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta cerrada.'**
+  String get jobOutcomeClosed;
+
+  /// No description provided for @jobOutcomeDiscarded.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrador descartado.'**
+  String get jobOutcomeDiscarded;
+
+  /// No description provided for @jobOutcomeDraftSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrador guardado.'**
+  String get jobOutcomeDraftSaved;
+
+  /// No description provided for @jobOutcomeChangesSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambios guardados.'**
+  String get jobOutcomeChangesSaved;
+
+  /// No description provided for @jobFormNewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva oferta'**
+  String get jobFormNewTitle;
+
+  /// No description provided for @jobFormEditTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar oferta'**
+  String get jobFormEditTitle;
+
+  /// No description provided for @jobFormIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos los campos son obligatorios salvo los que dicen \"opcional\", también para guardar un borrador. Para publicar, además, el sueldo mínimo tiene que ser mayor que 0, el vencimiento tiene que estar dentro de los próximos 60 días y, si la localidad tiene barrios, hay que elegir uno.'**
+  String get jobFormIntro;
+
+  /// No description provided for @jobFormDuplicateNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiamos el contenido de \"{title}\". Elegí una fecha de vencimiento nueva antes de guardar.'**
+  String jobFormDuplicateNote(String title);
+
+  /// No description provided for @jobFormErrorsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá los campos marcados'**
+  String get jobFormErrorsTitle;
+
+  /// No description provided for @jobFormErrorsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay datos que faltan o que no son válidos. Cada campo explica qué corregir.'**
+  String get jobFormErrorsBody;
+
+  /// No description provided for @jobSectionPosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Puesto y descripción'**
+  String get jobSectionPosition;
+
+  /// No description provided for @jobSectionSalary.
+  ///
+  /// In es, this message translates to:
+  /// **'Sueldo'**
+  String get jobSectionSalary;
+
+  /// No description provided for @jobSectionContract.
+  ///
+  /// In es, this message translates to:
+  /// **'Contrato y jornada'**
+  String get jobSectionContract;
+
+  /// No description provided for @jobSectionSchedule.
+  ///
+  /// In es, this message translates to:
+  /// **'Días y horario'**
+  String get jobSectionSchedule;
+
+  /// No description provided for @jobSectionWorkMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Modalidad'**
+  String get jobSectionWorkMode;
+
+  /// No description provided for @jobSectionLocation.
+  ///
+  /// In es, this message translates to:
+  /// **'Ubicación'**
+  String get jobSectionLocation;
+
+  /// No description provided for @jobSectionSector.
+  ///
+  /// In es, this message translates to:
+  /// **'Sector'**
+  String get jobSectionSector;
+
+  /// No description provided for @jobSectionExperience.
+  ///
+  /// In es, this message translates to:
+  /// **'Experiencia'**
+  String get jobSectionExperience;
+
+  /// No description provided for @jobSectionAvailability.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad'**
+  String get jobSectionAvailability;
+
+  /// No description provided for @jobSectionBenefits.
+  ///
+  /// In es, this message translates to:
+  /// **'Beneficios'**
+  String get jobSectionBenefits;
+
+  /// No description provided for @jobSectionVacancies.
+  ///
+  /// In es, this message translates to:
+  /// **'Vacantes'**
+  String get jobSectionVacancies;
+
+  /// No description provided for @jobSectionExpiry.
+  ///
+  /// In es, this message translates to:
+  /// **'Vencimiento'**
+  String get jobSectionExpiry;
+
+  /// No description provided for @jobSectionDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción y requisitos'**
+  String get jobSectionDescription;
+
+  /// No description provided for @jobSectionMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Más datos'**
+  String get jobSectionMore;
+
+  /// No description provided for @jobTitleLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Puesto'**
+  String get jobTitleLabel;
+
+  /// No description provided for @jobTitleHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Por ejemplo: Mozo/a de salón'**
+  String get jobTitleHint;
+
+  /// No description provided for @jobDescriptionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción y requisitos'**
+  String get jobDescriptionLabel;
+
+  /// No description provided for @jobDescriptionHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Contá las tareas y todo lo que pedís para el puesto: experiencia, conocimientos, documentación u otros requisitos.'**
+  String get jobDescriptionHelp;
+
+  /// No description provided for @jobSalaryMinLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sueldo mínimo'**
+  String get jobSalaryMinLabel;
+
+  /// No description provided for @jobSalaryMaxLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sueldo máximo'**
+  String get jobSalaryMaxLabel;
+
+  /// No description provided for @jobSalaryHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'En pesos argentinos y sin centavos. Para un sueldo fijo, poné el mismo monto en los dos campos. El sueldo siempre se muestra en la oferta.'**
+  String get jobSalaryHelp;
+
+  /// No description provided for @jobSalaryPeriodLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Período del sueldo'**
+  String get jobSalaryPeriodLabel;
+
+  /// No description provided for @jobSalaryPeriodMonthly.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensual'**
+  String get jobSalaryPeriodMonthly;
+
+  /// No description provided for @jobSalaryPeriodYearly.
+  ///
+  /// In es, this message translates to:
+  /// **'Anual'**
+  String get jobSalaryPeriodYearly;
+
+  /// No description provided for @jobSalaryPeriodHourly.
+  ///
+  /// In es, this message translates to:
+  /// **'Por hora'**
+  String get jobSalaryPeriodHourly;
+
+  /// No description provided for @jobSalaryPerMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'por mes'**
+  String get jobSalaryPerMonth;
+
+  /// No description provided for @jobSalaryPerYear.
+  ///
+  /// In es, this message translates to:
+  /// **'por año'**
+  String get jobSalaryPerYear;
+
+  /// No description provided for @jobSalaryPerHour.
+  ///
+  /// In es, this message translates to:
+  /// **'por hora'**
+  String get jobSalaryPerHour;
+
+  /// No description provided for @jobSalaryRange.
+  ///
+  /// In es, this message translates to:
+  /// **'ARS {min} a {max}'**
+  String jobSalaryRange(String min, String max);
+
+  /// No description provided for @jobSalarySingle.
+  ///
+  /// In es, this message translates to:
+  /// **'ARS {amount}'**
+  String jobSalarySingle(String amount);
+
+  /// No description provided for @jobSalaryWithPeriod.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} {period}'**
+  String jobSalaryWithPeriod(String amount, String period);
+
+  /// No description provided for @jobContractTypeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modalidad de contratación'**
+  String get jobContractTypeLabel;
+
+  /// No description provided for @jobContractRelacionDependencia.
+  ///
+  /// In es, this message translates to:
+  /// **'Relación de dependencia'**
+  String get jobContractRelacionDependencia;
+
+  /// No description provided for @jobContractMonotributo.
+  ///
+  /// In es, this message translates to:
+  /// **'Monotributo'**
+  String get jobContractMonotributo;
+
+  /// No description provided for @jobContractPlazoFijo.
+  ///
+  /// In es, this message translates to:
+  /// **'Plazo fijo'**
+  String get jobContractPlazoFijo;
+
+  /// No description provided for @jobContractTemporal.
+  ///
+  /// In es, this message translates to:
+  /// **'Temporal'**
+  String get jobContractTemporal;
+
+  /// No description provided for @jobContractPasantia.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasantía'**
+  String get jobContractPasantia;
+
+  /// No description provided for @jobContractFreelance.
+  ///
+  /// In es, this message translates to:
+  /// **'Freelance'**
+  String get jobContractFreelance;
+
+  /// No description provided for @jobJornadaLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Jornada'**
+  String get jobJornadaLabel;
+
+  /// No description provided for @jobJornadaFullTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Jornada completa'**
+  String get jobJornadaFullTime;
+
+  /// No description provided for @jobJornadaPartTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Jornada parcial'**
+  String get jobJornadaPartTime;
+
+  /// No description provided for @jobJornadaPorTurnos.
+  ///
+  /// In es, this message translates to:
+  /// **'Por turnos'**
+  String get jobJornadaPorTurnos;
+
+  /// No description provided for @jobJornadaFinDeSemana.
+  ///
+  /// In es, this message translates to:
+  /// **'Fines de semana'**
+  String get jobJornadaFinDeSemana;
+
+  /// No description provided for @jobJornadaPorHoras.
+  ///
+  /// In es, this message translates to:
+  /// **'Por horas'**
+  String get jobJornadaPorHoras;
+
+  /// No description provided for @jobScheduleDaysLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Días de trabajo'**
+  String get jobScheduleDaysLabel;
+
+  /// No description provided for @jobScheduleDetailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Horario'**
+  String get jobScheduleDetailLabel;
+
+  /// No description provided for @jobScheduleDetailHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Por ejemplo: 9 a 18 hs, viernes hasta las 15'**
+  String get jobScheduleDetailHint;
+
+  /// No description provided for @jobWorkModeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modalidad de trabajo'**
+  String get jobWorkModeLabel;
+
+  /// No description provided for @jobNeighborhoodHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Obligatorio para publicar en esta localidad.'**
+  String get jobNeighborhoodHelp;
+
+  /// No description provided for @jobSectorLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sector o rubro (opcional)'**
+  String get jobSectorLabel;
+
+  /// No description provided for @jobSectorNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin especificar'**
+  String get jobSectorNone;
+
+  /// La oferta (editada o duplicada) tenía un sector que ya no está activo: el formulario lo quita para que lo que se ve sea lo que se guarda
+  ///
+  /// In es, this message translates to:
+  /// **'El sector que tenía la oferta ya no está disponible. Elegí otro o dejalo sin especificar.'**
+  String get jobSectorUnavailable;
+
+  /// No description provided for @jobExperienceLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Experiencia requerida'**
+  String get jobExperienceLabel;
+
+  /// No description provided for @jobAvailabilityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad requerida'**
+  String get jobAvailabilityLabel;
+
+  /// No description provided for @jobBenefitAddLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar beneficio'**
+  String get jobBenefitAddLabel;
+
+  /// No description provided for @jobBenefitsHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional. Hasta {maxItems} beneficios de hasta {maxLength} caracteres cada uno; por ejemplo, comida incluida o propinas.'**
+  String jobBenefitsHelp(int maxItems, int maxLength);
+
+  /// No description provided for @jobBenefitsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} de {max} beneficios'**
+  String jobBenefitsCount(int count, int max);
+
+  /// No description provided for @jobBenefitsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'No se informaron beneficios.'**
+  String get jobBenefitsNone;
+
+  /// No description provided for @jobVacanciesLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cantidad de vacantes'**
+  String get jobVacanciesLabel;
+
+  /// No description provided for @jobVacanciesHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Entre {min} y {max}.'**
+  String jobVacanciesHelp(int min, int max);
+
+  /// No description provided for @jobVacanciesValue.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 vacante} other{{count} vacantes}}'**
+  String jobVacanciesValue(int count);
+
+  /// No description provided for @jobExpiryLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de vencimiento'**
+  String get jobExpiryLabel;
+
+  /// No description provided for @jobExpiryHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí una fecha'**
+  String get jobExpiryHint;
+
+  /// No description provided for @jobExpiryHelp.
+  ///
+  /// In es, this message translates to:
+  /// **'Para publicar, hasta {days} días desde hoy. Ese día la oferta deja de mostrarse.'**
+  String jobExpiryHelp(int days);
+
+  /// No description provided for @jobExpiryPick.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir la fecha de vencimiento'**
+  String get jobExpiryPick;
+
+  /// No description provided for @jobSaveDraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar borrador'**
+  String get jobSaveDraft;
+
+  /// No description provided for @jobPublish.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicar'**
+  String get jobPublish;
+
+  /// No description provided for @jobSaveChanges.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar cambios'**
+  String get jobSaveChanges;
+
+  /// No description provided for @jobPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get jobPreview;
+
+  /// No description provided for @jobPreviewNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Así va a ver la oferta un candidato.'**
+  String get jobPreviewNote;
+
+  /// Nombre provisorio de la empresa en la vista previa de una oferta nueva, solo si no se pudo leer el nombre real de la empresa (company_profiles)
+  ///
+  /// In es, this message translates to:
+  /// **'Tu empresa'**
+  String get jobPreviewCompanyName;
+
+  /// No description provided for @jobEditActiveNeedsVerification.
+  ///
+  /// In es, this message translates to:
+  /// **'Para modificar una oferta publicada, tu empresa tiene que estar verificada. Desde Mis ofertas podés pausarla o cerrarla.'**
+  String get jobEditActiveNeedsVerification;
+
+  /// No description provided for @jobLeaveTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Salir sin guardar?'**
+  String get jobLeaveTitle;
+
+  /// No description provided for @jobLeaveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tenés cambios sin guardar en la oferta. Si salís ahora, se pierden.'**
+  String get jobLeaveBody;
+
+  /// No description provided for @jobLeaveConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir sin guardar'**
+  String get jobLeaveConfirm;
+
+  /// No description provided for @jobLeaveCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get jobLeaveCancel;
+
+  /// No description provided for @jobNotFoundTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos esa oferta'**
+  String get jobNotFoundTitle;
+
+  /// No description provided for @jobNotFoundBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede haber sido descartada o el enlace ya no es válido.'**
+  String get jobNotFoundBody;
+
+  /// No description provided for @jobLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar la oferta. Revisá tu conexión y reintentá.'**
+  String get jobLoadError;
+
+  /// No description provided for @jobBackToList.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a Mis ofertas'**
+  String get jobBackToList;
+
+  /// No description provided for @jobNotEditableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta oferta ya no se puede editar'**
+  String get jobNotEditableTitle;
+
+  /// No description provided for @jobNotEditableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Una oferta vencida o cerrada queda como historial. Si querés volver a publicarla, duplicala y elegí una fecha nueva.'**
+  String get jobNotEditableBody;
+
+  /// No description provided for @jobErrorTextEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá este campo.'**
+  String get jobErrorTextEmpty;
+
+  /// No description provided for @jobErrorTextTooLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Admite hasta {max} caracteres.'**
+  String jobErrorTextTooLong(int max);
+
+  /// No description provided for @jobErrorDaysEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí al menos un día.'**
+  String get jobErrorDaysEmpty;
+
+  /// No description provided for @jobErrorDaysDuplicated.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay días repetidos.'**
+  String get jobErrorDaysDuplicated;
+
+  /// No description provided for @jobErrorSalaryMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el monto.'**
+  String get jobErrorSalaryMissing;
+
+  /// No description provided for @jobErrorSalaryFormat.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá solo números, en pesos y sin centavos (por ejemplo, 350000 o 350.000).'**
+  String get jobErrorSalaryFormat;
+
+  /// No description provided for @jobErrorSalaryNegative.
+  ///
+  /// In es, this message translates to:
+  /// **'El monto no puede ser negativo.'**
+  String get jobErrorSalaryNegative;
+
+  /// No description provided for @jobErrorSalaryTooHigh.
+  ///
+  /// In es, this message translates to:
+  /// **'El monto no puede superar {max}.'**
+  String jobErrorSalaryTooHigh(String max);
+
+  /// No description provided for @jobErrorSalaryNotPositive.
+  ///
+  /// In es, this message translates to:
+  /// **'Para publicar, el sueldo mínimo tiene que ser mayor que 0.'**
+  String get jobErrorSalaryNotPositive;
+
+  /// No description provided for @jobErrorSalaryBelowMin.
+  ///
+  /// In es, this message translates to:
+  /// **'El máximo no puede ser menor que el mínimo.'**
+  String get jobErrorSalaryBelowMin;
+
+  /// No description provided for @jobErrorBenefitEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribí el beneficio antes de agregarlo.'**
+  String get jobErrorBenefitEmpty;
+
+  /// No description provided for @jobErrorBenefitTooLong.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada beneficio admite hasta {max} caracteres.'**
+  String jobErrorBenefitTooLong(int max);
+
+  /// No description provided for @jobErrorBenefitDuplicated.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese beneficio ya está en la lista.'**
+  String get jobErrorBenefitDuplicated;
+
+  /// No description provided for @jobErrorBenefitTooMany.
+  ///
+  /// In es, this message translates to:
+  /// **'Podés cargar hasta {max} beneficios.'**
+  String jobErrorBenefitTooMany(int max);
+
+  /// No description provided for @jobErrorVacanciesMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá la cantidad de vacantes.'**
+  String get jobErrorVacanciesMissing;
+
+  /// No description provided for @jobErrorVacanciesOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiene que ser un número entero entre {min} y {max}.'**
+  String jobErrorVacanciesOutOfRange(int min, int max);
+
+  /// No description provided for @jobErrorExpiryMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí la fecha de vencimiento.'**
+  String get jobErrorExpiryMissing;
+
+  /// No description provided for @jobErrorExpiryNotInFuture.
+  ///
+  /// In es, this message translates to:
+  /// **'Para publicar, el vencimiento tiene que ser posterior a hoy.'**
+  String get jobErrorExpiryNotInFuture;
+
+  /// No description provided for @jobErrorExpiryBeyondWindow.
+  ///
+  /// In es, this message translates to:
+  /// **'Para publicar, el vencimiento puede estar como máximo a {days} días de hoy.'**
+  String jobErrorExpiryBeyondWindow(int days);
+
+  /// No description provided for @jobErrorNeighborhoodRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí el barrio: es obligatorio para publicar en esta localidad.'**
+  String get jobErrorNeighborhoodRequired;
+
+  /// No description provided for @jobValueMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin completar'**
+  String get jobValueMissing;
+
+  /// No description provided for @jobCompanyUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa sin nombre disponible'**
+  String get jobCompanyUnknown;
+
+  /// No description provided for @jobsFeedEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no hay ofertas publicadas.'**
+  String get jobsFeedEmpty;
+
+  /// No description provided for @jobsFeedEmptyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Volvé a mirar en un rato: las ofertas nuevas aparecen primero.'**
+  String get jobsFeedEmptyHint;
+
+  /// No description provided for @jobsFeedRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar'**
+  String get jobsFeedRefresh;
+
+  /// Rótulo del botón Actualizar del feed mientras la recarga está en vuelo
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizando ofertas'**
+  String get jobsFeedRefreshing;
+
+  /// SnackBar del feed cuando falla una recarga (botón Actualizar o deslizar) y se siguen viendo las ofertas de antes
+  ///
+  /// In es, this message translates to:
+  /// **'Las ofertas no se actualizaron. {motivo}'**
+  String jobsFeedRefreshFailed(String motivo);
+
+  /// SnackBar corto del feed cuando una recarga sale bien después de una que había fallado: reemplaza el aviso del fallo, que ya no es cierto
+  ///
+  /// In es, this message translates to:
+  /// **'Las ofertas ya están al día.'**
+  String get jobsFeedUpToDate;
+
+  /// No description provided for @jobsFeedLoadErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar las ofertas'**
+  String get jobsFeedLoadErrorTitle;
+
+  /// No description provided for @jobsFeedLoadMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargar más ofertas'**
+  String get jobsFeedLoadMore;
+
+  /// No description provided for @jobsFeedLoadingMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando más ofertas'**
+  String get jobsFeedLoadingMore;
+
+  /// No description provided for @jobsFeedEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay más ofertas por ahora.'**
+  String get jobsFeedEnd;
+
+  /// Cantidad de ofertas cargadas, anunciada por el lector al cambiar (UX_FLOWS §20)
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Mostrando 1 oferta} other{Mostrando {count} ofertas}}'**
+  String jobsFeedCount(int count);
+
+  /// Pista del lector de pantalla para la acción de tocar una tarjeta de oferta
+  ///
+  /// In es, this message translates to:
+  /// **'ver el detalle de la oferta'**
+  String get jobCardOpenHint;
+
+  /// No description provided for @jobDetailTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Detalle de la oferta'**
+  String get jobDetailTitle;
+
+  /// No description provided for @jobNotAvailableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta oferta no está disponible'**
+  String get jobNotAvailableTitle;
+
+  /// No description provided for @jobNotAvailableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede haber vencido, estar pausada o el enlace ya no es válido.'**
+  String get jobNotAvailableBody;
+
+  /// No description provided for @jobBackToFeed.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a las ofertas'**
+  String get jobBackToFeed;
+
+  /// Aviso honesto en el detalle de la oferta: no hay botón Postularme hasta T-040
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no podés postularte desde la app: esa función llega en una próxima etapa.'**
+  String get jobApplyComingSoon;
 }
 
 class _AppLocalizationsDelegate
