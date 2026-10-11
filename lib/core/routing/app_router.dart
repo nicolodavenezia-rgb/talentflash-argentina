@@ -6,6 +6,7 @@ import '../../features/authentication/data/auth_repository.dart';
 import '../../features/authentication/presentation/account_type_screen.dart';
 import '../../features/authentication/presentation/login_screen.dart';
 import '../../features/authentication/presentation/password_recovery_screen.dart';
+import '../../features/authentication/presentation/second_factor_screen.dart';
 import '../../features/authentication/presentation/session_issue_screen.dart';
 import '../../features/authentication/presentation/session_loading_screen.dart';
 import '../../features/authentication/presentation/sign_up_screen.dart';
@@ -207,6 +208,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoute.adminVerifications.path,
         name: AppRoute.adminVerifications.name,
         builder: (context, state) => const AdminVerificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.adminSecondFactor.path,
+        name: AppRoute.adminSecondFactor.name,
+        builder: (context, state) => const SecondFactorScreen(),
       ),
       GoRoute(
         path: AppRoute.sessionIssue.path,

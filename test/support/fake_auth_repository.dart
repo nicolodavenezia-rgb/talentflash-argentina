@@ -5,6 +5,8 @@ import 'package:talentflash_argentina/features/authentication/domain/auth_failur
 import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
 import 'package:talentflash_argentina/features/authentication/domain/authenticated_user.dart';
 import 'package:talentflash_argentina/features/authentication/domain/business_role.dart';
+import 'package:talentflash_argentina/features/authentication/domain/second_factor.dart';
+import 'package:talentflash_argentina/features/authentication/domain/session_assurance.dart';
 
 /// Doble de prueba del repositorio de autenticación.
 ///
@@ -37,6 +39,54 @@ class FakeAuthRepository implements AuthRepository {
   /// observar el estado de carga.
   Completer<void>? pendingAction;
 
+  // --- Segundo factor ---------------------------------------------------------
+
+  /// Factores verificados que devuelve `listVerifiedSecondFactors`.
+  List<SecondFactor> verifiedFactors = <SecondFactor>[];
+
+  /// Alta que devuelve el próximo `enrollTotp` (el fake no genera secretos).
+  TotpEnrollment nextEnrollment = const TotpEnrollment(
+    factorId: 'factor-pendiente',
+    friendlyName: 'TalentFlash · 08/09/2026 14:32',
+    secret: 'JBSWY3DPEHPK3PXP',
+    uri: 'otpauth://totp/TalentFlash%20Argentina:persona?secret=JBSWY3DPEHPK3PXP',
+  );
+
+  /// Altas encoladas: cada `enrollTotp` consume la primera. Sirve para probar
+  /// que un alta rehecha muestra un secreto **distinto** del anterior. Cuando
+  /// se vacía, se vuelve a [nextEnrollment].
+  final List<TotpEnrollment> queuedEnrollments = <TotpEnrollment>[];
+
+  /// Vencimiento que se asigna al próximo desafío.
+  DateTime nextChallengeExpiresAt = DateTime(2030);
+
+  /// Fallos por método, consumidos al usarse. Un `nextFailure` global se lo
+  /// comería la primera lectura del flujo y probaría el caso equivocado.
+  AuthFailure? nextListFactorsFailure;
+  AuthFailure? nextEnrollFailure;
+  AuthFailure? nextChallengeFailure;
+  AuthFailure? nextVerifyFailure;
+  AuthFailure? nextDiscardFailure;
+
+  /// Retiene la próxima operación de segundo factor, sea cual sea.
+  Completer<void>? pendingSecondFactorAction;
+
+  /// Retiene **una** operación por nombre (`enrollTotp`, `verifySecondFactor`,
+  /// …). Hace falta para ejercitar las ramas donde una sola llamada queda en
+  /// vuelo mientras las demás pasan: con el gate compartido, retener el alta
+  /// obligaba a retener también la lectura de factores y el flujo nunca
+  /// llegaba a crear el pendiente.
+  final Map<String, Completer<void>> pendingByCall =
+      <String, Completer<void>>{};
+
+  int challengeCounter = 0;
+  String? lastFriendlyName;
+  String? lastChallengedFactorId;
+  String? lastVerifiedFactorId;
+  String? lastVerifiedChallengeId;
+  String? lastVerifiedCode;
+  final List<String> discardedFactorIds = <String>[];
+
   @override
   AuthStatus get currentStatus => _status;
 
@@ -55,10 +105,19 @@ class FakeAuthRepository implements AuthRepository {
   void emitSignedIn(
     BusinessRole role, {
     String email = 'persona@dev.talentflash.test',
+    SessionAssurance assurance = SessionAssurance.aal1,
+    String? id,
+    String? sessionId,
   }) {
     emit(
       AuthStatusSignedIn(
-        AuthenticatedUser(id: 'user-${role.claim}', email: email, role: role),
+        AuthenticatedUser(
+          id: id ?? 'user-${role.claim}',
+          email: email,
+          role: role,
+        ),
+        assurance: assurance,
+        sessionId: sessionId,
       ),
     );
   }
@@ -111,8 +170,87 @@ class FakeAuthRepository implements AuthRepository {
     emit(const AuthStatusSignedOut());
   }
 
+  @override
+  Future<List<SecondFactor>> listVerifiedSecondFactors() async {
+    calls.add('listVerifiedSecondFactors');
+    await _awaitPendingSecondFactor('listVerifiedSecondFactors');
+    _throwIf(nextListFactorsFailure, () => nextListFactorsFailure = null);
+    return List<SecondFactor>.unmodifiable(verifiedFactors);
+  }
+
+  @override
+  Future<TotpEnrollment> enrollTotp({required String friendlyName}) async {
+    calls.add('enrollTotp');
+    lastFriendlyName = friendlyName;
+    await _awaitPendingSecondFactor('enrollTotp');
+    _throwIf(nextEnrollFailure, () => nextEnrollFailure = null);
+    if (queuedEnrollments.isNotEmpty) {
+      return queuedEnrollments.removeAt(0);
+    }
+    return nextEnrollment;
+  }
+
+  @override
+  Future<SecondFactorChallenge> challengeSecondFactor(String factorId) async {
+    calls.add('challengeSecondFactor:$factorId');
+    lastChallengedFactorId = factorId;
+    await _awaitPendingSecondFactor('challengeSecondFactor');
+    _throwIf(nextChallengeFailure, () => nextChallengeFailure = null);
+    challengeCounter++;
+    return SecondFactorChallenge(
+      id: 'challenge-$challengeCounter',
+      factorId: factorId,
+      expiresAt: nextChallengeExpiresAt,
+    );
+  }
+
+  @override
+  Future<void> verifySecondFactor({
+    required String factorId,
+    required String challengeId,
+    required String code,
+  }) async {
+    calls.add('verifySecondFactor:$factorId');
+    lastVerifiedFactorId = factorId;
+    lastVerifiedChallengeId = challengeId;
+    lastVerifiedCode = code;
+    await _awaitPendingSecondFactor('verifySecondFactor');
+    _throwIf(nextVerifyFailure, () => nextVerifyFailure = null);
+    // Igual que el SDK con `mfaChallengeVerified`: la sesión vigente vuelve a
+    // emitirse con `aal2`, mismo usuario y misma sesión.
+    final current = _status;
+    if (current is AuthStatusSignedIn) {
+      emit(
+        AuthStatusSignedIn(
+          current.authUser,
+          assurance: SessionAssurance.aal2,
+          sessionId: current.sessionId,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<void> discardPendingSecondFactor(String factorId) async {
+    calls.add('discardPendingSecondFactor:$factorId');
+    discardedFactorIds.add(factorId);
+    await _awaitPendingSecondFactor('discardPendingSecondFactor');
+    _throwIf(nextDiscardFailure, () => nextDiscardFailure = null);
+  }
+
   Future<void> _awaitPending() async {
     final pending = pendingAction;
+    if (pending != null) {
+      await pending.future;
+    }
+  }
+
+  Future<void> _awaitPendingSecondFactor(String call) async {
+    final byCall = pendingByCall[call];
+    if (byCall != null) {
+      await byCall.future;
+    }
+    final pending = pendingSecondFactorAction;
     if (pending != null) {
       await pending.future;
     }
@@ -122,6 +260,13 @@ class FakeAuthRepository implements AuthRepository {
     final failure = nextFailure;
     if (failure != null) {
       nextFailure = null;
+      throw failure;
+    }
+  }
+
+  void _throwIf(AuthFailure? failure, void Function() clear) {
+    if (failure != null) {
+      clear();
       throw failure;
     }
   }

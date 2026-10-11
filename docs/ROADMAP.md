@@ -188,7 +188,7 @@ Convenciones: cada tarea es chica (≤2–3 días), tiene **criterio verificable
 
 | ID | Tarea | Criterio verificable | Dep. |
 |---|---|---|---|
-| T-076 | Panel admin web con rol admin + 2FA | Solo rol admin entra (test de integración) | T-015 |
+| T-076 | Panel admin web con rol admin + 2FA. **Avance parcial (segundo factor):** alta y verificación TOTP en la app para administración (`/admin/segundo-factor`, feature `authentication`): sin factor verificado se inicia el alta con QR y clave manual; con uno, se desafía ese factor; con varios, se elige. Solo `currentLevel == aal2` habilita la cola; el nivel se propaga por el estado de sesión sin reiniciar. Evidencia real: `npm run mfa:test` (alta, desafío y verificación contra GoTrue local; RPC rechazada con aal1 y aceptada con aal2; reingreso y nuevo desafío; aal2 sin rol admin rechazado). **Fuera de este avance y sin circuito definido:** recuperación por pérdida del autenticador, baja o reemplazo de un factor verificado, códigos de recuperación y cualquier acceso alternativo — hoy una cuenta admin que pierde su app queda sin poder operar la cola hasta que se defina ese circuito. El panel web completo (shell, denuncias, métricas) sigue abierto. | Solo rol admin entra (test de integración) | T-015 |
 | T-077 | Colas operativas: verificación CUIT, denuncias, moderación de videos | Aprobar/rechazar desde el panel impacta el estado en la app | T-076 |
 | T-078 | Métricas operativas: usuarios, ofertas, matches, videos, costo IA/Stream del mes | Números del dashboard coinciden con queries SQL de control | T-076 |
 | T-079 | Gestión de suscripciones: estado, baja manual, cupones beta | Toda acción queda auditada en `audit_log` | T-076, T-069 |

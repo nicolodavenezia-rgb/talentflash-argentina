@@ -27,11 +27,9 @@ abstract interface class CompanyVerificationRepository {
   /// URL firmada de vida corta para mirar una constancia ya subida.
   Future<String> createConstanciaSignedUrl(String path);
 
-  /// ¿La sesión actual llegó a AAL2 (segundo factor verificado)?
-  ///
-  /// Es un dato del token para poder explicar la situación ANTES de que el
-  /// servidor rechace. No autoriza nada: la RPC vuelve a mirarlo.
-  Future<bool> hasSecondFactor();
+  // El nivel AAL de la sesión ya no se consulta acá: es un dato del estado de
+  // sesión (`AuthStatus.assurance`, feature de autenticación) y así el panel
+  // lo ve cambiar en cuanto se verifica el segundo factor.
 
   /// Cola administrativa filtrada por estado (avance parcial de T-077).
   Future<List<CompanyVerificationRequest>> fetchVerificationQueue(

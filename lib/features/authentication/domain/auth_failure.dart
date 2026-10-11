@@ -14,7 +14,68 @@ enum AuthFailureCode {
   emailNotConfirmed,
   rateLimited,
   network,
-  unknown,
+
+  /// No hay sesión (o el servidor ya no la reconoce): hay que volver a
+  /// iniciar sesión. Distinto de [invalidCredentials].
+  sessionMissing,
+
+  /// La operación pertenecía a una sesión que dejó de ser la vigente mientras
+  /// viajaba (cierre de sesión, otra cuenta, reingreso): se descartó antes de
+  /// que el SDK pudiera aplicarla. La UI no la muestra como error de la
+  /// sesión nueva; el flujo que la pidió ya no existe.
+  staleSession,
+
+  // --- Segundo factor (TOTP). Los `error_code` de GoTrue de abajo se
+  // --- verificaron contra el stack local con `npm run mfa:test`.
+
+  /// El código no corresponde al factor (`mfa_verification_failed`).
+  mfaInvalidCode,
+
+  /// El desafío venció antes de mandar el código (`mfa_challenge_expired`).
+  mfaChallengeExpired,
+
+  /// El factor ya no existe (`mfa_factor_not_found`), p. ej. lo descartó
+  /// otra sesión.
+  mfaFactorNotFound,
+
+  /// Ya hay un factor con ese nombre (`mfa_factor_name_conflict`): suele ser
+  /// un alta anterior interrumpida.
+  mfaFactorNameConflict,
+
+  /// La cuenta llegó al máximo de factores (`too_many_enrolled_mfa_factors`).
+  mfaTooManyFactors,
+
+  /// La acción exige `aal2` y la sesión está en `aal1` (`insufficient_aal`):
+  /// con un factor verificado no se puede dar de alta otro sin desafiar el
+  /// existente.
+  mfaInsufficientAssurance,
+
+  /// TOTP deshabilitado en el proyecto (`mfa_totp_*_not_enabled`).
+  mfaNotEnabled,
+
+  /// El servidor rechazó la verificación por política o por cambio de red
+  /// (`mfa_verification_rejected`, `mfa_ip_address_mismatch`).
+  mfaRejected,
+
+  /// **Esta misma sesión** ya verificó su segundo factor mientras la operación
+  /// corría: el nivel subió de `aal1` a `aal2` sin que cambiara la sesión.
+  ///
+  /// No lo emite GoTrue: lo emite el repositorio para cortar un alta que dejó
+  /// de tener sentido (`SupabaseAuthRepository.enrollTotp`). **No es
+  /// [staleSession]**: la sesión es la misma —el `session_id` no cambió— y
+  /// sigue siendo válida; lo que cambió es su nivel. Decirle a la persona que
+  /// su sesión cambió sería falso, y dejarla en un error sería peor todavía:
+  /// su sesión ya está autorizada y lo que corresponde es llevarla a la cola.
+  mfaAlreadyVerified,
+
+  unknown;
+
+  /// `error_code` con el que `SessionScopedHttpClient` descarta una respuesta
+  /// de una sesión que ya no es la vigente. No lo emite GoTrue.
+  String? get wireCode => switch (this) {
+    AuthFailureCode.staleSession => 'stale_session',
+    _ => null,
+  };
 }
 
 /// Error tipado de la capa de autenticación.
@@ -34,7 +95,19 @@ class AuthFailure implements Exception {
       return error;
     }
     if (error is AuthRetryableFetchException) {
-      return AuthFailure(AuthFailureCode.network, debugDetail: '$error');
+      // Sin `$error`: ante un 2xx con JSON malformado el SDK mete en el
+      // mensaje un fragmento del cuerpo, que en el alta TOTP contendría el
+      // secreto. El tipo alcanza para diagnosticar.
+      return const AuthFailure(
+        AuthFailureCode.network,
+        debugDetail: 'AuthRetryableFetchException',
+      );
+    }
+    if (error is AuthSessionMissingException) {
+      return AuthFailure(
+        AuthFailureCode.sessionMissing,
+        debugDetail: 'AuthSessionMissingException',
+      );
     }
     if (error is AuthException) {
       return AuthFailure(
@@ -44,9 +117,17 @@ class AuthFailure implements Exception {
       );
     }
     if (error is TimeoutException) {
-      return AuthFailure(AuthFailureCode.network, debugDetail: '$error');
+      return const AuthFailure(
+        AuthFailureCode.network,
+        debugDetail: 'TimeoutException',
+      );
     }
-    return AuthFailure(AuthFailureCode.unknown, debugDetail: '$error');
+    // Solo el tipo: un `toString` ajeno puede arrastrar datos de la
+    // respuesta, y este detalle termina en logs.
+    return AuthFailure(
+      AuthFailureCode.unknown,
+      debugDetail: error.runtimeType.toString(),
+    );
   }
 
   final AuthFailureCode code;
@@ -69,6 +150,33 @@ class AuthFailure implements Exception {
       case 'over_request_rate_limit':
       case 'over_email_send_rate_limit':
         return AuthFailureCode.rateLimited;
+      case 'session_not_found':
+      case 'session_expired':
+      case 'refresh_token_not_found':
+      case 'refresh_token_already_used':
+        return AuthFailureCode.sessionMissing;
+      // Lo emite `SessionScopedHttpClient`, no GoTrue: la respuesta llegó
+      // para una sesión que ya no es la vigente.
+      case 'stale_session':
+        return AuthFailureCode.staleSession;
+      case 'mfa_verification_failed':
+        return AuthFailureCode.mfaInvalidCode;
+      case 'mfa_challenge_expired':
+        return AuthFailureCode.mfaChallengeExpired;
+      case 'mfa_factor_not_found':
+        return AuthFailureCode.mfaFactorNotFound;
+      case 'mfa_factor_name_conflict':
+        return AuthFailureCode.mfaFactorNameConflict;
+      case 'too_many_enrolled_mfa_factors':
+        return AuthFailureCode.mfaTooManyFactors;
+      case 'insufficient_aal':
+        return AuthFailureCode.mfaInsufficientAssurance;
+      case 'mfa_totp_enroll_not_enabled':
+      case 'mfa_totp_verify_not_enabled':
+        return AuthFailureCode.mfaNotEnabled;
+      case 'mfa_verification_rejected':
+      case 'mfa_ip_address_mismatch':
+        return AuthFailureCode.mfaRejected;
     }
     if (error.statusCode == '429') {
       return AuthFailureCode.rateLimited;

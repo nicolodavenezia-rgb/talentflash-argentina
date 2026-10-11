@@ -12,51 +12,29 @@ import 'package:talentflash_argentina/shared/models/data_failure.dart';
 
 import '../../../support/gotrue_fixtures.dart';
 
-/// Arma un access token con forma de JWT **en tiempo de ejecución**, para que
-/// el `eyJ...` no exista como literal en el repositorio (el scan de secretos y
-/// el test de arquitectura buscan justamente eso). La firma es de utilería: el
-/// SDK solo decodifica el payload, no verifica nada.
-String tokenConAal(String? aal) {
-  String parte(Map<String, dynamic> mapa) =>
-      base64Url.encode(utf8.encode(jsonEncode(mapa))).replaceAll('=', '');
-  final payload = <String, dynamic>{
-    'sub': GoTrueFixtures.userId,
-    'role': 'authenticated',
-    'amr': <dynamic>[],
-  };
-  // Sin `aal` en el payload se simula la sesión de un solo factor, que es
-  // exactamente lo que emite GoTrue cuando no hay MFA verificado.
-  if (aal != null) {
-    payload['aal'] = aal;
-  }
-  return '${parte(<String, dynamic>{'alg': 'HS256', 'typ': 'JWT'})}'
-      '.${parte(payload)}'
-      '.firma-de-utileria';
-}
-
 /// El repositorio de verificación contra un cliente HTTP falso con las formas
 /// reales de PostgREST y Storage: ningún test toca un proyecto Supabase.
+///
+/// El nivel AAL de la sesión ya no se lee desde este repositorio: es parte del
+/// estado de sesión y se prueba en `supabase_auth_repository_test.dart`.
 void main() {
   const jsonHeaders = {'content-type': 'application/json'};
   late List<http.Request> requests;
 
   Future<SupabaseClient> makeClient(
-    Future<http.Response> Function(http.Request request) handler, {
-    String? aal,
-  }) async {
+    Future<http.Response> Function(http.Request request) handler,
+  ) async {
     requests = [];
     final client = SupabaseClient(
       'http://127.0.0.1:54321',
       'sb_publishable_de_prueba',
       httpClient: MockClient((request) async {
         if (request.url.path.contains('/auth/v1/token')) {
-          final sesion = jsonDecode(
+          return http.Response(
             GoTrueFixtures.sessionJson(appRole: 'company'),
-          ) as Map<String, dynamic>;
-          if (aal != null) {
-            sesion['access_token'] = tokenConAal(aal);
-          }
-          return http.Response(jsonEncode(sesion), 200, headers: jsonHeaders);
+            200,
+            headers: jsonHeaders,
+          );
         }
         requests.add(request);
         final response = await handler(request);
@@ -359,56 +337,6 @@ void main() {
       final body = jsonDecode(requests.single.body) as Map<String, dynamic>;
       expect(body['expiresIn'], 300);
     });
-  });
-
-  group('hasSecondFactor', () {
-    test('un token con aal2 devuelve true', () async {
-      final client = await makeClient(
-        (request) async => http.Response('{}', 200, headers: jsonHeaders),
-        aal: 'aal2',
-      );
-      expect(
-        await SupabaseCompanyVerificationRepository(client).hasSecondFactor(),
-        isTrue,
-      );
-    });
-
-    test('aal1 devuelve false', () async {
-      final client = await makeClient(
-        (request) async => http.Response('{}', 200, headers: jsonHeaders),
-        aal: 'aal1',
-      );
-      expect(
-        await SupabaseCompanyVerificationRepository(client).hasSecondFactor(),
-        isFalse,
-      );
-    });
-
-    test('sin claim aal devuelve false', () async {
-      final client = await makeClient(
-        (request) async => http.Response('{}', 200, headers: jsonHeaders),
-        aal: null,
-      );
-      expect(
-        await SupabaseCompanyVerificationRepository(client).hasSecondFactor(),
-        isFalse,
-      );
-    });
-
-    test(
-      'un token ilegible falla cerrado en vez de propagar la excepción',
-      () async {
-        // El fixture por defecto trae un access token que NO es un JWT: leer el
-        // nivel lanza, y "no sé" tiene que valer lo mismo que "no tengo".
-        final client = await makeClient(
-          (request) async => http.Response('{}', 200, headers: jsonHeaders),
-        );
-        expect(
-          await SupabaseCompanyVerificationRepository(client).hasSecondFactor(),
-          isFalse,
-        );
-      },
-    );
   });
 
   group('cola administrativa', () {

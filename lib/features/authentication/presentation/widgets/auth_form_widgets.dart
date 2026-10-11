@@ -255,10 +255,15 @@ class AuthSubmitButton extends StatelessWidget {
     return FilledButton(
       onPressed: isLoading ? null : onPressed,
       child: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              // El botón conserva su nombre accesible mientras carga: sin
+              // esto el lector lo anuncia como "botón deshabilitado" a secas.
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                semanticsLabel: label,
+              ),
             )
           : Text(label),
     );

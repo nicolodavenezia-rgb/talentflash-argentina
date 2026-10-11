@@ -255,6 +255,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos completar la acción. Reintentá en unos minutos.';
 
   @override
+  String get authFailureSessionMissing =>
+      'Tu sesión terminó. Volvé a iniciar sesión.';
+
+  @override
   String get authErrorTitle => 'No pudimos continuar';
 
   @override
@@ -1274,7 +1278,160 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adminVerificationsMfaBody =>
-      'Para revisar verificaciones hay que iniciar sesión con segundo factor. Cerrá sesión, activá el segundo factor y volvé a entrar.';
+      'Para revisar verificaciones tenés que confirmar tu segundo factor en esta sesión. Si todavía no lo configuraste, lo hacés en el mismo paso, sin cerrar sesión.';
+
+  @override
+  String get adminVerificationsMfaAction => 'Verificar segundo factor';
+
+  @override
+  String get mfaTitle => 'Segundo factor';
+
+  @override
+  String get mfaPreparing => 'Preparando el segundo factor…';
+
+  @override
+  String get mfaEnrollTitle => 'Configurá tu autenticador';
+
+  @override
+  String get mfaEnrollIntro =>
+      'Escaneá el código QR con una app de autenticación (por ejemplo Google Authenticator, Microsoft Authenticator o Aegis). Si no podés escanearlo, cargá la clave manual que sigue.';
+
+  @override
+  String get mfaEnrollPendingNote =>
+      'El segundo factor queda activo recién cuando ingresás un código válido. Si salís antes, no queda configurado.';
+
+  @override
+  String get mfaEnrollRestartedTitle => 'La configuración anterior venció';
+
+  @override
+  String get mfaEnrollRestarted =>
+      'Pasó demasiado tiempo y la configuración anterior venció. Este código QR es NUEVO: borrá la entrada anterior de tu app de autenticación y escaneá este. El código que tenías ya no sirve.';
+
+  @override
+  String get mfaLimitsNote =>
+      'Guardá bien el acceso a tu app de autenticación: esta versión no permite recuperar, dar de baja ni reemplazar el autenticador desde la app.';
+
+  @override
+  String get mfaQrSemantics =>
+      'Código QR para registrar TalentFlash en tu app de autenticación. Si no podés escanearlo, usá la clave manual que sigue.';
+
+  @override
+  String get mfaManualKeyLabel => 'Clave manual';
+
+  @override
+  String get mfaManualKeyHelp =>
+      'Cargala en tu app como clave de tiempo (TOTP), sin espacios.';
+
+  @override
+  String mfaManualKeySemantics(String clave) {
+    return 'Clave manual, carácter por carácter: $clave';
+  }
+
+  @override
+  String get mfaCodeLabel => 'Código de 6 dígitos';
+
+  @override
+  String get mfaCodeHelp =>
+      'Es el código que muestra tu app ahora; cambia cada 30 segundos.';
+
+  @override
+  String get mfaCodeRequired => 'Ingresá el código de tu app.';
+
+  @override
+  String get mfaCodeFormat => 'El código tiene 6 dígitos.';
+
+  @override
+  String get mfaSubmitEnroll => 'Activar segundo factor';
+
+  @override
+  String get mfaSubmitVerify => 'Verificar';
+
+  @override
+  String get mfaCancel => 'Cancelar y volver';
+
+  @override
+  String get mfaBackToQueue => 'Volver a la cola';
+
+  @override
+  String get mfaChallengeTitle => 'Confirmá tu segundo factor';
+
+  @override
+  String mfaChallengeIntro(String nombre) {
+    return 'Ingresá el código que muestra tu app de autenticación para $nombre.';
+  }
+
+  @override
+  String get mfaChooseTitle => '¿Qué autenticador vas a usar?';
+
+  @override
+  String get mfaChooseIntro =>
+      'Tu cuenta tiene más de un autenticador registrado. Elegí con cuál vas a verificar esta sesión.';
+
+  @override
+  String get mfaChooseAnother => 'Usar otro autenticador';
+
+  @override
+  String get mfaFactorUnnamed => 'Autenticador sin nombre';
+
+  @override
+  String mfaFactorUnnamedCreated(String fecha) {
+    return 'Autenticador sin nombre, registrado el $fecha';
+  }
+
+  @override
+  String mfaFriendlyName(String fecha) {
+    return 'TalentFlash · $fecha';
+  }
+
+  @override
+  String get mfaVerified =>
+      'Segundo factor verificado. Ya podés revisar la cola.';
+
+  @override
+  String get mfaAlreadyVerified =>
+      'Tu sesión ya tiene el segundo factor verificado.';
+
+  @override
+  String get mfaErrorTitle => 'No pudimos verificar el código';
+
+  @override
+  String get mfaUnavailableTitle => 'No pudimos preparar el segundo factor';
+
+  @override
+  String get mfaFailureInvalidCode =>
+      'El código no es válido. Fijate que sea el actual de tu app y probá de nuevo.';
+
+  @override
+  String get mfaFailureChallengeExpired =>
+      'Se venció el tiempo para ingresar el código. Probá de nuevo con el código actual de tu app.';
+
+  @override
+  String get mfaFailureFactorNotFound =>
+      'No encontramos ese autenticador. Volvé a la cola y empezá de nuevo.';
+
+  @override
+  String get mfaFailureNameConflict =>
+      'Quedó un alta anterior sin terminar con ese nombre. Reintentá para generar una nueva.';
+
+  @override
+  String get mfaFailureTooManyFactors =>
+      'Tu cuenta llegó al máximo de autenticadores registrados.';
+
+  @override
+  String get mfaFailureInsufficientAssurance =>
+      'Para hacer esto primero tenés que verificar el autenticador que ya tenés.';
+
+  @override
+  String get mfaFailureNotEnabled =>
+      'El segundo factor no está habilitado en este entorno.';
+
+  @override
+  String get mfaFailureRejected =>
+      'La verificación fue rechazada. Probá de nuevo con el código actual de tu app.';
+
+  @override
+  String get mfaFailureStaleSession =>
+      'La sesión cambió mientras preparábamos el segundo factor. Reintentá para empezar de nuevo.';
 
   @override
   String get adminVerificationsEmpty => 'No hay solicitudes en este estado.';

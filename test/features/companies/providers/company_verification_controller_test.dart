@@ -3,12 +3,18 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
+import 'package:talentflash_argentina/features/authentication/domain/authenticated_user.dart';
+import 'package:talentflash_argentina/features/authentication/domain/business_role.dart';
+import 'package:talentflash_argentina/features/authentication/domain/session_assurance.dart';
+import 'package:talentflash_argentina/features/authentication/providers/auth_providers.dart';
 import 'package:talentflash_argentina/features/companies/data/company_access_repository.dart';
 import 'package:talentflash_argentina/features/companies/data/company_verification_repository.dart';
 import 'package:talentflash_argentina/features/companies/domain/company_verification.dart';
 import 'package:talentflash_argentina/features/companies/providers/company_verification_providers.dart';
 import 'package:talentflash_argentina/shared/models/data_failure.dart';
 
+import '../../../support/fake_auth_repository.dart';
 import '../../../support/fake_company_verification_repository.dart';
 
 void main() {
@@ -186,6 +192,39 @@ void main() {
   });
 
   group('revisión administrativa', () {
+    const admin = AuthenticatedUser(
+      id: 'admin-1',
+      email: 'admin@dev.talentflash.test',
+      role: BusinessRole.admin,
+    );
+
+    /// La revisión pertenece a una cuenta: el resultado solo se aplica si la
+    /// sesión sigue siendo la misma, así que hay que tener una resuelta.
+    Future<void> conSesionAdmin(
+      CompanyVerificationRepository verification,
+    ) async {
+      final auth = FakeAuthRepository(
+        initialStatus: const AuthStatusSignedIn(
+          admin,
+          assurance: SessionAssurance.aal2,
+        ),
+      );
+      addTearDown(auth.dispose);
+      container = ProviderContainer.test(
+        retry: (retryCount, error) => null,
+        overrides: [
+          companyVerificationRepositoryProvider.overrideWithValue(verification),
+          constanciaPickerProvider.overrideWithValue(picker),
+          authRepositoryProvider.overrideWithValue(auth),
+        ],
+      );
+      container.listen(authStatusProvider, (_, _) {});
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    setUp(() => conSesionAdmin(repository));
+
     test('aprobar no arrastra motivo y refresca la cola', () async {
       await review().approve('req-1');
 
@@ -226,14 +265,7 @@ void main() {
 
     test('el doble tap no resuelve dos veces la misma solicitud', () async {
       final completer = Completer<void>();
-      final lenta = _RepositorioLento(repository, completer.future);
-      container = ProviderContainer.test(
-        retry: (retryCount, error) => null,
-        overrides: [
-          companyVerificationRepositoryProvider.overrideWithValue(lenta),
-          constanciaPickerProvider.overrideWithValue(picker),
-        ],
-      );
+      await conSesionAdmin(_RepositorioLento(repository, completer.future));
 
       final primera = review().approve('req-1');
       final segunda = review().approve('req-1');
@@ -243,6 +275,193 @@ void main() {
       expect(
         repository.calls.where((c) => c == 'reviewVerification').length,
         1,
+      );
+    });
+  });
+
+  group('cola atada a la cuenta', () {
+    const adminA = AuthenticatedUser(
+      id: 'admin-a',
+      email: 'a@dev.talentflash.test',
+      role: BusinessRole.admin,
+    );
+    const adminB = AuthenticatedUser(
+      id: 'admin-b',
+      email: 'b@dev.talentflash.test',
+      role: BusinessRole.admin,
+    );
+
+    CompanyVerificationRequest solicitud(String nombre) =>
+        CompanyVerificationRequest(
+          requestId: 'req-$nombre',
+          companyId: 'c-1',
+          companyName: nombre,
+          requestStatus: CompanyVerificationStatus.pending,
+          cuitSubmitted: '30-70000001-6',
+        );
+
+    Future<void> settle() async {
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+    }
+
+    test(
+      'una respuesta tardía de la cuenta anterior no se aplica a la siguiente',
+      () async {
+        final auth = FakeAuthRepository(
+          initialStatus: const AuthStatusSignedIn(
+            adminA,
+            assurance: SessionAssurance.aal2,
+          ),
+        );
+        addTearDown(auth.dispose);
+        final gate = Completer<void>();
+        repository
+          ..queue = [solicitud('Empresa de A')]
+          ..pendingQueueFetch = gate;
+        container = ProviderContainer.test(
+          retry: (retryCount, error) => null,
+          overrides: [
+            companyVerificationRepositoryProvider.overrideWithValue(repository),
+            constanciaPickerProvider.overrideWithValue(picker),
+            authRepositoryProvider.overrideWithValue(auth),
+          ],
+        );
+        container.listen(authStatusProvider, (_, _) {});
+        await settle();
+
+        final valores = <List<CompanyVerificationRequest>>[];
+        final subscription = container.listen(verificationQueueProvider, (
+          _,
+          next,
+        ) {
+          if (next.hasValue) {
+            valores.add(next.value!);
+          }
+        }, fireImmediately: true);
+        addTearDown(subscription.close);
+        await settle();
+        expect(repository.calls, <String>['fetchVerificationQueue:pending']);
+
+        // Cambio de cuenta con la lectura de A todavía en vuelo. La lectura
+        // de B responde enseguida.
+        repository
+          ..pendingQueueFetch = null
+          ..queue = [solicitud('Empresa de B')];
+        auth.emit(
+          const AuthStatusSignedIn(adminB, assurance: SessionAssurance.aal2),
+        );
+        await settle();
+        expect(
+          container.read(verificationQueueProvider).value?.single.companyName,
+          'Empresa de B',
+        );
+
+        // Recién ahora responde la lectura de A.
+        gate.complete();
+        await settle();
+
+        expect(
+          container.read(verificationQueueProvider).value?.single.companyName,
+          'Empresa de B',
+        );
+        expect(
+          valores.any((v) => v.any((r) => r.companyName == 'Empresa de A')),
+          isFalse,
+          reason: 'los datos de A nunca se publicaron para B',
+        );
+      },
+    );
+
+    test('una revisión en vuelo de la cuenta anterior no se muestra a la '
+        'siguiente', () async {
+      final auth = FakeAuthRepository(
+        initialStatus: const AuthStatusSignedIn(
+          adminA,
+          assurance: SessionAssurance.aal2,
+        ),
+      );
+      addTearDown(auth.dispose);
+      final gate = Completer<void>();
+      final lenta = _RepositorioLento(repository, gate.future);
+      container = ProviderContainer.test(
+        retry: (retryCount, error) => null,
+        overrides: [
+          companyVerificationRepositoryProvider.overrideWithValue(lenta),
+          constanciaPickerProvider.overrideWithValue(picker),
+          authRepositoryProvider.overrideWithValue(auth),
+        ],
+      );
+      container.listen(authStatusProvider, (_, _) {});
+      container.listen(verificationReviewControllerProvider, (_, _) {});
+      await settle();
+
+      final revision = review().approve('req-1');
+      await settle();
+      expect(
+        container.read(verificationReviewControllerProvider).isLoading,
+        isTrue,
+      );
+
+      // Cambio de cuenta con la revisión todavía en vuelo.
+      auth.emit(const AuthStatusSignedOut());
+      await settle();
+      auth.emit(
+        const AuthStatusSignedIn(adminB, assurance: SessionAssurance.aal2),
+      );
+      await settle();
+      expect(
+        container.read(verificationReviewControllerProvider).value,
+        isNull,
+      );
+
+      gate.complete();
+      await revision;
+      await settle();
+
+      expect(
+        container.read(verificationReviewControllerProvider).value,
+        isNull,
+        reason: 'el "resuelta" de A no se le muestra a B',
+      );
+      expect(
+        container.read(verificationReviewControllerProvider).hasError,
+        isFalse,
+      );
+    });
+
+    test('cerrar sesión descarta el estado de una revisión', () async {
+      final auth = FakeAuthRepository(
+        initialStatus: const AuthStatusSignedIn(
+          adminA,
+          assurance: SessionAssurance.aal2,
+        ),
+      );
+      addTearDown(auth.dispose);
+      container = ProviderContainer.test(
+        retry: (retryCount, error) => null,
+        overrides: [
+          companyVerificationRepositoryProvider.overrideWithValue(repository),
+          constanciaPickerProvider.overrideWithValue(picker),
+          authRepositoryProvider.overrideWithValue(auth),
+        ],
+      );
+      container.listen(authStatusProvider, (_, _) {});
+      container.listen(verificationReviewControllerProvider, (_, _) {});
+      await settle();
+      await review().approve('req-1');
+      expect(
+        container.read(verificationReviewControllerProvider).value,
+        VerificationActionOutcome.reviewed,
+      );
+
+      auth.emit(const AuthStatusSignedOut());
+      await settle();
+
+      expect(
+        container.read(verificationReviewControllerProvider).value,
+        isNull,
+        reason: 'el resultado de la cuenta anterior no sobrevive',
       );
     });
   });
@@ -294,9 +513,6 @@ class _RepositorioLento implements CompanyVerificationRepository {
   @override
   Future<String> createConstanciaSignedUrl(String path) =>
       _inner.createConstanciaSignedUrl(path);
-
-  @override
-  Future<bool> hasSecondFactor() => _inner.hasSecondFactor();
 
   @override
   Future<List<CompanyVerificationRequest>> fetchVerificationQueue(

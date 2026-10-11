@@ -5,10 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:talentflash_argentina/features/authentication/data/auth_repository.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_attempt_recorder.dart';
+import 'package:talentflash_argentina/features/authentication/data/second_factor_cleanup_policy.dart';
+import 'package:talentflash_argentina/features/authentication/data/session_scoped_http_client.dart';
 import 'package:talentflash_argentina/features/authentication/data/supabase_auth_repository.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_failure.dart';
 import 'package:talentflash_argentina/features/authentication/domain/auth_status.dart';
 import 'package:talentflash_argentina/features/authentication/domain/business_role.dart';
+import 'package:talentflash_argentina/features/authentication/domain/session_assurance.dart';
 
 import '../../../support/gotrue_fixtures.dart';
 
@@ -19,22 +23,41 @@ void main() {
   late List<http.Request> requests;
 
   /// Construye el repositorio con un GoTrue apuntado al cliente falso.
+  /// [ownedFactors] son los pendientes que el test siembra en el servidor
+  /// falso: se registran como propios de esta instancia, igual que haría el
+  /// alta real, porque representan un alta interrumpida de ESTA misma app.
+  /// Sin eso, la política de limpieza no los tocaría y el test no ejercitaría
+  /// lo que dice ejercitar.
   SupabaseAuthRepository buildRepository(
-    Future<http.Response> Function(http.Request request) handler,
-  ) {
-    final client = GoTrueClient(
+    Future<http.Response> Function(http.Request request) handler, {
+    List<String> ownedFactors = const [],
+  }) {
+    final cleanup = SecondFactorCleanupPolicy();
+    for (final id in ownedFactors) {
+      cleanup.recordEnrolled(id);
+    }
+    late final GoTrueClient client;
+    client = GoTrueClient(
       url: 'http://127.0.0.1:54321/auth/v1',
       autoRefreshToken: false,
       // El flujo PKCE necesita almacenamiento asíncrono; para estos tests
       // alcanza con el implícito.
       flowType: AuthFlowType.implicit,
-      httpClient: MockClient((request) {
-        requests.add(request);
-        return handler(request);
-      }),
+      // Mismo cableado que `bootstrap.dart`: el guard de sesión entre el SDK
+      // y la red. `requests` registra lo que el guard dejó salir.
+      httpClient: SessionScopedHttpClient(
+        SecondFactorAttemptRecorder.withInnerClient(
+          cleanup,
+          MockClient((request) {
+            requests.add(request);
+            return handler(request);
+          }),
+        ),
+        currentAccessToken: () => client.currentSession?.accessToken,
+      ),
     );
     addTearDown(client.dispose);
-    return SupabaseAuthRepository(client);
+    return SupabaseAuthRepository(client, cleanup);
   }
 
   http.Response json(String body, {int status = 200}) => http.Response(
@@ -330,6 +353,505 @@ void main() {
 
       expect(repository.currentStatus, isA<AuthStatusSignedOut>());
       expect(repository.currentStatus.user, isNull);
+    });
+  });
+
+  group('nivel de la sesión (claim aal)', () {
+    test('un token sin forma de JWT vale desconocido, no explota', () {
+      expect(
+        SupabaseAuthRepository.assuranceFromAccessToken(
+          GoTrueFixtures.accessToken,
+        ),
+        SessionAssurance.unknown,
+      );
+      expect(
+        SupabaseAuthRepository.assuranceFromAccessToken('a.b.c'),
+        SessionAssurance.unknown,
+      );
+      expect(
+        SupabaseAuthRepository.assuranceFromAccessToken(''),
+        SessionAssurance.unknown,
+      );
+    });
+
+    test('lee aal1 y aal2 exactos del payload', () {
+      expect(
+        SupabaseAuthRepository.assuranceFromAccessToken(
+          GoTrueFixtures.accessTokenWithClaims(aal: 'aal1'),
+        ),
+        SessionAssurance.aal1,
+      );
+      expect(
+        SupabaseAuthRepository.assuranceFromAccessToken(
+          GoTrueFixtures.accessTokenWithClaims(aal: 'aal2'),
+        ),
+        SessionAssurance.aal2,
+      );
+    });
+
+    test('claim ausente, caja equivocada o nivel inventado: desconocido', () {
+      for (final aal in <String?>[null, 'AAL2', 'aal3', 'aal2 ']) {
+        expect(
+          SupabaseAuthRepository.assuranceFromAccessToken(
+            GoTrueFixtures.accessTokenWithClaims(aal: aal),
+          ),
+          SessionAssurance.unknown,
+          reason: 'para $aal',
+        );
+      }
+    });
+
+    test('la sesión traduce el nivel junto con el rol', () async {
+      final repository = buildRepository(
+        (_) async => json(
+          GoTrueFixtures.sessionJson(
+            appRole: 'admin',
+            accessToken: GoTrueFixtures.accessTokenWithClaims(aal: 'aal1'),
+          ),
+        ),
+      );
+
+      await repository.signInWithEmail(
+        email: 'admin@dev.talentflash.test',
+        password: 'password123',
+      );
+
+      final status = repository.currentStatus;
+      expect(status.role, BusinessRole.admin);
+      expect(status.assurance, SessionAssurance.aal1);
+      expect(status.hasSecondFactorVerified, isFalse);
+    });
+  });
+
+  group('segundo factor TOTP', () {
+    /// Sesión aal1 de una admin, más los endpoints de MFA con las formas
+    /// reales del stack local (`npm run mfa:test`).
+    /// [factors] viaja en la sesión del login (la copia que guarda el SDK);
+    /// [userFactors] es lo que responde `GET /user` (el servidor). Por
+    /// defecto coinciden; los tests que prueban que se consulta al servidor
+    /// los separan.
+    Future<SupabaseAuthRepository> signedInAdmin({
+      List<Map<String, dynamic>>? factors,
+      List<Map<String, dynamic>>? userFactors,
+      http.Response Function(http.Request request)? mfa,
+      List<String> ownedFactors = const [],
+    }) async {
+      final repository = buildRepository(ownedFactors: ownedFactors, (
+        request,
+      ) async {
+        final path = request.url.path;
+        if (path.endsWith('/token')) {
+          return json(
+            GoTrueFixtures.sessionJson(
+              appRole: 'admin',
+              accessToken: GoTrueFixtures.accessTokenWithClaims(aal: 'aal1'),
+              factors: factors,
+            ),
+          );
+        }
+        if (path.endsWith('/user') && request.method == 'GET') {
+          // Lo que devuelve `/user`: el usuario con sus factores vigentes.
+          return json(
+            jsonEncode(
+              GoTrueFixtures.user(
+                appRole: 'admin',
+                factors: userFactors ?? factors,
+              ),
+            ),
+          );
+        }
+        final custom = mfa?.call(request);
+        if (custom != null) {
+          return custom;
+        }
+        return json(
+          GoTrueFixtures.errorJson(
+            code: 404,
+            errorCode: 'not_found',
+            message: 'ruta no simulada: $path',
+          ),
+          status: 404,
+        );
+      });
+      await repository.signInWithEmail(
+        email: 'admin@dev.talentflash.test',
+        password: 'password123',
+      );
+      requests.clear();
+      return repository;
+    }
+
+    test('lista solo los factores TOTP verificados según el servidor', () async {
+      final repository = await signedInAdmin(
+        // La copia de la sesión está vieja a propósito: lo que vale es `/user`.
+        factors: [GoTrueFixtures.factor(id: 'viejo-en-sesion')],
+        userFactors: [
+          GoTrueFixtures.factor(id: 'ok', friendlyName: 'Celular'),
+          GoTrueFixtures.factor(id: 'pendiente', status: 'unverified'),
+          GoTrueFixtures.factor(id: 'sms', factorType: 'phone'),
+          GoTrueFixtures.factor(id: 'sin-nombre', friendlyName: ''),
+        ],
+      );
+
+      final factors = await repository.listVerifiedSecondFactors();
+
+      expect(requests.single.method, 'GET');
+      expect(
+        requests.single.url.path,
+        endsWith('/user'),
+        reason: 'la lista sale del servidor (`/user`), sin refrescar la sesión',
+      );
+      expect(factors.map((f) => f.id), <String>['ok', 'sin-nombre']);
+      expect(factors.first.friendlyName, 'Celular');
+      expect(factors.last.friendlyName, isNull);
+      expect(factors.first.createdAt, isNotNull);
+    });
+
+    test('sin factores la lista es vacía', () async {
+      final repository = await signedInAdmin();
+      expect(await repository.listVerifiedSecondFactors(), isEmpty);
+    });
+
+    test(
+      'el alta manda tipo, emisor y nombre, y guarda solo lo necesario',
+      () async {
+        final repository = await signedInAdmin(
+          mfa: (request) => request.url.path.endsWith('/factors')
+              ? json(GoTrueFixtures.totpEnrollJson())
+              : http.Response('', 404),
+        );
+
+        final enrollment = await repository.enrollTotp(
+          friendlyName: 'TalentFlash · 08/09/2026 14:32',
+        );
+
+        // Primero consulta al servidor qué pendientes hay; después crea.
+        expect(requests.first.method, 'GET');
+        expect(requests.first.url.path, endsWith('/user'));
+        final request = requests.last;
+        expect(request.method, 'POST');
+        expect(request.url.path, endsWith('/factors'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['factor_type'], 'totp');
+        expect(body['issuer'], 'TalentFlash Argentina');
+        expect(body['friendly_name'], 'TalentFlash · 08/09/2026 14:32');
+        expect(enrollment.factorId, 'factor-1');
+        expect(enrollment.secret, 'JBSWY3DPEHPK3PXP');
+        expect(enrollment.uri, startsWith('otpauth://totp/'));
+        expect(enrollment.toString(), isNot(contains('JBSWY3DPEHPK3PXP')));
+        // Crear el factor pendiente no cambia el nivel de la sesión.
+        expect(repository.currentStatus.assurance, SessionAssurance.aal1);
+      },
+    );
+
+    test(
+      'antes de un alta nueva descarta los factores pendientes viejos',
+      () async {
+        final repository = await signedInAdmin(
+          // La copia de la sesión no los conoce: la limpieza consulta al
+          // servidor, que es el único que sabe qué quedó de un alta
+          // interrumpida. Son altas de ESTA instancia —por eso van como
+          // propias—; los de otra corrida ya no se tocan, y eso lo cubre
+          // `supabase_auth_repository_assurance_test.dart`.
+          ownedFactors: const ['huerfano-1', 'huerfano-2', 'sms-pendiente'],
+          factors: const [],
+          userFactors: [
+            GoTrueFixtures.factor(id: 'huerfano-1', status: 'unverified'),
+            GoTrueFixtures.factor(id: 'verificado', status: 'verified'),
+            GoTrueFixtures.factor(
+              id: 'huerfano-2',
+              status: 'unverified',
+              friendlyName: null,
+            ),
+            GoTrueFixtures.factor(
+              id: 'sms-pendiente',
+              status: 'unverified',
+              factorType: 'phone',
+            ),
+          ],
+          mfa: (request) {
+            if (request.method == 'DELETE') {
+              return json(jsonEncode({'id': request.url.pathSegments.last}));
+            }
+            if (request.url.path.endsWith('/factors')) {
+              return json(GoTrueFixtures.totpEnrollJson());
+            }
+            return http.Response('', 404);
+          },
+        );
+
+        await repository.enrollTotp(friendlyName: 'x');
+
+        expect(
+          requests.where((r) => r.method == 'DELETE'),
+          isEmpty,
+          reason:
+              'la app NO manda bajas automáticas: el endpoint de baja es '
+              'incondicional y su chequeo de nivel no es atómico. Los '
+              'pendientes viejos los recolecta el servidor, y por eso el '
+              'desafío se pide recién al mandar el código',
+        );
+        expect(
+          requests.last.method,
+          'POST',
+          reason: 'el alta sigue adelante igual',
+        );
+        expect(requests.last.url.path, endsWith('/factors'));
+      },
+    );
+
+    test(
+      'si un pendiente viejo no se puede borrar, el alta sigue igual',
+      () async {
+        final repository = await signedInAdmin(
+          factors: [
+            GoTrueFixtures.factor(id: 'huerfano', status: 'unverified'),
+          ],
+          mfa: (request) {
+            if (request.method == 'DELETE') {
+              return json(
+                GoTrueFixtures.errorJson(
+                  code: 404,
+                  errorCode: 'mfa_factor_not_found',
+                  message: 'Factor not found',
+                ),
+                status: 404,
+              );
+            }
+            return json(GoTrueFixtures.totpEnrollJson());
+          },
+        );
+
+        final enrollment = await repository.enrollTotp(friendlyName: 'x');
+
+        expect(enrollment.factorId, 'factor-1');
+      },
+    );
+
+    test(
+      'con un factor verificado y aal1 el servidor rechaza otra alta',
+      () async {
+        final repository = await signedInAdmin(
+          mfa: (_) => json(
+            GoTrueFixtures.errorJson(
+              code: 403,
+              errorCode: 'insufficient_aal',
+              message: 'AAL2 required to enroll a new factor',
+            ),
+            status: 403,
+          ),
+        );
+
+        await expectLater(
+          repository.enrollTotp(friendlyName: 'x'),
+          throwsA(
+            isA<AuthFailure>().having(
+              (f) => f.code,
+              'code',
+              AuthFailureCode.mfaInsufficientAssurance,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('el desafío devuelve id y vencimiento', () async {
+      final expiresAt = DateTime.utc(2026, 9, 8, 17, 40);
+      final repository = await signedInAdmin(
+        mfa: (request) => request.url.path.endsWith('/challenge')
+            ? json(GoTrueFixtures.challengeJson(expiresAt: expiresAt))
+            : http.Response('', 404),
+      );
+
+      final challenge = await repository.challengeSecondFactor('factor-1');
+
+      expect(requests.single.url.path, endsWith('/factors/factor-1/challenge'));
+      expect(challenge.id, 'challenge-1');
+      expect(challenge.factorId, 'factor-1');
+      expect(challenge.expiresAt.toUtc(), expiresAt);
+    });
+
+    test(
+      'verificar sube la sesión a aal2 con el MISMO usuario y lo publica por '
+      'el stream',
+      () async {
+        final repository = await signedInAdmin(
+          mfa: (request) {
+            if (!request.url.path.endsWith('/verify')) {
+              return http.Response('', 404);
+            }
+            return json(
+              GoTrueFixtures.sessionJson(
+                appRole: 'admin',
+                accessToken: GoTrueFixtures.accessTokenWithClaims(
+                  aal: 'aal2',
+                  amr: [
+                    {'method': 'totp', 'timestamp': 1757353920},
+                    {'method': 'password', 'timestamp': 1757353800},
+                  ],
+                ),
+                factors: [GoTrueFixtures.factor()],
+              ),
+            );
+          },
+        );
+        final before = repository.currentStatus;
+        final emitted = <AuthStatus>[];
+        final subscription = repository.statusChanges().listen(emitted.add);
+        addTearDown(subscription.cancel);
+
+        await repository.verifySecondFactor(
+          factorId: 'factor-1',
+          challengeId: 'challenge-1',
+          code: '123456',
+        );
+        await Future<void>.delayed(Duration.zero);
+
+        final body = jsonDecode(requests.single.body) as Map<String, dynamic>;
+        expect(requests.single.url.path, endsWith('/factors/factor-1/verify'));
+        expect(body['challenge_id'], 'challenge-1');
+        expect(body['code'], '123456');
+
+        final after = repository.currentStatus;
+        expect(after.assurance, SessionAssurance.aal2);
+        expect(after.hasSecondFactorVerified, isTrue);
+        expect(after.user, before.user, reason: 'misma identidad');
+        expect(after.role, BusinessRole.admin);
+        expect(before.assurance, SessionAssurance.aal1);
+        expect(before == after, isFalse, reason: 'el estado SÍ cambió');
+        expect(
+          emitted.last,
+          isA<AuthStatusSignedIn>().having(
+            (s) => s.assurance,
+            'assurance',
+            SessionAssurance.aal2,
+          ),
+        );
+      },
+    );
+
+    test(
+      'un código incorrecto llega tipado y la sesión sigue en aal1',
+      () async {
+        final repository = await signedInAdmin(
+          mfa: (_) => json(
+            GoTrueFixtures.errorJson(
+              code: 422,
+              errorCode: 'mfa_verification_failed',
+              message: 'Invalid TOTP code entered',
+            ),
+            status: 422,
+          ),
+        );
+
+        await expectLater(
+          repository.verifySecondFactor(
+            factorId: 'factor-1',
+            challengeId: 'challenge-1',
+            code: '000000',
+          ),
+          throwsA(
+            isA<AuthFailure>().having(
+              (f) => f.code,
+              'code',
+              AuthFailureCode.mfaInvalidCode,
+            ),
+          ),
+        );
+        expect(repository.currentStatus.assurance, SessionAssurance.aal1);
+      },
+    );
+
+    test('un desafío vencido llega tipado', () async {
+      final repository = await signedInAdmin(
+        mfa: (_) => json(
+          GoTrueFixtures.errorJson(
+            code: 422,
+            errorCode: 'mfa_challenge_expired',
+            message: 'MFA challenge has expired',
+          ),
+          status: 422,
+        ),
+      );
+
+      await expectLater(
+        repository.verifySecondFactor(
+          factorId: 'factor-1',
+          challengeId: 'challenge-1',
+          code: '123456',
+        ),
+        throwsA(
+          isA<AuthFailure>().having(
+            (f) => f.code,
+            'code',
+            AuthFailureCode.mfaChallengeExpired,
+          ),
+        ),
+      );
+    });
+
+    test('descartar un factor pendiente NO pega ningún DELETE, ni siquiera con '
+        'todas las precondiciones cumplidas', () async {
+      final repository = await signedInAdmin(
+        ownedFactors: const ['factor-1'],
+        mfa: (request) => request.method == 'DELETE'
+            ? json(jsonEncode({'id': 'factor-1'}))
+            : http.Response('', 404),
+      );
+
+      await repository.discardPendingSecondFactor('factor-1');
+
+      expect(
+        requests,
+        isEmpty,
+        reason:
+            'el factor es propio y no tiene intentos sin resolver, y aun '
+            'así no sale nada: el endpoint de baja es incondicional. Ver '
+            'SecondFactorCleanupPolicy.automaticUnenrollEnabled',
+      );
+    });
+
+    test('descartar un factor que ya no existe no es un error', () async {
+      final repository = await signedInAdmin(
+        mfa: (_) => json(
+          GoTrueFixtures.errorJson(
+            code: 404,
+            errorCode: 'mfa_factor_not_found',
+            message: 'Factor not found',
+          ),
+          status: 404,
+        ),
+      );
+
+      await expectLater(
+        repository.discardPendingSecondFactor('factor-1'),
+        completes,
+      );
+    });
+
+    test('el descarte no falla ni aunque el servidor fuera a rechazarlo: no '
+        'llega a preguntarle', () async {
+      // Antes esto comprobaba que un 403 del DELETE se propagara tipado.
+      // Ya no hay DELETE, así que lo que queda por fijar es que el camino
+      // termina bien y en silencio: la pantalla que lo llama al salir no
+      // tiene que ver un error por algo que la app decidió no hacer.
+      final repository = await signedInAdmin(
+        ownedFactors: const ['factor-1'],
+        mfa: (_) => json(
+          GoTrueFixtures.errorJson(
+            code: 403,
+            errorCode: 'insufficient_aal',
+            message: 'AAL2 required to unenroll a verified factor',
+          ),
+          status: 403,
+        ),
+      );
+
+      await expectLater(
+        repository.discardPendingSecondFactor('factor-1'),
+        completes,
+      );
+      expect(requests, isEmpty);
     });
   });
 }
